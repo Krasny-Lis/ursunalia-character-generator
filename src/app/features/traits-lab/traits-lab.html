@@ -5,7 +5,11 @@
       <strong>URSUNALIA</strong>
       <span>ZIEMIE BRACI · 2027</span>
     </div>
-    <span class="mode">PROTOTYP GENERATORA</span>
+    <nav class="toplinks" aria-label="Etapy generatora">
+      <a routerLink="/">← Tożsamość</a>
+      <a routerLink="/traits" aria-current="page">Cechy charakteru</a>
+      <a routerLink="/hooks">Haki fabularne →</a>
+    </nav>
   </header>
 
   <main>
@@ -58,7 +62,33 @@
         </section>
 
         <aside class="selection" aria-label="Wybrane cechy">
+          <a class="return-identity" routerLink="/">← Wróć do tożsamości postaci</a>
           <p class="eyebrow">TWOJA POSTAĆ</p>
+          <div class="switcher">
+            <label for="character-select">Wybierz postać do testowania</label>
+            <select id="character-select" [value]="activeCharacter()?.id ?? ''" (change)="selectCharacter($event)">
+              @for (character of characters(); track character.id) {
+                <option [value]="character.id" [selected]="character.id === activeCharacter()?.id">
+                  {{ character.name || 'Nowa postać (bez nazwy)' }}{{ character.id.startsWith('demo-') ? ' · przykład' : '' }}
+                </option>
+              }
+            </select>
+            <button type="button" class="new-character" (click)="createCharacter()">＋ Utwórz nową postać</button>
+            <label for="character-name">Nazwa aktywnej postaci</label>
+            <input
+              id="character-name"
+              type="text"
+              [value]="activeCharacter()?.name ?? ''"
+              (input)="renameCharacter($event)"
+              placeholder="Wpisz nazwę nowej postaci"
+              maxlength="160"
+            />
+            @if (!charactersStore.storageAvailable()) {
+              <p class="storage-warning" role="status">Zapis sesji jest zablokowany w tej przeglądarce. Dane mogą zniknąć po odświeżeniu.</p>
+            } @else {
+              <p class="storage-note">Zmiany zapisują się automatycznie w bieżącej sesji przeglądarki.</p>
+            }
+          </div>
           <h2>Wybrane cechy</h2>
           <div class="count">{{ selectedIds().length }} <span>/ zalecane 1–3</span></div>
 
@@ -94,9 +124,10 @@
             <p class="empty">Nie wybrano jeszcze żadnej cechy.</p>
           }
 
+          <a class="return-identity" routerLink="/hooks">Przejdź do haków fabularnych →</a>
           <p class="disclaimer">
-            To pierwszy widok testowy. Na razie wybór działa w pamięci komponentu;
-            zapis postaci do sesji dodamy w kolejnym etapie.
+            Wybory dotyczą wyłącznie aktywnej postaci. Po zmianie postaci oraz
+            odświeżeniu strony zostaną przywrócone z pamięci sesji tej karty.
           </p>
         </aside>
       </div>

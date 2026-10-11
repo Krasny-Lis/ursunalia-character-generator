@@ -162,3 +162,59 @@ footer { text-align: center; color: #778da2; margin-top: 34px; font-size: 10px; 
   .mode { display: none; }
   .group { padding: 15px; }
 }
+
+/* Selektor postaci — współdzielony stan CharacterStore. */
+.selection .switcher {
+  display: grid;
+  gap: 8px;
+  margin: 13px 0 20px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid #3c5263;
+}
+.selection .switcher label {
+  color: #bcd0dd;
+  font-size: 12px;
+  font-weight: 600;
+}
+.selection .switcher select,
+.selection .switcher input {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px;
+  color: #f1e7d4;
+  background: #0b1b2c;
+  border: 1px solid #557088;
+  border-radius: 8px;
+  font: inherit;
+}
+.selection .switcher select:focus-visible,
+.selection .switcher input:focus-visible,
+.selection .switcher .new-character:focus-visible {
+  outline: 2px solid #d3b67a;
+  outline-offset: 2px;
+}
+.selection .switcher .new-character {
+  padding: 10px 12px;
+  color: #122236;
+  background: #dfc38f;
+  border: 1px solid #f0d7a2;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  &:hover { background: #f2d8a5; }
+}
+.selection .switcher .storage-note,
+.selection .switcher .storage-warning {
+  margin: 4px 0 0;
+  color: #a9bacb;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.selection .switcher .storage-warning { color: #f7c3a6; }
+
+/* Nawigacja między podstawami postaci a charakterem. */
+.toplinks { margin-left:auto; display:flex; gap:14px; flex-wrap:wrap; }
+.toplinks a { color:#e1c99a; text-decoration:none; font-size:12px; font-weight:650; }
+.toplinks a:hover, .return-identity:hover { color:#fff; }
+.return-identity { color:#e1c99a; font-size:12px; display:inline-block; margin-bottom:12px; text-decoration:none; }
+@media(max-width:550px) { .topbar { flex-wrap:wrap; } .toplinks { width:100%; margin-left:0; } }
