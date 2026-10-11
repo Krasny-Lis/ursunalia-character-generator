@@ -5,12 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { PillarId } from '../../core/models/character.model';
 import { CatalogService } from '../../core/services/catalog.service';
 import { CharacterStore } from '../../core/storage/character-store.service';
-
-interface RequiredSection {
-  label: string;
-  ready: boolean;
-  route: string;
-}
+import { validateCharacter } from '../../core/validation/character-validation';
 
 @Component({
   selector: 'app-character-review',
@@ -60,30 +55,15 @@ export class CharacterReview {
     this.catalogs()?.relationOpenness.find((entry) => entry.id === this.activeCharacter()?.relationOpenness)
   );
 
-  // To jedynie wskaźnik gotowości formularza: nie wysyła ani nie zatwierdza zgłoszenia.
-  protected readonly requiredSections = computed<RequiredSection[]>(() => {
-    const c = this.activeCharacter();
+  // Czysta walidacja – wynik jest przeliczany po każdej zmianie aktywnej postaci.
+  protected readonly validation = computed(() => {
+    const character = this.activeCharacter();
     const data = this.catalogs();
-    if (!c || !data) return [];
-    return [
-      { label: 'Nazwa postaci', ready: c.name.trim().length > 0, route: '/' },
-      { label: 'Rola społeczna i zawód', ready: !!c.roleId && !!c.occupation.trim(), route: '/' },
-      { label: 'Region pochodzenia', ready: !!c.regionId, route: '/' },
-      { label: 'Status na Ziemiach Braci', ready: !!c.residency, route: '/' },
-      { label: 'Pochodzenie kulturowe', ready: !!c.cultureId, route: '/' },
-      { label: 'Biografia (min. 500 znaków)', ready: (c.story?.history?.trim().length ?? 0) >= 500, route: '/history' },
-      {
-        label: 'Oceny wszystkich sześciu filarów',
-        ready: data.pillars.every((entry) => {
-          const rating = c.pillarRatings?.[entry.id as PillarId];
-          return typeof rating === 'number' && rating >= 1 && rating <= 5;
-        }),
-        route: '/pillars',
-      },
-      { label: 'Dominujący styl gry', ready: !!c.gameplayStyle, route: '/gameplay' },
-    ];
+    return character && data ? validateCharacter(character, data) : null;
   });
-  protected readonly readyCount = computed(() => this.requiredSections().filter((entry) => entry.ready).length);
+  protected readonly requiredSections = computed(() => this.validation()?.required ?? []);
+  protected readonly optionalIssues = computed(() => this.validation()?.optionalIssues ?? []);
+  protected readonly readyCount = computed(() => this.validation()?.readyCount ?? 0);
 
   protected selectCharacter(event: Event): void {
     this.store.selectCharacter((event.target as HTMLSelectElement).value);

@@ -37,18 +37,37 @@
                   <div><p class="eyebrow">KONTROLA WYMAGANYCH PÓL</p><h2>Stan przygotowania postaci</h2></div>
                   <span class="progress-count">{{ readyCount() }} / {{ requiredSections().length }}</span>
                 </div>
-                <p class="muted">Poniższa lista dotyczy tylko wymaganych odpowiedzi. Cechy charakteru, haki i relacje są opcjonalne.</p>
+                <p class="muted">Sprawdzamy osiem obowiązkowych elementów zgłoszenia. Cechy charakteru, haki i relacje są opcjonalne.</p>
+                <div class="progress-meter" role="progressbar" aria-label="Uzupełnienie obowiązkowych elementów"
+                  [attr.aria-valuenow]="readyCount()" aria-valuemin="0" [attr.aria-valuemax]="requiredSections().length">
+                  <div class="progress-meter-fill" [style.width.%]="requiredSections().length ? readyCount() * 100 / requiredSections().length : 0"></div>
+                </div>
                 <ul class="checklist">
-                  @for (section of requiredSections(); track section.label) {
-                    <li>
+                  @for (section of requiredSections(); track section.id) {
+                    <li [class.incomplete]="!section.ready">
                       <span class="status-icon" [class.ok]="section.ready" aria-hidden="true">{{ section.ready ? '✓' : '○' }}</span>
-                      <span>{{ section.label }}</span>
+                      <span class="checklist-content">
+                        <strong>{{ section.label }}</strong>
+                        @if (!section.ready) { <small>{{ section.detail }}</small> }
+                      </span>
                       <a [routerLink]="section.route">{{ section.ready ? 'Edytuj' : 'Uzupełnij' }}</a>
                     </li>
                   }
                 </ul>
-                @if (readyCount() === requiredSections().length) {
-                  <p class="success-note">Wszystkie sprawdzane wymagane pola są uzupełnione. Zgłoszenie nadal pozostaje lokalnym szkicem – nie zostało wysłane.</p>
+                @if (optionalIssues().length) {
+                  <div class="validation-warnings" role="status">
+                    <h3>Popraw odpowiedzi przekraczające limit</h3>
+                    <ul>
+                      @for (issue of optionalIssues(); track issue.id) {
+                        <li><strong>{{ issue.label }}</strong>: {{ issue.detail }}
+                          <a [routerLink]="issue.route">Popraw →</a>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+                @if (validation()?.complete) {
+                  <p class="success-note">Formularz spełnia sprawdzane wymagania. Zgłoszenie nadal pozostaje lokalnym szkicem – niczego nie wysłano.</p>
                 } @else {
                   <p class="small-note">Możesz zachować nieukończony szkic i wrócić do niego w tej sesji przeglądarki.</p>
                 }
