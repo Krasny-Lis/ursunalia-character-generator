@@ -1,0 +1,234 @@
+<div class="page">
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true">✦</div>
+    <div class="brand"><strong>URSUNALIA</strong><span>ZIEMIE BRACI · 2027</span></div>
+    <nav class="toplinks" aria-label="Etapy generatora">
+      <a routerLink="/">Tożsamość</a>
+      <a routerLink="/traits">Cechy</a>
+      <a routerLink="/hooks">Haki fabularne</a>
+      <a routerLink="/history">Historia</a>
+      <a routerLink="/pillars">Preferencje</a>
+      <a routerLink="/gameplay">Styl gry</a>
+      <a routerLink="/relations">Relacje</a>
+      <a routerLink="/summary" [attr.aria-current]="!cardMode ? 'page' : null">Podsumowanie</a>
+      <a routerLink="/card" [attr.aria-current]="cardMode ? 'page' : null">Karta postaci</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">ŚWIĘTO BUDZENIA NIEDŹWIEDZI · GENERATOR POSTACI</p>
+      @if (cardMode) {
+        <h1>Karta postaci</h1>
+        <p>Wersja do odczytu: tożsamość, cechy, haki, znajomości oraz historia postaci. Rozwijaj nazwy, aby poznać pełne opisy.</p>
+      } @else {
+        <h1>Podsumowanie formularza</h1>
+        <p>Przejrzyj przygotowaną postać i sprawdź, czego jeszcze brakuje. Każdą część możesz uzupełnić w odpowiednim etapie generatora.</p>
+      }
+    </section>
+
+    @if (catalogs(); as data) {
+      @if (activeCharacter(); as c) {
+        <div class="layout">
+          <section class="content" aria-label="Dane postaci">
+            @if (!cardMode) {
+              <section class="panel progress-panel">
+                <div class="section-header">
+                  <div><p class="eyebrow">KONTROLA WYMAGANYCH PÓL</p><h2>Stan przygotowania postaci</h2></div>
+                  <span class="progress-count">{{ readyCount() }} / {{ requiredSections().length }}</span>
+                </div>
+                <p class="muted">Poniższa lista dotyczy tylko wymaganych odpowiedzi. Cechy charakteru, haki i relacje są opcjonalne.</p>
+                <ul class="checklist">
+                  @for (section of requiredSections(); track section.label) {
+                    <li>
+                      <span class="status-icon" [class.ok]="section.ready" aria-hidden="true">{{ section.ready ? '✓' : '○' }}</span>
+                      <span>{{ section.label }}</span>
+                      <a [routerLink]="section.route">{{ section.ready ? 'Edytuj' : 'Uzupełnij' }}</a>
+                    </li>
+                  }
+                </ul>
+                @if (readyCount() === requiredSections().length) {
+                  <p class="success-note">Wszystkie sprawdzane wymagane pola są uzupełnione. Zgłoszenie nadal pozostaje lokalnym szkicem – nie zostało wysłane.</p>
+                } @else {
+                  <p class="small-note">Możesz zachować nieukończony szkic i wrócić do niego w tej sesji przeglądarki.</p>
+                }
+              </section>
+            }
+
+            <section class="panel" id="identity">
+              <div class="section-header">
+                <div><p class="eyebrow">TOŻSAMOŚĆ</p><h2>{{ c.name || 'Postać bez nazwy' }}</h2></div>
+                @if (!cardMode) { <a class="edit-link" routerLink="/">Edytuj tożsamość →</a> }
+              </div>
+              <dl class="facts">
+                <div><dt>Rola społeczna</dt><dd>{{ role()?.name || 'Nie wybrano' }}</dd></div>
+                <div><dt>Zajęcie</dt><dd>{{ c.occupation || 'Nie określono' }}</dd></div>
+                <div><dt>Region pochodzenia</dt><dd>{{ region()?.name || 'Nie wybrano' }}</dd></div>
+                @if (c.originDetail) { <div><dt>Szczegóły pochodzenia</dt><dd>{{ c.originDetail }}</dd></div> }
+                <div><dt>Status na Ziemiach Braci</dt><dd>{{ residency()?.name || 'Nie określono' }}</dd></div>
+                <div><dt>Kultura</dt><dd>{{ culture()?.name || 'Nie wybrano' }}</dd></div>
+              </dl>
+              @if (region(); as entry) {
+                <details class="lore"><summary>Stereotyp regionalny · {{ entry.name }}</summary>
+                  <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
+                </details>
+              }
+              @if (culture(); as entry) {
+                <details class="lore"><summary>Stereotyp kulturowy · {{ entry.name }}</summary>
+                  <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
+                </details>
+              }
+              @if (role(); as entry) {
+                <details class="lore"><summary>Opis roli · {{ entry.name }}</summary><p>{{ entry.description }}</p></details>
+              }
+            </section>
+
+            <section class="panel" id="traits">
+              <div class="section-header">
+                <div><p class="eyebrow">CHARAKTER</p><h2>Cechy postaci <span class="meta-count">{{ selectedTraits().length }}</span></h2></div>
+                @if (!cardMode) { <a class="edit-link" routerLink="/traits">Edytuj cechy →</a> }
+              </div>
+              @if (selectedTraits().length) {
+                <div class="tag-grid">
+                  @for (entry of selectedTraits(); track entry.id) {
+                    <details class="tag-card">
+                      <summary>{{ entry.name }} <span class="chevron" aria-hidden="true">⌄</span></summary>
+                      @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
+                      <p>{{ entry.description }}</p>
+                    </details>
+                  }
+                </div>
+              } @else { <p class="empty">Nie wybrano cech charakteru.</p> }
+            </section>
+
+            <section class="panel" id="hooks">
+              <div class="section-header">
+                <div><p class="eyebrow">WĄTKI I BRZEMIONA</p><h2>Haki fabularne <span class="meta-count">{{ selectedHooks().length }}</span></h2></div>
+                @if (!cardMode) { <a class="edit-link" routerLink="/hooks">Edytuj haki →</a> }
+              </div>
+              @if (selectedHooks().length) {
+                <div class="tag-grid">
+                  @for (entry of selectedHooks(); track entry.id) {
+                    <details class="tag-card">
+                      <summary>{{ entry.name }} <span class="chevron" aria-hidden="true">⌄</span></summary>
+                      @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
+                      <p>{{ entry.description }}</p>
+                    </details>
+                  }
+                </div>
+              } @else { <p class="empty">Nie wybrano haków fabularnych.</p> }
+            </section>
+
+            <section class="panel" id="story">
+              <div class="section-header">
+                <div><p class="eyebrow">DZIEJE POSTACI</p><h2>Historia i motywacje</h2></div>
+                @if (!cardMode) { <a class="edit-link" routerLink="/history">Edytuj historię →</a> }
+              </div>
+              @if (c.story.goal) { <div class="story-field"><h3>Cel postaci</h3><p>{{ c.story.goal }}</p></div> }
+              @if (c.story.obstacle) { <div class="story-field"><h3>Przeszkoda</h3><p>{{ c.story.obstacle }}</p></div> }
+              @if (c.story.presenceReason) {
+                <div class="story-field"><h3>{{ c.residency === 'resident' ? 'Dlaczego uczestniczy w święcie?' : c.residency === 'visitor' ? 'Dlaczego przybyła na Ziemie Braci?' : 'Powód obecności' }}</h3>
+                  <p>{{ c.story.presenceReason }}</p></div>
+              }
+              @if (c.story.stakes) { <div class="story-field"><h3>Co ma do stracenia?</h3><p>{{ c.story.stakes }}</p></div> }
+              <div class="biography">
+                <h3>Pełna biografia</h3>
+                @if (c.story.history) { <p>{{ c.story.history }}</p> }
+                @else { <p class="empty">Biografia nie została jeszcze napisana.</p> }
+              </div>
+            </section>
+
+            <section class="panel" id="relations">
+              <div class="section-header">
+                <div><p class="eyebrow">WIĘZI</p><h2>Istniejące znajomości <span class="meta-count">{{ c.relations.length }}</span></h2></div>
+                @if (!cardMode) { <a class="edit-link" routerLink="/relations">Edytuj relacje →</a> }
+              </div>
+              @if (c.relations.length) {
+                <div class="relation-grid">
+                  @for (relation of c.relations; track relation.id) {
+                    <article class="relation-item">
+                      <h3>{{ relation.personOrCharacter || 'Osoba bez nazwy' }}</h3>
+                      <p>{{ relation.description || 'Opis relacji nie został uzupełniony.' }}</p>
+                    </article>
+                  }
+                </div>
+              } @else { <p class="empty">Brak zapisanych znajomości.</p> }
+            </section>
+
+            @if (!cardMode) {
+              <section class="panel" id="preferences">
+                <div class="section-header"><div><p class="eyebrow">PREFERENCJE GRACZA</p><h2>Rozgrywka</h2></div>
+                  <a class="edit-link" routerLink="/pillars">Edytuj oceny →</a>
+                </div>
+                <div class="pillar-grid">
+                  @for (pillar of pillars(); track pillar.id) {
+                    <div class="pillar-row"><span>{{ pillar.name }}</span><strong>{{ ratingFor(pillar.id) ?? '–' }} / 5</strong></div>
+                  }
+                </div>
+                <div class="preference-block">
+                  <h3>Dominujący styl gry</h3>
+                  <p>{{ selectedStyle()?.name || 'Nie wybrano' }} <a routerLink="/gameplay">Edytuj →</a></p>
+                  @if (selectedStyle(); as entry) {
+                    <details class="lore"><summary>Pełny opis stylu</summary><p>{{ entry.description }}</p></details>
+                  }
+                </div>
+                <div class="preference-block">
+                  <h3>Otwartość na nowe relacje</h3>
+                  <p>{{ selectedOpenness()?.name || 'Nie określono' }} <a routerLink="/relations">Edytuj →</a></p>
+                </div>
+                <div class="private-fields">
+                  <h3>Pola poufne</h3>
+                  <p>Granice bezpieczeństwa: {{ c.safetyBoundaries?.trim() ? 'uzupełniono' : 'nie uzupełniono' }}.</p>
+                  <p>Wykluczenia relacyjne: {{ c.relationshipExclusions?.trim() ? 'uzupełniono' : 'nie uzupełniono' }}.</p>
+                  <p class="small-note">Treść tych pól nie jest pokazywana ani tutaj, ani na karcie postaci. Możesz ją edytować w odpowiednich formularzach.</p>
+                </div>
+              </section>
+            }
+
+            <div class="bottom-actions">
+              @if (cardMode) { <a class="nav-button" routerLink="/summary">← Powrót do podsumowania</a> }
+              @else { <a class="nav-button" routerLink="/relations">← Wróć do relacji</a><a class="nav-button primary" routerLink="/card">Zobacz kartę postaci →</a> }
+            </div>
+          </section>
+
+          <aside class="sidepanel" aria-label="Przełączanie postaci">
+            <p class="eyebrow">TWOJE POSTACIE</p>
+            <label for="review-character-select">Wybierz postać</label>
+            <select id="review-character-select" [value]="activeCharacter()?.id ?? ''" (change)="selectCharacter($event)">
+              @for (character of characters(); track character.id) {
+                <option [value]="character.id" [selected]="character.id === activeCharacter()?.id">
+                  {{ character.name || 'Nowa postać (bez nazwy)' }}{{ character.id.startsWith('demo-') ? ' · przykład' : '' }}
+                </option>
+              }
+            </select>
+            <button type="button" class="new-character" (click)="createCharacter()">＋ Utwórz pustą postać</button>
+            <div class="rule"></div>
+            <p class="eyebrow">PODGLĄD</p>
+            <h2>{{ c.name || 'Postać bez nazwy' }}</h2>
+            <p class="small-note">{{ c.occupation || 'Zajęcie nieokreślone' }}</p>
+            <div class="rule"></div>
+            <a routerLink="/summary" class="side-link" [attr.aria-current]="!cardMode ? 'page' : null">Podsumowanie formularza →</a>
+            <a routerLink="/card" class="side-link" [attr.aria-current]="cardMode ? 'page' : null">Karta postaci →</a>
+            <a routerLink="/" class="side-link">Edytuj tożsamość →</a>
+            <div class="rule"></div>
+            @if (cardMode) {
+              <p class="private-note">Karta nie zawiera preferencji gracza ani pól poufnych. Jest widoczna tylko w tej aplikacji i przeglądarce, ale nie ma jeszcze kontroli dostępu.</p>
+            } @else {
+              <p class="private-note">To robocze podsumowanie, nie wysłane zgłoszenie. Poufne odpowiedzi pozostają w formularzach.</p>
+            }
+            @if (!store.storageAvailable()) {
+              <p class="warning" role="status">Zapis sesji jest zablokowany. Dane mogą zniknąć po odświeżeniu.</p>
+            } @else {
+              <p class="small-note storage">Dane są przechowywane lokalnie w sesji przeglądarki, bez backendu.</p>
+            }
+          </aside>
+        </div>
+      } @else {
+        <p class="loading">Nie znaleziono aktywnej postaci.</p>
+      }
+      <footer>URSUNALIA 2027 · PROJEKT GENERATORA POSTACI</footer>
+    } @else {
+      <p class="loading" role="status">Wczytywanie katalogów postaci…</p>
+    }
+  </main>
+</div>

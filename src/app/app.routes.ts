@@ -36,5 +36,17 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/character-relations/character-relations').then((m) => m.CharacterRelations),
   },
+  {
+    path: 'summary',
+    data: { cardMode: false },
+    loadComponent: () =>
+      import('./features/character-review/character-review').then((m) => m.CharacterReview),
+  },
+  {
+    path: 'card',
+    data: { cardMode: true },
+    loadComponent: () =>
+      import('./features/character-review/character-review').then((m) => m.CharacterReview),
+  },
   { path: '**', redirectTo: '' },
 ];
