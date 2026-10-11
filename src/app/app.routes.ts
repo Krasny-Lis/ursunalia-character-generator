@@ -16,5 +16,15 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/character-hooks/character-hooks').then((m) => m.CharacterHooks),
   },
+  {
+    path: 'history',
+    loadComponent: () =>
+      import('./features/character-history/character-history').then((m) => m.CharacterHistory),
+  },
+  {
+    path: 'pillars',
+    loadComponent: () =>
+      import('./features/character-pillars/character-pillars').then((m) => m.CharacterPillars),
+  },
   { path: '**', redirectTo: '' },
 ];
