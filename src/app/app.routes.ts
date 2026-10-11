@@ -31,5 +31,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/character-gameplay/character-gameplay').then((m) => m.CharacterGameplay),
   },
+  {
+    path: 'relations',
+    loadComponent: () =>
+      import('./features/character-relations/character-relations').then((m) => m.CharacterRelations),
+  },
   { path: '**', redirectTo: '' },
 ];
