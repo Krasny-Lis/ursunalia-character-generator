@@ -39,6 +39,11 @@ export class CharacterPillars {
     if (!this.pillars().some((pillar) => pillar.id === id) || rating < 1 || rating > 5) return;
     const character = this.activeCharacter();
     if (!character) return;
+    // Ponowne kliknięcie tej samej oceny odznacza ją.
+    if (this.ratingFor(id) === rating) {
+      this.clearRating(id);
+      return;
+    }
     this.store.updateActive({
       pillarRatings: { ...character.pillarRatings, [id]: rating },
     });

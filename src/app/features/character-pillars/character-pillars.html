@@ -8,6 +8,7 @@
       <a routerLink="/hooks">Haki fabularne</a>
       <a routerLink="/history">Historia</a>
       <a routerLink="/pillars" aria-current="page">Preferencje fabularne</a>
+          <a routerLink="/gameplay">Styl gry i granice</a>
     </nav>
   </header>
 
@@ -27,7 +28,7 @@
             <p class="eyebrow">ETAP 8 · PREFERENCJE GRACZA</p>
             <h2>Sześć filarów rozgrywki</h2>
             <p class="muted">Wybierz jedną ocenę od 1 do 5 dla każdego filaru. Nie ustawiamy
-              wartości domyślnych. Możesz zmieniać odpowiedzi i zapisać nieukończony szkic.</p>
+              wartości domyślnych. Kliknij wybraną ocenę ponownie, aby ją odznaczyć. Możesz też zapisać nieukończony szkic.</p>
             <div class="scale-key"><span>1 – Niewielkie zainteresowanie</span><span>5 – Bardzo duże zainteresowanie</span></div>
           </div>
 
@@ -40,7 +41,7 @@
                   <label class="rating-option" [class.active]="ratingFor(pillar.id) === score">
                     <input type="radio" [name]="'rating-' + pillar.id" [value]="score"
                       [checked]="ratingFor(pillar.id) === score"
-                      (change)="ratePillar(pillar.id, score)"
+                      (click)="ratePillar(pillar.id, score)"
                       [attr.aria-label]="pillar.name + ': ' + score + ' z 5'" />
                     <span>{{ score }}</span>
                   </label>
@@ -60,6 +61,7 @@
 
           <div class="bottom-actions">
             <a routerLink="/history" class="secondary">← Wróć do historii</a>
+            <a routerLink="/gameplay" class="secondary">Styl gry i granice →</a>
             <span class="autosave">Zapis automatyczny w sesji</span>
           </div>
         </section>
@@ -102,6 +104,7 @@
           <a routerLink="/history" class="side-link">← Historia postaci</a>
           <a routerLink="/traits" class="side-link">Cechy charakteru →</a>
           <a routerLink="/hooks" class="side-link">Haki fabularne →</a>
+          <a routerLink="/gameplay" class="side-link">Styl gry i granice →</a>
           @if (!store.storageAvailable()) {
             <p class="warning" role="status">Zapis sesji jest zablokowany. Odpowiedzi mogą zniknąć po odświeżeniu.</p>
           } @else {

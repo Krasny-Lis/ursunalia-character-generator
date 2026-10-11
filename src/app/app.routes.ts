@@ -26,5 +26,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/character-pillars/character-pillars').then((m) => m.CharacterPillars),
   },
+  {
+    path: 'gameplay',
+    loadComponent: () =>
+      import('./features/character-gameplay/character-gameplay').then((m) => m.CharacterGameplay),
+  },
   { path: '**', redirectTo: '' },
 ];
