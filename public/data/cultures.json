@@ -1,0 +1,26 @@
+[
+  {
+    "id": "hospodar",
+    "name": "Hospodar",
+    "tagline": "Stróżowie tradycji i ładu Kisleva",
+    "description": "Hospodarowie – bez względu na status społeczny – widzą siebie jako prawowitych gospodarzy Kisleva, strzegących jego cywilizacji, tradycji i ładu. Świętością jest dla nich duma z własnego rodu, kultura oraz pozycja Kisleva. Byle lekceważenie, podważenie ich autorytetu czy brak szacunku dla ich zwyczajów traktują nie tylko jako osobistą obelgę, ale atak na samą godność i porządek ich ojczyzny."
+  },
+  {
+    "id": "ungol",
+    "name": "Ungoł",
+    "tagline": "Krnąbrni i chodzący własnymi ścieżkami",
+    "description": "Ungołowie znani są ze swojej krnąbrności i przekory. Wykonają polecenie czy rozkaz przełożonego, ale rzadko tak, jak ten sobie wyobrażał – jeśli ubzdura im się, że coś powinno być zrobione inaczej, zrobią to po swojemu, a czasem wręcz złośliwie na przekór."
+  },
+  {
+    "id": "ropsmen",
+    "name": "Ropsmen",
+    "tagline": "Kupiecki zmysł i układy",
+    "description": "Ropsmeni to pamiętliwa mniejszość, przed wiekami niemal całkowicie zdominowana przez Ungołów. Dziś to nacja urodzonych kupców, która ponad otwartą walkę stawia handel, zysk i ciche układy. Sporne sprawy wolą załatwiać poprzez interesy, sieć pośredników i małe spiski – tam, gdzie inni sięgają po broń, Ropsmen szuka układu."
+  },
+  {
+    "id": "dolgan",
+    "name": "Dolganin",
+    "tagline": "Bohaterowie własnych opowieści",
+    "description": "Dolganie znani są z tego, że w swoich opowieściach nigdy nie wypadają przeciętnie. Słyną z koloryzowania własnych czynów – z każdym powtórzeniem ich przeciwnicy stają się groźniejsi, a sukcesy bardziej niezwykłe. Gdy ktoś podważa ich słowa, Dolganie chętnie dokładają kolejne, jeszcze bardziej niesamowite szczegóły."
+  }
+]

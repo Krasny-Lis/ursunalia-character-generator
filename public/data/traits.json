@@ -1,0 +1,233 @@
+[
+  {
+    "id": "ambitny",
+    "name": "Ambitny",
+    "description": "Szukasz większych wpływów, majątku lub uznania i chętnie wykorzystujesz okazje do awansu.",
+    "categoryId": "zysk-pieniadz-i-interes"
+  },
+  {
+    "id": "chciwy",
+    "name": "Chciwy",
+    "description": "Zawsze chcesz mieć więcej, ale niechętnie rozstajesz się z tym, co już posiadasz. Targujesz się, szukasz dodatkowego zysku i trudno nakłonić Cię do bezinteresownej hojności.",
+    "categoryId": "zysk-pieniadz-i-interes"
+  },
+  {
+    "id": "rozrzutny",
+    "name": "Rozrzutny",
+    "description": "Pieniądze się Ciebie nie trzymają; łatwo wydajesz, stawiasz innym i rozdajesz to, co masz.",
+    "categoryId": "zysk-pieniadz-i-interes"
+  },
+  {
+    "id": "wyrachowany",
+    "name": "Wyrachowany",
+    "description": "Zanim komuś pomożesz, poprzesz jego sprawę albo zawrzesz umowę, zastanawiasz się, co możesz na tym zyskać. Nawet przysługa może służyć zdobyciu przewagi.",
+    "categoryId": "zysk-pieniadz-i-interes"
+  },
+  {
+    "id": "egoista",
+    "name": "Egoista",
+    "description": "Własne potrzeby, wygoda i bezpieczeństwo są dla Ciebie ważniejsze niż dobro innych. Niechętnie ponosisz koszty dla wspólnej sprawy.",
+    "categoryId": "zysk-pieniadz-i-interes"
+  },
+  {
+    "id": "oportunista",
+    "name": "Oportunista",
+    "description": "Dostosowujesz poglądy, sojusze i zachowanie do sytuacji. Gdy pojawia się korzystniejsza możliwość, jesteś gotów zmienić stronę.",
+    "categoryId": "zysk-pieniadz-i-interes"
+  },
+  {
+    "id": "msciwy",
+    "name": "Mściwy",
+    "description": "Długo pamiętasz krzywdy i zniewagi; domagasz się odpłaty i rozliczenia.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "malostkowy",
+    "name": "Małostkowy",
+    "description": "Drobne uchybienia, brak ukłonu czy zły dobór słów potrafisz rozpamiętywać i domagać się zadośćuczynienia.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "porywczy",
+    "name": "Porywczy",
+    "description": "Łatwo ponoszą Cię emocje. Na zniewagę odpowiadasz natychmiast, zanim pomyślisz o konsekwencjach. Szybko wybuchasz, ale możesz równie szybko ochłonąć.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "pieniacz",
+    "name": "Pieniacz",
+    "description": "Uwielbiasz spory i kłótnie. Potrafisz godzinami wykłócać się o drobiazgi, kwestionować cudze racje i domagać się rozstrzygnięć.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "prowokator",
+    "name": "Prowokator",
+    "description": "Gdy sytuacja robi się spokojna, chętnie podkręcasz napięcie, aby sprawdzić reakcje innych.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "uparty",
+    "name": "Uparty",
+    "description": "Gdy raz podejmiesz decyzję, trudno Ci zmienić zdanie nawet pod wpływem rozsądnych argumentów.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "przekorny",
+    "name": "Przekorny",
+    "description": "Nie znosisz, gdy ktoś mówi Ci, co masz robić. Im mocniej naciska, tym bardziej chcesz postąpić po swojemu lub na przekór.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "bezposredni",
+    "name": "Bezpośredni",
+    "description": "Mówisz, co myślisz, bez owijania w bawełnę, także gdy opinia jest niewygodna.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "ugodowy",
+    "name": "Ugodowy",
+    "description": "Szukasz kompromisu i unikasz przedłużających się konfliktów, nawet kosztem ustępstw.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "pogardliwy",
+    "name": "Pogardliwy",
+    "description": "Okazujesz wyższość ludziom, których uznajesz za gorszych ze względu na pochodzenie, majątek lub zajęcie.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "prozny",
+    "name": "Próżny",
+    "description": "Łakniesz pochwał, uznania i uwagi; łatwo zdobyć Twoją sympatię przesadnymi komplementami.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "zawistny",
+    "name": "Zawistny",
+    "description": "Cudze sukcesy i majątek Cię uwierają; porównujesz się z innymi i czasem podkopujesz ich osiągnięcia.",
+    "categoryId": "relacje-ludzie-i-konflikt"
+  },
+  {
+    "id": "prawdomowny",
+    "name": "Prawdomówny",
+    "description": "Kłamstwo przychodzi Ci z trudem; wolisz powiedzieć prawdę albo odmówić odpowiedzi.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "honorowy",
+    "name": "Honorowy",
+    "description": "Dotrzymanie słowa i własny kodeks stawiasz ponad wygodę, a czasem nawet ponad zdrowy rozsądek.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "lgarz",
+    "name": "Łgarz",
+    "description": "Kłamiesz lub koloryzujesz bez oporów, czasem nawet bez potrzeby, i szybko wymyślasz kolejne wyjaśnienia.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "obludny",
+    "name": "Obłudny",
+    "description": "Głośno potępiasz cudze przewinienia i domagasz się przestrzegania zasad, ale dla własnych występków zawsze znajdujesz wygodne usprawiedliwienie.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "paranoik",
+    "name": "Paranoik",
+    "description": "„Wszędzie czyha nieszczęście”. Nieustannie spodziewasz się najgorszego. Szepty przy sąsiednim stole to dla Ciebie oznaka spisku, ciemne chmury zapowiedź uderzenia pioruna, a luźna dachówka tylko czeka, by spaść komuś na głowę. W każdej sytuacji dostrzegasz zagrożenia, których inni nie zauważają lub nie traktują poważnie. Ciągle ostrzegasz, podejrzewasz i przygotowujesz się na katastrofę, a zapewnienia, że wszystko będzie dobrze, zwykle tylko wzmagają Twoje obawy.",
+    "categoryId": "prawda-zaufanie-i-wladza",
+    "subtitle": "Wszędzie czyha nieszczęście"
+  },
+  {
+    "id": "donosiciel",
+    "name": "Donosiciel",
+    "description": "Chętnie zgłaszasz cudze przewinienia osobom u władzy.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "lojalny",
+    "name": "Lojalny",
+    "description": "Stoisz murem za swoim człowiekiem, zwierzchnikiem lub dowódcą, nawet gdy zaczyna Cię to kosztować.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "apodyktyczny",
+    "name": "Apodyktyczny",
+    "description": "Lubisz kontrolować innych, narzucać im swoje zdanie i wydawać polecenia, nawet gdy nikt Cię o to nie prosi.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "nadgorliwy",
+    "name": "Nadgorliwy",
+    "description": "Każde powierzone zadanie traktujesz śmiertelnie poważnie. Wykonujesz polecenia z przesadną dokładnością, często robiąc więcej, niż od Ciebie wymagano, nawet gdy przysparza to problemów innym.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "sluzalczy",
+    "name": "Służalczy",
+    "description": "Zabiegasz o względy silnego protektora i wykonujesz dla niego zadania w zamian za ochronę i udział w sukcesie.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "skryty",
+    "name": "Skryty",
+    "description": "Strzeżesz swoich spraw i nie otwierasz się łatwo, choć być może szukasz kogoś, komu naprawdę zaufasz.",
+    "categoryId": "prawda-zaufanie-i-wladza"
+  },
+  {
+    "id": "zabobonny",
+    "name": "Zabobonny",
+    "description": "Wszędzie dostrzegasz omeny i znaki. Przestrzegasz przesądów oraz odprawiasz drobne rytuały, by odwrócić pecha.",
+    "categoryId": "wiara-los-i-ryzyko"
+  },
+  {
+    "id": "bogobojny",
+    "name": "Bogobojny",
+    "description": "Wierzysz, że bogowie obserwują Twoje czyny i mogą Cię ukarać. Starasz się przestrzegać nakazów wiary i zjednać sobie ich przychylność.",
+    "categoryId": "wiara-los-i-ryzyko"
+  },
+  {
+    "id": "fatalista",
+    "name": "Fatalista",
+    "description": "Uważasz, że niektórych wydarzeń nie da się uniknąć, bo zostały przesądzone przez los.",
+    "categoryId": "wiara-los-i-ryzyko"
+  },
+  {
+    "id": "fanatyczny",
+    "name": "Fanatyczny",
+    "description": "Bezkompromisowo bronisz uznanej przez siebie prawdy religijnej lub moralnej i zwalczasz odstępstwa.",
+    "categoryId": "wiara-los-i-ryzyko"
+  },
+  {
+    "id": "ryzykant",
+    "name": "Ryzykant",
+    "description": "„Wszystko albo nic”. Nie interesują Cię małe stawki i bezpieczne rozwiązania. Kiedy widzisz szansę na wielką wygraną, jesteś gotów postawić na szali majątek, reputację, pozycję, a nawet własne życie. Tam, gdzie inni wybierają ostrożność, Ty podbijasz stawkę. Im więcej możesz stracić, tym bardziej kusi Cię możliwość zwycięstwa.",
+    "categoryId": "wiara-los-i-ryzyko",
+    "subtitle": "Wszystko albo nic"
+  },
+  {
+    "id": "tchorzliwy",
+    "name": "Tchórzliwy",
+    "description": "W niebezpieczeństwie przedkładasz bezpieczeństwo własnej skóry nad honor; szukasz odwrotu lub kogoś, kto zaryzykuje za Ciebie.",
+    "categoryId": "wiara-los-i-ryzyko"
+  },
+  {
+    "id": "niecierpliwy",
+    "name": "Niecierpliwy",
+    "description": "Źle znosisz zwłokę i przedłużające się narady; chcesz natychmiast przechodzić do działania.",
+    "categoryId": "dzialanie-i-podejscie-do-zadan"
+  },
+  {
+    "id": "tradycjonalista",
+    "name": "Tradycjonalista",
+    "description": "Ufasz starym, sprawdzonym rozwiązaniom; nowości budzą Twój opór.",
+    "categoryId": "dzialanie-i-podejscie-do-zadan"
+  },
+  {
+    "id": "roztrzepany",
+    "name": "Roztrzepany",
+    "description": "„Tysiąc myśli naraz”. Twoje myśli biegną szybciej niż Ty sam. Łatwo się rozpraszasz, przeskakujesz między tematami i zaczynasz kolejne zadania, zanim skończysz poprzednie. Zdarza Ci się zapomnieć, po co gdzieś przyszedłeś, zgubić ważną rzecz albo przerwać rozmowę, bo właśnie przypomniało Ci się coś pilnego. Kiedy jednak coś naprawdę Cię zainteresuje, potrafisz pochłonąć się tym bez reszty, zapominając o całym otaczającym świecie.",
+    "categoryId": "dzialanie-i-podejscie-do-zadan",
+    "subtitle": "Tysiąc myśli naraz"
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "all",
+    "name": "Otwarty/a na wszystko",
+    "description": "Chętnie przyjmę nowe wątki i relacje przygotowane przez organizatorów, np. dawnych znajomych, rywali, dłużników czy krewnych."
+  },
+  {
+    "id": "consult",
+    "name": "Umiarkowana otwartość",
+    "description": "Chętnie rozważę nowe relacje, ale chcę poznać propozycję i zaakceptować ją przed wydarzeniem."
+  },
+  {
+    "id": "self",
+    "name": "Samodzielne tworzenie relacji",
+    "description": "Wolę samodzielnie ustalać powiązania z innymi graczami; nie chcę, żeby organizatorzy dopisywali mi nowe relacje bez mojego udziału."
+  }
+]

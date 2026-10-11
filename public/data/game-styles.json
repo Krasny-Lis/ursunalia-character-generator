@@ -1,0 +1,17 @@
+[
+  {
+    "id": "calm",
+    "name": "Spokojna gra",
+    "description": "Chcę przede wszystkim cieszyć się światem, odgrywać swoją postać, nawiązywać relacje i uczestniczyć w wydarzeniach. Nie szukam problemów ani wielkich dramatów, choć nie unikam naturalnych konsekwencji swoich decyzji."
+  },
+  {
+    "id": "trouble",
+    "name": "Play for Trouble",
+    "description": "Sam szukam kłopotów. Lubię podejmować decyzje, które komplikują życie mojej postaci. Chętnie wchodzę w konflikty, popełniam błędy i tworzę innym okazje do reagowania. Nie muszę wygrywać – ciekawa porażka może dać mi więcej satysfakcji niż łatwy sukces."
+  },
+  {
+    "id": "high-stakes",
+    "name": "Chcę od razu grać o wysokie stawki",
+    "description": "Chcę od początku uczestniczyć w poważnych konfliktach i wydarzeniach, w których moje decyzje mają duże znaczenie. Interesują mnie trudne wybory, wielkie ambicje, dramatyczne zwroty akcji oraz możliwość poniesienia dotkliwych konsekwencji fabularnych."
+  }
+]

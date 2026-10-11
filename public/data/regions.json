@@ -1,0 +1,32 @@
+[
+  {
+    "id": "north",
+    "name": "Północny",
+    "tagline": "Twardzi i bezlitośni dla narzekania",
+    "description": "Na Północy nikt nie cacka się z marudami. Północzanie znani są z twardego podejścia – gdy ktoś narzeka przy nich na zimno, głód, parszywy los czy niewygodę, zamiast współczuć, przypominają, że zawsze mogło być gorzej i trzeba robić swoje."
+  },
+  {
+    "id": "east",
+    "name": "Wschodni",
+    "tagline": "Tarcza Kisleva",
+    "description": "Ludzie ze Wschodu widzą się jako pierwszą i główną linię obrony całego Kisleva, a mieszkańców spokojniejszych ziem mają za miękkich, niewdzięcznych i wygodnickich. Nie omieszkają wypunktować cudzych słabości oraz przypomnieć innym, kto tu naprawdę krwawi za cały kraj."
+  },
+  {
+    "id": "west",
+    "name": "Zachodni",
+    "tagline": "Otwarci, lecz niebudzący zaufania",
+    "description": "Zachód słynie z otwartości, uśmiechu i łatwości nawiązywania kontaktów, co wynika z ciągłego handlu ze światem zewnętrznym. Ta wylewna przyjacielskość sprawia jednak, że reszta Kisleva często postrzega ich jako nieszczerych, fałszywych lub podszytych interesownością."
+  },
+  {
+    "id": "south",
+    "name": "Południowy",
+    "tagline": "Cywilizowane serce Kisleva",
+    "description": "Dla Południowców ich strony to jedyne prawdziwie cywilizowane serce Kisleva. Znani są ze swoich komentarzy na temat lokalnych zwyczajów, prowincjonalnych rozwiązań czy braku ogłady, kiedy to z pobłażliwą wyższością wyjaśniają, jak taką sprawę załatwia się porządnie u nich."
+  },
+  {
+    "id": "abroad",
+    "name": "Zagraniczny",
+    "tagline": "Kislevici zza granicy",
+    "description": "Kislevici wychowani poza granicami kraju znani są z tego, że trudno im powstrzymać się od ciągłych porównań. Przy każdej okazji przypominają, jak tam, gdzie mieszkali, załatwia się sprawy inaczej – dając do zrozumienia, że obce wzorce bywają sprawniejsze lub wygodniejsze niż rodzima tradycja."
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "politics",
+    "name": "Polityka i wpływy",
+    "description": "Walka o władzę, stanowiska, ziemię i przywileje. Negocjacje, zawieranie sojuszy, zdobywanie poparcia, rozstrzyganie sporów oraz wpływanie na decyzje lokalnych władz.",
+    "order": 1
+  },
+  {
+    "id": "mysticism",
+    "name": "Mistycyzm",
+    "description": "Niepokojące zjawiska, niebezpieczne sekrety, duchy, klątwy i spotkania z siłami, których człowiek nie rozumie.",
+    "order": 2
+  },
+  {
+    "id": "religion",
+    "name": "Religia, kult i obrzędowość",
+    "description": "Wiara w bogów Kisleva i jej miejsce w codziennym życiu. Uczestnictwo w świętach, ceremoniach i ofiarach, pielęgnowanie tradycji, działalność duchowieństwa oraz spory o wierzenia, nakazy religijne i właściwy sposób oddawania czci bogom.",
+    "order": 3
+  },
+  {
+    "id": "daily-life",
+    "name": "Obyczajowość, świętowanie i lokalne życie",
+    "description": "Codzienne życie kislevskiej społeczności, biesiady, jarmarki, handel, rzemiosło, lokalne tradycje i wspólne świętowanie. Relacje sąsiedzkie, przyjaźnie, plotki, drobne konflikty, rywalizacje oraz sprawy zwykłych mieszkańców.",
+    "order": 4
+  },
+  {
+    "id": "combat",
+    "name": "Turniej, arena i spory honorowe",
+    "description": "Turnieje, pojedynki, zawody siłowe i pokazy sprawności. Rywalizacja o sławę, nagrody i honor, publiczne wyzwania, karczemne bójki oraz rozstrzyganie osobistych sporów poprzez walkę.",
+    "order": 5
+  },
+  {
+    "id": "intrigue",
+    "name": "Intrygi i tajemnice",
+    "description": "Poszukiwanie wskazówek, rozwiązywanie zagadek, prowadzenie śledztw i odkrywanie sekretów. Wyjaśnianie dawnych wydarzeń, poznawanie ukrytych powiązań i docieranie do prawdy.",
+    "order": 6
+  }
+]

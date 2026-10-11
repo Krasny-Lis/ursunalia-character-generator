@@ -1,0 +1,27 @@
+[
+  {
+    "id": "zysk-pieniadz-i-interes",
+    "name": "Zysk, pieniądz i interes",
+    "order": 1
+  },
+  {
+    "id": "relacje-ludzie-i-konflikt",
+    "name": "Relacje, ludzie i konflikt",
+    "order": 2
+  },
+  {
+    "id": "prawda-zaufanie-i-wladza",
+    "name": "Prawda, zaufanie i władza",
+    "order": 3
+  },
+  {
+    "id": "wiara-los-i-ryzyko",
+    "name": "Wiara, los i ryzyko",
+    "order": 4
+  },
+  {
+    "id": "dzialanie-i-podejscie-do-zadan",
+    "name": "Działanie i podejście do zadań",
+    "order": 5
+  }
+]

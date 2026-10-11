@@ -1,0 +1,12 @@
+[
+  {
+    "id": "resident",
+    "name": "Mieszkaniec",
+    "description": "Żyjesz tutaj na co dzień; możesz mieć dom, gospodarstwo albo stałą służbę. Znasz lokalne zwyczaje, układy i sąsiadów."
+  },
+  {
+    "id": "visitor",
+    "name": "Przybyły",
+    "description": "Znalazłeś się tutaj niedawno; możesz podróżować, przybyć na święto, prowadzić interesy, szukać schronienia albo planować osiedlenie."
+  }
+]

@@ -1,0 +1,81 @@
+[
+  {
+    "id": "officials",
+    "name": "Urzędnicy",
+    "description": "Przykładowe zajęcia: skryba, poborca podatkowy, zarządca, prawnik.",
+    "examples": [
+      "skryba",
+      "poborca podatkowy",
+      "zarządca",
+      "prawnik"
+    ]
+  },
+  {
+    "id": "clergy",
+    "name": "Duchowni",
+    "description": "Przykładowe zajęcia: kapłan, akolita, guślarz, mnich.",
+    "examples": [
+      "kapłan",
+      "akolita",
+      "guślarz",
+      "mnich"
+    ]
+  },
+  {
+    "id": "military-nobility",
+    "name": "Wojsko zawodowe i szlachta",
+    "description": "Przykładowe zajęcia: drużin, oficer, żołnierz zaciężny, strażnik.",
+    "examples": [
+      "drużin",
+      "oficer",
+      "żołnierz zaciężny",
+      "strażnik"
+    ]
+  },
+  {
+    "id": "medics-scholars",
+    "name": "Medycy i uczeni",
+    "description": "Przykładowe zajęcia: cyrulik, aptekarz, alchemik, badacz.",
+    "examples": [
+      "cyrulik",
+      "aptekarz",
+      "alchemik",
+      "badacz"
+    ]
+  },
+  {
+    "id": "crafts-merchants-artists",
+    "name": "Rzemieślnicy, kupcy i artyści",
+    "description": "Przykładowe zajęcia: kowal, karczmarz, kupiec, bard, kuglarz.",
+    "examples": [
+      "kowal",
+      "karczmarz",
+      "kupiec",
+      "bard",
+      "kuglarz"
+    ]
+  },
+  {
+    "id": "peasants-workers",
+    "name": "Chłopi i pracownicy fizyczni",
+    "description": "Przykładowe zajęcia: rolnik, pasterz, drwal, służący, górnik.",
+    "examples": [
+      "rolnik",
+      "pasterz",
+      "drwal",
+      "służący",
+      "górnik"
+    ]
+  },
+  {
+    "id": "wanderers-nomads",
+    "name": "Włóczędzy i koczownicy",
+    "description": "Przykładowe zajęcia: żebrak, banita, łowca, koczownik dolgański.",
+    "examples": [
+      "żebrak",
+      "banita",
+      "łowca",
+      "koczownik dolgański"
+    ]
+  }
+]

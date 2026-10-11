@@ -1,0 +1,97 @@
+[
+  {
+    "id": "dlug",
+    "name": "Dług",
+    "description": "Jesteś komuś coś winien: pieniądze, przysługę, uratowane życie lub inną należność. Ktoś ma wobec Ciebie realne roszczenie i prędzej czy później upomni się o zapłatę. Nie zawsze możesz spłacić ten dług pieniędzmi."
+  },
+  {
+    "id": "przysiega",
+    "name": "Przysięga",
+    "description": "Złożyłeś uroczystą obietnicę człowiekowi, rodowi, sprawie lub bogom. Choć okoliczności mogły się zmienić, dane słowo wciąż Cię wiąże. Dotrzymanie przysięgi może wymagać poświęceń, a jej złamanie pociągnąć za sobą poważne konsekwencje."
+  },
+  {
+    "id": "dawna-zdrada",
+    "name": "Dawna zdrada",
+    "description": "Kiedyś zdradziłeś czyjeś zaufanie albo sam zostałeś zdradzony. Być może złamano przysięgę, sprzedano sekret, porzucono towarzyszy lub wydano kogoś wrogom. Choć od tamtych wydarzeń minęło wiele czasu, dawne krzywdy nie zostały zapomniane. Ktoś nadal szuka zemsty, zadośćuczynienia lub okazji do wyrównania rachunków."
+  },
+  {
+    "id": "nierozwiazany-spor",
+    "name": "Nierozwiązany spór",
+    "description": "Od dawna pozostajesz z kimś w konflikcie, którego nie udało się zakończyć. Może chodzić o majątek, honor, władzę, dawną krzywdę albo osobistą nienawiść. Żadna ze stron nie zamierza łatwo ustąpić, a ponowne spotkanie może doprowadzić do pojednania lub zaostrzenia konfliktu."
+  },
+  {
+    "id": "wspolna-wina",
+    "name": "Wspólna wina",
+    "description": "W przeszłości uczestniczyłeś z kimś w wydarzeniu, za które oboje ponosicie odpowiedzialność. Może to być przestępstwo, zdrada, tragiczny błąd albo decyzja, która doprowadziła do czyjegoś nieszczęścia. Łączą Was konsekwencje tego czynu, nawet jeśli dziś stoicie po przeciwnych stronach."
+  },
+  {
+    "id": "mroczna-tajemnica",
+    "name": "Mroczna tajemnica",
+    "description": "Ukrywasz fakt ze swojej przeszłości, którego ujawnienie mogłoby zniszczyć Twoją reputację, zagrozić bezpieczeństwu albo przekreślić Twoje plany. Być może ktoś zna prawdę, ale równie dobrze możesz być jedyną osobą, która wciąż pamięta, co naprawdę się wydarzyło."
+  },
+  {
+    "id": "pech-w-milosci",
+    "name": "Pech w miłości",
+    "description": "Twoje życie uczuciowe nie potoczyło się tak, jak tego pragnąłeś. Być może na przeszkodzie stanęła rodzina, obowiązki, konwenanse, różnice społeczne lub nieodwzajemnione uczucie. Może zabrakło Ci odwagi, rozdzielił Was los albo sam zaprzepaściłeś swoją szansę. Choć od tamtych wydarzeń mogło minąć wiele czasu, sprawa wciąż się za Tobą ciągnie. Niespełnione uczucie, żal, tęsknota lub dawne zobowiązania nadal wpływają na Twoje decyzje."
+  },
+  {
+    "id": "rodzinne-brzemie",
+    "name": "Rodzinne brzemię",
+    "description": "Twoja rodzina jest źródłem problemów lub obowiązków, od których trudno Ci uciec. Być może musisz zadbać o jej przyszłość, rozwiązać dawną waśń, zaopiekować się bliskimi albo spełnić oczekiwania krewnych. Niezależnie od tego, czy kieruje Tobą lojalność, poczucie winy czy presja rodziny, jej sprawy ciągle wpływają na Twoje życie i stoją na drodze własnym planom."
+  },
+  {
+    "id": "spor-o-dziedzictwo",
+    "name": "Spór o dziedzictwo",
+    "description": "Majątek, ziemia, rodzinny interes lub należna Ci pozycja stały się przedmiotem sporu. Być może ktoś podważa Twoje prawo do spadku, pojawił się nieznany krewny albo to Ty kwestionujesz cudze roszczenia. Spór może dotyczyć zarówno wielkich posiadłości, jak i skromnego gospodarstwa. Niezależnie od jego wartości nie zamierzasz łatwo ustąpić, a rozstrzygnięcie może odmienić Twoją przyszłość."
+  },
+  {
+    "id": "odziedziczony-konflikt",
+    "name": "Odziedziczony konflikt",
+    "description": "Zostałeś uwikłany w spór, który rozpoczął się przed Twoimi narodzinami. Może to być wieloletnia waśń między rodzinami, dawny zatarg między rodami albo nieuregulowana krzywda. Inni oczekują, że zajmiesz w nim stanowisko, nawet jeśli sam nie masz ochoty walczyć."
+  },
+  {
+    "id": "nieslawa",
+    "name": "Niesława",
+    "description": "Twoje imię lub nazwisko zostało splamione dawnym czynem, skandalem albo krążącymi o Tobie opowieściami. Być może rzeczywiście dopuściłeś się czegoś haniebnego, a może ludzie wyolbrzymiają Twoje przewinienia. Niezależnie od prawdy, zła reputacja ciągnie się za Tobą. Jedni okazują Ci pogardę, inni nie chcą mieć z Tobą nic wspólnego, a Ty musisz zdecydować, czy spróbujesz odzyskać dobre imię, czy wykorzystasz swoją niesławę."
+  },
+  {
+    "id": "niesluszne-oskarzenie",
+    "name": "Niesłuszne oskarżenie",
+    "description": "Zarzucono Ci czyn, którego nie popełniłeś. Być może ktoś celowo Cię wrobił, świadkowie się pomylili albo wszystkie dowody zdają się wskazywać na Ciebie. Choć znasz prawdę, inni niekoniecznie wierzą w Twoją niewinność. Możesz szukać prawdziwego sprawcy, próbować oczyścić swoje imię albo ukrywać się przed konsekwencjami oskarżenia. Sprawa wciąż pozostaje nierozwiązana i może powrócić w najmniej odpowiednim momencie."
+  },
+  {
+    "id": "utracona-swietnosc",
+    "name": "Utracona świetność",
+    "description": "Kiedyś byłeś kimś znacznie ważniejszym niż dziś. Być może posiadałeś wielki majątek, wpływowe stanowisko, szacunek otoczenia albo sławę zdobytą dzięki niezwykłym czynom. Dziś dawna pozycja jest już tylko wspomnieniem, ale Ty nie potrafisz o niej zapomnieć. Możesz rozpamiętywać minione sukcesy, domagać się szacunku należnego Twojej dawnej pozycji albo za wszelką cenę próbować odzyskać to, co utraciłeś."
+  },
+  {
+    "id": "spalone-mosty",
+    "name": "Spalone mosty",
+    "description": "Pozostawiłeś za sobą dawne życie, choć niekoniecznie z własnej woli. Być może uciekłeś przed niebezpieczeństwem, zostałeś wygnany ze swojej społeczności albo porzuciłeś służbę, łamiąc rozkazy. Teraz próbujesz zacząć od nowa, ale przeszłość nie daje o sobie zapomnieć. Ktoś może Cię poszukiwać, czekać na rozliczenie dawnych czynów lub domagać się Twojego powrotu. A Ty musisz zdecydować, jak wiele jesteś gotów zrobić, żeby nie wracać do tego, co zostawiłeś za sobą."
+  },
+  {
+    "id": "ocalony",
+    "name": "Ocalony",
+    "description": "Przeżyłeś wydarzenie, z którego inni nie wyszli cało. Być może była to bitwa, najazd, zaraza, pożar lub inna katastrofa. Nie wiesz, dlaczego właśnie Tobie udało się przetrwać, a wspomnienia tamtych chwil wciąż Cię prześladują. Możesz odczuwać winę, strach, wdzięczność albo przekonanie, że los oszczędził Cię w konkretnym celu. Jedno jest pewne – tamte wydarzenia na zawsze odmieniły Twoje życie."
+  },
+  {
+    "id": "utrata-bliskiej-osoby",
+    "name": "Utrata bliskiej osoby",
+    "description": "Śmierć kogoś ważnego na zawsze odmieniła Twoje życie. Być może straciłeś członka rodziny, ukochaną osobę, przyjaciela lub towarzysza broni. Pozostały niewypowiedziane słowa, niespełnione obietnice, niedokończone sprawy albo obowiązki, które teraz spoczywają na Tobie. Możesz szukać odpowiedzi, pragnąć zemsty, próbować uczcić pamięć zmarłego lub po prostu nie potrafić pogodzić się ze stratą. Choć życie toczy się dalej, przeszłość wciąż wpływa na Twoje decyzje."
+  },
+  {
+    "id": "stara-rana",
+    "name": "Stara rana",
+    "description": "Dawne wydarzenie pozostawiło w Tobie ślad, który do dziś daje o sobie znać. Może to być uraz, przewlekły ból, niesprawna kończyna albo głęboko zakorzeniony lęk, którego nie potrafisz się pozbyć. Przez tę ranę unikasz pewnych sytuacji, masz trudności z wykonywaniem niektórych czynności lub reagujesz inaczej niż pozostali. Możesz próbować przezwyciężyć swoje ograniczenia, ukrywać je przed światem albo nauczyć się z nimi żyć. Przeszłość wciąż potrafi przypomnieć o sobie w najmniej odpowiednim momencie."
+  },
+  {
+    "id": "naznaczony",
+    "name": "Naznaczony",
+    "description": "Doświadczyłeś czegoś, czego nie potrafisz racjonalnie wyjaśnić. Być może ujrzałeś niepokojący omen, usłyszałeś głos ducha, otrzymałeś przepowiednię albo uwierzyłeś, że ciąży nad Tobą klątwa. Od tamtej pory doszukujesz się znaczenia w kolejnych wydarzeniach. Możesz próbować zrozumieć otrzymany znak, wypełnić domniemaną wolę bogów lub uwolnić się od prześladującego Cię nieszczęścia. Niezależnie od tego, czy siły nadprzyrodzone rzeczywiście Cię dotknęły, to doświadczenie nadal kieruje Twoimi decyzjami."
+  },
+  {
+    "id": "tajemniczy-przedmiot",
+    "name": "Tajemniczy przedmiot",
+    "description": "W Twoim posiadaniu znajduje się przedmiot, którego prawdziwego znaczenia lub pochodzenia nie znasz. Być może jest to rodzinna pamiątka, stara relikwia, zapieczętowany dokument, niezwykły amulet albo coś, co powierzono Ci pod groźbą poważnych konsekwencji. Nie wiesz, dlaczego jest ważny, lecz podejrzewasz, że kryje jakąś tajemnicę. Ktoś może go poszukiwać, rościć sobie do niego prawo lub wiedzieć o nim znacznie więcej niż Ty."
+  }
+]
