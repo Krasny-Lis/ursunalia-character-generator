@@ -1,35 +1,34 @@
 import type { Routes } from '@angular/router';
-import { moduleEnabledGuard } from './core/guards/module-enabled.guard';
-
 export const routes: Routes = [
+  { path: '', loadComponent: () => import('./platform/event.page').then((m) => m.EventPage) },
   {
-    path: '', pathMatch: 'full',
-    canMatch: [moduleEnabledGuard('event')],
-    loadComponent: () => import('./modules/event/pages/home-page/home-page').then(m => m.HomePage),
+    path: 'wydarzenie/:id',
+    loadComponent: () => import('./platform/event.page').then((m) => m.EventPage),
   },
   {
     path: 'zgloszenie-postaci',
-    canMatch: [moduleEnabledGuard('character')],
-    loadComponent: () => import('./modules/character/pages/character-generator-page/character-generator-page').then(m => m.CharacterGeneratorPage),
+    loadComponent: () => import('./platform/form.page').then((m) => m.FormPage),
+  },
+  {
+    path: 'karta-postaci',
+    loadComponent: () => import('./platform/summary.page').then((m) => m.SummaryPage),
+  },
+  {
+    path: 'moje-postacie',
+    loadComponent: () => import('./platform/applications.page').then((m) => m.ApplicationsPage),
   },
   {
     path: 'organizator/ankiety/edytor',
-    canMatch: [moduleEnabledGuard('surveys')],
-    loadComponent: () => import('./modules/surveys/pages/survey-builder-page/survey-builder-page').then(m => m.SurveyBuilderPage),
+    loadComponent: () => import('./platform/builder.page').then((m) => m.BuilderPage),
   },
-  {
-    path: 'organizator/ankiety/podglad',
-    canMatch: [moduleEnabledGuard('surveys')],
-    loadComponent: () => import('./modules/surveys/pages/survey-preview-page/survey-preview-page').then(m => m.SurveyPreviewPage),
-  },
+  { path: 'organizator/ankiety/podglad', redirectTo: 'zgloszenie-postaci', pathMatch: 'full' },
   {
     path: 'organizator/ankiety',
-    canMatch: [moduleEnabledGuard('surveys')],
-    loadComponent: () => import('./modules/surveys/pages/surveys-dev-page/surveys-dev-page').then(m => m.SurveysDevPage),
+    loadComponent: () => import('./platform/organizer.page').then((m) => m.OrganizerPage),
   },
   {
-    path: 'modul-niedostepny',
-    loadComponent: () => import('./modules/event/pages/module-unavailable/module-unavailable').then(m => m.ModuleUnavailablePage),
+    path: 'konto',
+    loadComponent: () => import('./platform/account.page').then((m) => m.AccountPage),
   },
   { path: '**', redirectTo: '' },
 ];

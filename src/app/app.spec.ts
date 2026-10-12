@@ -1,29 +1,26 @@
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, withHashLocation } from '@angular/router';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { provideRouter } from '@angular/router';
+import { describe, it, expect, vi } from 'vitest';
 import { App } from './app';
+import { PlatformStore } from './platform/platform.store';
 import { routes } from './app.routes';
-
-describe('Platform App Shell v24', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports:[App],
-      providers:[provideHttpClient(), provideHttpClientTesting(), provideRouter(routes, withHashLocation())],
-    }).compileComponents();
-  });
-
-  it('pokazuje markę i router-outlet niezależnie od modułów', () => {
-    const fixture=TestBed.createComponent(App);
-    fixture.detectChanges();
-    const root=fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('router-outlet')).not.toBeNull();
+describe('Royal Manuscript application shell', () => {
+  it('keeps the brand, mobile navigation and loading state accessible before bootstrap', async () => {
+    TestBed.configureTestingModule({ imports: [App], providers: [provideRouter(routes)] });
+    const store = TestBed.inject(PlatformStore);
+    vi.spyOn(store, 'initialize').mockResolvedValue();
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.platform-brand')?.textContent).toContain('URSUNALIA');
-  });
-
-  it('posiada trasy wydarzenia i działającego generatora', () => {
-    expect(routes.some(route => route.path === '')).toBe(true);
-    expect(routes.some(route => route.path === 'zgloszenie-postaci')).toBe(true);
+    const toggle = root.querySelector('.menu-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    await fixture.whenStable();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(root.querySelector('[role="status"]')?.textContent).toContain('Otwieramy księgę');
+    store.ready.set(true);
+    await fixture.whenStable();
+    expect(root.querySelector('router-outlet')).not.toBeNull();
   });
 });

@@ -1,0 +1,158 @@
+<a class="back-link" routerLink="/"><u-icon name="back" />Ankiety organizatora</a>
+@if (store.active(); as app) {
+  <section class="page-heading">
+    <div>
+      <div class="eyebrow">ANKIETA ZGŁOSZENIOWA · WERSJA {{ app.form.revision }}</div>
+      <h1>{{ app.form.title }}</h1>
+      <p>{{ app.form.description }}</p>
+    </div>
+    <div class="actions">
+      <button
+        class="button outline"
+        (click)="store.save()"
+        [disabled]="store.busy() || app.status === 'submitted' || app.status === 'accepted'"
+      >
+        <u-icon name="edit" />Zapisz szkic</button
+      ><a class="button dark" routerLink="/karta-postaci"><u-icon name="eye" />Podgląd</a
+      ><button class="button primary" (click)="review()">
+        <u-icon name="file" />Sprawdź ankietę
+      </button>
+    </div>
+  </section>
+  @if (app.status === 'submitted' || app.status === 'accepted') {
+    <div class="info-strip">
+      <u-icon name="check" />{{
+        app.status === 'accepted'
+          ? 'Twoja postać została zaakceptowana.'
+          : 'Zgłoszenie wysłane. Oczekuje na sprawdzenie organizatora.'
+      }}
+    </div>
+  }
+  @if (app.feedback) {
+    <div class="info-strip">
+      <u-icon name="info" /><span>Uwagi organizatora: {{ app.feedback }}</span>
+    </div>
+  }
+  <div class="mobile-steps" aria-label="Sekcje ankiety">
+    @for (section of app.form.sections; track section.id) {
+      <button
+        [class.done]="ready(section.id)"
+        [class.current]="current() === section.id"
+        (click)="go(section.id)"
+      >
+        <span>{{ $index + 1 }}</span
+        ><small>{{ section.title }}</small>
+      </button>
+    }
+  </div>
+  <div class="content-layout">
+    <div class="form-sections">
+      @if (attempted() && completed() < app.form.sections.length) {
+        <div class="error-banner" role="alert">
+          Ankieta wymaga uzupełnienia. Błędy zaznaczono pod polami.
+        </div>
+      }
+      @for (section of app.form.sections; track section.id) {
+        <section class="paper form-section" [id]="'section-' + section.id">
+          <button
+            class="section-heading"
+            type="button"
+            [attr.aria-expanded]="!collapsed().has(section.id)"
+            [attr.aria-controls]="'body-' + section.id"
+            (click)="toggle(section.id)"
+          >
+            <span class="section-number">{{ $index + 1 }}</span
+            ><span
+              ><h2>{{ section.title }}</h2>
+              <p>{{ section.description }}</p></span
+            ><u-icon [name]="collapsed().has(section.id) ? 'chevron' : 'up'" />
+          </button>
+          @if (!collapsed().has(section.id)) {
+            <div class="ornament" aria-hidden="true">✧</div>
+            <div class="field-grid" [id]="'body-' + section.id">
+              @for (field of section.fields; track field.id) {
+                <u-field
+                  [class.full]="
+                    ['textarea', 'multi', 'single', 'file', 'info'].includes(field.type)
+                  "
+                  [field]="field"
+                  [value]="app.answers[field.id]"
+                  [error]="attempted() ? issues()[field.id] || '' : ''"
+                  [disabled]="store.busy() || !['draft', 'changes'].includes(app.status)"
+                  (changed)="store.update(field.id, $event)"
+                />
+              }
+            </div>
+          }
+        </section>
+      }
+      <div class="form-end">
+        <button class="button outline" (click)="export()">
+          <u-icon name="download" />Pobierz szkic JSON</button
+        ><button class="button primary" (click)="review()">
+          Przejdź do podsumowania<u-icon name="next" />
+        </button>
+      </div>
+    </div>
+    <aside class="sidebar">
+      <div class="paper progress-card">
+        <span class="eyebrow">POSTĘP ANKIETY</span>
+        <div class="progress-row">
+          <progress
+            [value]="completed()"
+            [max]="app.form.sections.length"
+            aria-label="Uzupełnienie ankiety"
+          ></progress
+          ><span>{{ completed() }} z {{ app.form.sections.length }} sekcji</span>
+        </div>
+        <div class="ornament">✧</div>
+        <ol class="step-list">
+          @for (section of app.form.sections; track section.id) {
+            <li>
+              <button (click)="go(section.id)" [class.complete]="ready(section.id)">
+                <span class="step-index">{{ $index + 1 }}</span
+                ><span
+                  ><strong>{{ section.title }}</strong
+                  ><small>{{ section.description }}</small></span
+                ><u-icon [name]="ready(section.id) ? 'check' : 'radio'" />
+              </button>
+            </li>
+          }
+        </ol>
+        <div class="tip">
+          <u-icon name="info" />
+          <div>
+            <strong>Wskazówka</strong>
+            <p>Możesz w każdej chwili zapisać szkic ankiety i wrócić do niej później.</p>
+          </div>
+        </div>
+        <div class="sidebar-engraving" aria-hidden="true">
+          ✦<span>KAŻDA HISTORIA<br />MA SWÓJ POCZĄTEK</span>
+        </div>
+        <p class="save-state">
+          {{
+            store.storageError()
+              ? 'Zapis lokalny niedostępny – pobierz JSON.'
+              : store.dirty()
+                ? 'Masz niezapisane zmiany.'
+                : store.mode() === 'demo'
+                  ? 'Szkic zapisany w tej przeglądarce.'
+                  : 'Zmiany zapisane.'
+          }}
+        </p>
+      </div>
+    </aside>
+  </div>
+  <div class="mobile-actions">
+    <button class="button dark" (click)="store.save()" [disabled]="store.busy()">
+      <u-icon name="save" />Zapisz szkic</button
+    ><button class="button primary" (click)="next()">Dalej<u-icon name="next" /></button>
+  </div>
+} @else {
+  <section class="paper empty-state">
+    <u-icon name="feather" />
+    <h1>Zacznij swoją historię</h1>
+    <p>Wybierz ankietę na stronie wydarzenia, aby utworzyć postać.</p>
+    <a class="button primary" routerLink="/">Przejdź do wydarzenia<u-icon name="next" /></a>
+  </section>
+}

@@ -1,0 +1,350 @@
+<a class="back-link" routerLink="/moje-postacie"><u-icon name="back" />Moje postacie</a>
+@if (store.active(); as app) {
+  <section class="page-heading">
+    <div>
+      <div class="eyebrow">KROK KOŃCOWY · WERSJA {{ app.form.revision }}</div>
+      <h1>
+        {{ app.form.id === 'character-2027' ? 'Podsumowanie postaci' : 'Podsumowanie ankiety' }}
+      </h1>
+      <p>Sprawdź wszystkie informacje przed wysłaniem zgłoszenia.</p>
+    </div>
+    <div class="actions">
+      <a class="button outline" routerLink="/zgloszenie-postaci"
+        ><u-icon name="edit" />Edytuj zgłoszenie</a
+      >
+      @if (['draft', 'changes'].includes(app.status)) {
+        <button
+          class="button primary"
+          [disabled]="!complete() || store.busy()"
+          (click)="confirmOpen.set(true)"
+        >
+          <u-icon name="send" />{{
+            store.mode() === 'demo' ? 'Sprawdź zgłoszenie' : 'Wyślij zgłoszenie'
+          }}
+        </button>
+      }
+    </div>
+  </section>
+  <div class="content-layout summary-layout">
+    <div class="summary-content">
+      <section class="paper character-hero">
+        @if (portrait()) {
+          <div class="portrait-frame">
+            <img [src]="portrait()" alt="Portret zgłoszonej postaci" />
+          </div>
+        } @else {
+          <div class="portrait-placeholder"><u-icon name="user" /></div>
+        }
+        <div class="character-hero-copy">
+          <span class="eyebrow">{{
+            app.id === 'demo-alena' ? 'POSTAĆ PRZYKŁADOWA' : 'POSTAĆ'
+          }}</span>
+          <h2>{{ text('name') || app.form.title }} {{ text('surname') }}</h2>
+          <div class="character-badges">
+            @if (text('culture')) {
+              <span><u-icon name="people" />{{ text('culture') }}</span>
+            }
+            @if (text('role')) {
+              <span><u-icon name="shield" />{{ text('role') }}</span>
+            }
+            @if (text('occupation')) {
+              <span><u-icon name="sword" />{{ text('occupation') }}</span>
+            }
+          </div>
+          @if (text('quote')) {
+            <blockquote>„{{ text('quote') }}”</blockquote>
+          }
+          <div class="ornament">✧</div>
+        </div>
+        <span class="character-sigil" aria-hidden="true">✦</span>
+      </section>
+      @if (app.form.id === 'character-2027') {
+        <div class="mobile-character-cards">
+          <details class="paper mobile-summary-row">
+            <summary>
+              <span class="wax-icon"><u-icon name="sword" /></span
+              ><span
+                ><span class="eyebrow">ROLA POSTACI</span>
+                <h2>{{ text('occupation') || text('role') || 'Nie wybrano roli' }}</h2>
+                <p>{{ text('role') }}</p></span
+              ><u-icon name="next" />
+            </summary>
+            <p>{{ description('role') }}</p>
+            <a
+              class="edit-link"
+              routerLink="/zgloszenie-postaci"
+              [queryParams]="{ section: 'identity' }"
+              ><u-icon name="edit" />Edytuj tożsamość</a
+            >
+          </details>
+          <details class="paper mobile-summary-row">
+            <summary>
+              <span class="wax-icon"><u-icon name="people" /></span
+              ><span
+                ><span class="eyebrow">KULTURA</span>
+                <h2>{{ text('culture') || 'Nie wybrano kultury' }}</h2>
+                <p>Człowiek · Kislev</p></span
+              ><u-icon name="next" />
+            </summary>
+            <p>{{ description('culture') }}</p>
+            <a
+              class="edit-link"
+              routerLink="/zgloszenie-postaci"
+              [queryParams]="{ section: 'origin' }"
+              ><u-icon name="edit" />Edytuj pochodzenie</a
+            >
+          </details>
+          <details class="paper mobile-summary-row">
+            <summary>
+              <span class="wax-icon"><u-icon name="pin" /></span
+              ><span
+                ><span class="eyebrow">REGION POCHODZENIA</span>
+                <h2>{{ text('region') || 'Nie wybrano regionu' }}</h2>
+                <p>{{ text('originDetail') }}</p></span
+              ><u-icon name="next" />
+            </summary>
+            <p>{{ description('region') }}</p>
+            <p>{{ text('background') }}</p>
+            <p>{{ text('patron') }}</p>
+            <a
+              class="edit-link"
+              routerLink="/zgloszenie-postaci"
+              [queryParams]="{ section: 'origin' }"
+              ><u-icon name="edit" />Edytuj pochodzenie</a
+            >
+          </details>
+          <details class="paper mobile-summary-row">
+            <summary>
+              <span class="wax-icon"><u-icon name="feather" /></span
+              ><span
+                ><span class="eyebrow">WYBRANE CECHY</span>
+                <h2>{{ text('traits') || 'Nie wybrano cech' }}</h2>
+                <p>Osobowość i motywacje postaci.</p></span
+              ><u-icon name="next" />
+            </summary>
+            <p>Haki fabularne: {{ text('hooks') || 'Brak' }}</p>
+            <a
+              class="edit-link"
+              routerLink="/zgloszenie-postaci"
+              [queryParams]="{ section: 'traits' }"
+              ><u-icon name="edit" />Edytuj cechy</a
+            >
+          </details>
+          <details class="paper mobile-summary-row">
+            <summary>
+              <span class="wax-icon"><u-icon name="book" /></span
+              ><span
+                ><span class="eyebrow">HISTORIA POSTACI</span>
+                <h2>{{ text('name') || 'Twoja historia' }}</h2>
+                <p>
+                  {{ text('history').slice(0, 150) }}{{ text('history').length > 150 ? '…' : '' }}
+                </p></span
+              ><u-icon name="next" />
+            </summary>
+            <p class="story-text">{{ text('history') }}</p>
+            <strong>Cel postaci</strong>
+            <p>{{ text('goal') }}</p>
+            <strong>Powód przybycia</strong>
+            <p>{{ text('presenceReason') }}</p>
+            <a
+              class="edit-link"
+              routerLink="/zgloszenie-postaci"
+              [queryParams]="{ section: 'history' }"
+              ><u-icon name="edit" />Edytuj historię</a
+            >
+          </details>
+          <details class="paper mobile-summary-row">
+            <summary>
+              <span class="wax-icon"><u-icon name="people" /></span
+              ><span
+                ><span class="eyebrow">RELACJE I PREFERENCJE</span>
+                <h2>Ludzie i opowieści</h2>
+                <p>{{ text('gameStyle') }}</p></span
+              ><u-icon name="next" />
+            </summary>
+            <p>{{ text('relations') }}</p>
+            <p>{{ text('openness') }}</p>
+            <div class="private-field">
+              <strong>Granice i potrzeby · poufne</strong>
+              <p>{{ text('boundaries') || 'Nie podano' }}</p>
+            </div>
+            <a
+              class="edit-link"
+              routerLink="/zgloszenie-postaci"
+              [queryParams]="{ section: 'preferences' }"
+              ><u-icon name="edit" />Edytuj preferencje</a
+            >
+          </details>
+        </div>
+      }
+      <div class="summary-grid" [class.generic-summary]="app.form.id !== 'character-2027'">
+        @for (section of sections(); track section.id) {
+          @if (section.id !== 'consents') {
+            <section class="paper summary-card" [class.summary-history]="section.id === 'history'">
+              <div class="summary-heading">
+                <u-icon [name]="icon(section.id)" />
+                <h2>{{ section.title }}</h2>
+                <a
+                  routerLink="/zgloszenie-postaci"
+                  [queryParams]="{ section: section.id }"
+                  class="edit-link"
+                  ><u-icon name="edit" />Edytuj</a
+                >
+              </div>
+              <div class="ornament">✧</div>
+              <dl>
+                @for (field of fields(section); track field.id) {
+                  <div
+                    [class.long-answer]="field.type === 'textarea'"
+                    [class.private-field]="['boundaries', 'exclusions'].includes(field.id)"
+                  >
+                    <dt>
+                      {{ field.label }}
+                      @if (['boundaries', 'exclusions'].includes(field.id)) {
+                        <small> · poufne</small>
+                      }
+                    </dt>
+                    <dd>
+                      @if (field.type === 'multi') {
+                        <div class="tags">
+                          @for (label of values(field); track label) {
+                            <span>{{ label }}</span>
+                          } @empty {
+                            <span class="muted">Nie wybrano</span>
+                          }
+                        </div>
+                      } @else if (field.type === 'rating') {
+                        <span class="summary-rating"
+                          >{{ text(field.id) || '—' }} / {{ field.max }}</span
+                        >
+                      } @else {
+                        <span [class.muted]="!text(field.id)">{{
+                          text(field.id) || 'Nie uzupełniono'
+                        }}</span>
+                      }
+                      @if (issues()[field.id]) {
+                        <small class="field-error">{{ issues()[field.id] }}</small>
+                      }
+                    </dd>
+                  </div>
+                }
+              </dl>
+            </section>
+          }
+        }
+      </div>
+      <div class="form-end">
+        <button class="button outline" (click)="export()">
+          <u-icon name="download" />Pobierz JSON</button
+        ><button class="button dark" (click)="print()"><u-icon name="file" />Drukuj kartę</button>
+      </div>
+    </div>
+    <aside class="sidebar">
+      <section class="paper completeness">
+        <span class="eyebrow"><u-icon name="shield" /> STATUS KOMPLETNOŚCI</span>
+        <div class="progress-row">
+          <progress
+            [class.success]="complete()"
+            [value]="completed()"
+            [max]="sections().length"
+            aria-label="Kompletność postaci"
+          ></progress
+          ><strong>{{ completed() }} / {{ sections().length }}</strong>
+        </div>
+        <strong [class.success-text]="complete()">{{
+          complete() ? 'Twoja karta postaci jest kompletna.' : 'Uzupełnij brakujące informacje.'
+        }}</strong>
+        <p>
+          {{
+            app.status === 'accepted'
+              ? 'Organizator zaakceptował Twoje zgłoszenie.'
+              : app.status === 'submitted'
+                ? 'Zgłoszenie oczekuje na sprawdzenie.'
+                : store.mode() === 'demo'
+                  ? 'To przykład – dane pozostają w przeglądarce.'
+                  : 'Po sprawdzeniu możesz wysłać zgłoszenie.'
+          }}
+        </p>
+      </section>
+      <section class="paper">
+        <span class="eyebrow">PODSUMOWANIE</span>
+        <div class="ornament">✧</div>
+        <ul class="summary-checks">
+          @for (section of sections(); track section.id) {
+            <li>
+              <span class="check-circle" [class.incomplete]="!ready(section)"
+                ><u-icon [name]="ready(section) ? 'check' : 'close'" /></span
+              ><a routerLink="/zgloszenie-postaci" [queryParams]="{ section: section.id }">{{
+                section.title
+              }}</a>
+            </li>
+          }
+        </ul>
+      </section>
+      @for (section of sections(); track section.id) {
+        @if (section.id === 'consents') {
+          <section class="paper">
+            <div class="summary-heading">
+              <u-icon name="file" />
+              <h2>Zgody i oświadczenia</h2>
+              <a
+                class="edit-link"
+                routerLink="/zgloszenie-postaci"
+                [queryParams]="{ section: section.id }"
+                ><u-icon name="edit" />Edytuj</a
+              >
+            </div>
+            <div class="ornament">✧</div>
+            <ul class="summary-checks">
+              @for (field of section.fields; track field.id) {
+                <li>
+                  <span class="check-circle" [class.incomplete]="!!issues()[field.id]"
+                    ><u-icon [name]="issues()[field.id] ? 'close' : 'check'" /></span
+                  ><span>{{ field.label }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </aside>
+  </div>
+  @if (confirmOpen()) {
+    <div class="modal-backdrop" (click)="confirmOpen.set(false)">
+      <section
+        class="paper modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="send-title"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+        (click)="$event.stopPropagation()"
+        (keydown.escape)="confirmOpen.set(false)"
+      >
+        <h2 id="send-title">
+          {{
+            store.mode() === 'demo' ? 'Sprawdzenie przykładowego zgłoszenia' : 'Wysłać zgłoszenie?'
+          }}
+        </h2>
+        <p>
+          {{
+            store.mode() === 'demo'
+              ? 'Wersja demonstracyjna sprawdzi kompletność odpowiedzi. Nie wyśle danych do organizatora.'
+              : 'Organizator otrzyma odpowiedzi i portret. Po wysłaniu edycja będzie dostępna, gdy organizator poprosi o poprawki.'
+          }}
+        </p>
+        <div class="actions">
+          <button class="button light" (click)="confirmOpen.set(false)">Wróć</button
+          ><button class="button primary" (click)="send()">
+            {{ store.mode() === 'demo' ? 'Sprawdź' : 'Wyślij zgłoszenie' }}<u-icon name="send" />
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+} @else {
+  <section class="paper empty-state">
+    <h1>Nie wybrano postaci</h1>
+    <a class="button primary" routerLink="/">Wybierz ankietę</a>
+  </section>
+}

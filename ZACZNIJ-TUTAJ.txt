@@ -1,0 +1,55 @@
+URSUNALIA v27 — KOMPLETNY PROJEKT
+
+Archiwum zawiera cały aktualny kod aplikacji Angular, API Node.js/SQLite,
+grafiki, katalogi świata, przykładowe ankiety, testy, konfigurację,
+dokumentację oraz gotową kompilację w katalogu dist/.
+
+SZYBKI START — PEŁNA APLIKACJA Z ZAPISEM NA SERWERZE
+1. Zainstaluj Node.js 24 lub nowszy.
+2. Rozpakuj ZIP i otwórz terminal w katalogu ursunalia-v27.
+3. Skopiuj .env.example do .env. Ustaw ADMIN_EMAIL i własne
+   ADMIN_PASSWORD (12–128 znaków).
+4. Wykonaj: npm run server
+5. Otwórz http://localhost:3000
+
+Gotowy build jest dołączony. Do powyższego uruchomienia nie trzeba
+instalować zależności frontendu. Serwer korzysta z modułów Node.js.
+
+PRACA NAD KODEM / DEMONSTRACJA
+W katalogu projektu wykonaj:
+  npm ci
+  npm start
+Otwórz http://localhost:4200. To demo lokalne w przeglądarce.
+Po zmianach kodu odbuduj wersję dla serwera: npm run build
+
+TESTY
+Po npm ci wykonaj: npm run verify
+Dodatkowo: node scripts/validate-catalog.mjs
+W trakcie prac przeszły kompilacja produkcyjna, 18 testów i walidacja
+katalogów. Nie wykonano ręcznej kontroli wyglądu w przeglądarce.
+
+STAN PRAC
+Przebudowano wydarzenie, ankiety uczestnika, kartę postaci, edytor ankiet,
+panel organizatora, konta oraz obsługę zgłoszeń. Szczegóły w README.md,
+docs/DESIGN-v27.md i docs/QA-v27.md.
+Wysłanie zmian do GitHub oraz utworzenie pull requestu nie zostały
+potwierdzone. Ta paczka zawiera cały przygotowany lokalnie projekt.
+
+W archiwum nie ma node_modules, pamięci podręcznej, historii .git,
+prywatnego .env ani bazy danych użytkowników. Zależności odtwarza npm ci,
+a baza powstaje przy uruchomieniu serwera.
+
+Commit lokalny: 0fa7ea5f96b803930ff544f99944ad67e9c4175b
+
+DODATEK v27.1 — POPRAWKI WIZUALNE I TESTY
+Poprawiono nagłówki kreatora, mobilną nawigację siedmiosekcyjną,
+obramowania pergaminu i kontrast tła. Ten sam CSS jest w źródłach
+oraz gotowej kompilacji dist/.
+Przeczytaj docs/QA-v27.1.md: 6/6 testów backendu, poprawne katalogi,
+21 testów szerokości w izolowanej przeglądarce. Build Angular/Vitest
+NIE zostały ponownie uruchomione: środowisko nie ma właściwej wersji
+Node i pobierania npm. Projekt wymagający npm ci należy przetestować
+w odpowiednim środowisku przed PR.
+
+Instrukcja przygotowania pełnej gałęzi GitHub: README.md;
+bezpieczny skrypt importu: scripts/reconcile-rebuild.mjs.

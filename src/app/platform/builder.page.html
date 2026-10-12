@@ -1,0 +1,499 @@
+<a class="back-link" routerLink="/organizator/ankiety"
+  ><u-icon name="back" />Ankiety organizatora</a
+>
+@if (!store.canOrganize()) {
+  <section class="paper empty-state">
+    <h1>Panel organizatora</h1>
+    <p>Zaloguj się na konto organizatora, aby tworzyć ankiety.</p>
+    <a class="button primary" routerLink="/konto">Zaloguj się</a>
+  </section>
+} @else {
+  <section class="page-heading builder-heading">
+    <div>
+      <div class="eyebrow">EDYTOR ANKIET · WERSJA {{ form().revision }}</div>
+      <h1>Kreator formularzy</h1>
+      <p>Wybierz kartę pytania, aby edytować ją bezpośrednio w formularzu.</p>
+    </div>
+    <div class="actions">
+      <button
+        class="button"
+        [class.outline]="mode() === 'edit'"
+        [class.dark]="mode() !== 'edit'"
+        (click)="mode.set('edit')"
+      >
+        <u-icon name="edit" />Edycja</button
+      ><button
+        class="button"
+        [class.outline]="mode() === 'preview'"
+        [class.dark]="mode() !== 'preview'"
+        (click)="mode.set('preview')"
+      >
+        <u-icon name="eye" />Podgląd</button
+      ><button class="button primary" (click)="export()">
+        <u-icon name="download" />Eksport JSON
+      </button>
+    </div>
+  </section>
+  <div class="info-strip">
+    <u-icon name="info" /><span>{{
+      mode() === 'edit'
+        ? 'Szkic roboczy – zapis tylko w tej przeglądarce. Opublikuj, aby udostępnić ankietę.'
+        : 'Podgląd uczestnika. Odpowiedzi testowe nie są zapisywane ani wysyłane.'
+    }}</span
+    ><span>{{ form().sections.length }} sekcji · {{ count() }} elementów</span>
+  </div>
+  @if (error()) {
+    <div class="error-banner" role="alert">{{ error() }}</div>
+  }
+  <div class="content-layout builder-layout">
+    <div>
+      <section class="paper form-title-card">
+        <span class="eyebrow">TYTUŁ FORMULARZA</span>
+        @if (mode() === 'edit') {
+          <input
+            class="title-input"
+            aria-label="Tytuł formularza"
+            [ngModel]="form().title"
+            (ngModelChange)="meta('title', $event)"
+            maxlength="200"
+          /><input
+            class="description-input"
+            aria-label="Opis formularza"
+            placeholder="Opcjonalny opis formularza, widoczny dla osób wypełniających ankietę."
+            [ngModel]="form().description"
+            (ngModelChange)="meta('description', $event)"
+          />
+        } @else {
+          <h2>{{ form().title }}</h2>
+          <p>{{ form().description }}</p>
+        }
+        <u-icon class="title-feather" name="feather" />
+      </section>
+      <div
+        cdkDropList
+        [cdkDropListData]="form().sections"
+        (cdkDropListDropped)="dropSection($event)"
+        class="builder-sections"
+      >
+        @for (section of form().sections; track section.id; let si = $index) {
+          <section
+            class="paper builder-section"
+            cdkDrag
+            [cdkDragDisabled]="mode() !== 'edit'"
+            [id]="'builder-' + section.id"
+          >
+            <div class="section-heading">
+              @if (mode() === 'edit') {
+                <button class="drag-handle" cdkDragHandle aria-label="Przeciągnij sekcję">
+                  <u-icon name="grip" />
+                </button>
+              }
+              <span class="section-number">{{ si + 1 }}</span>
+              <div class="section-title-edit">
+                @if (mode() === 'edit') {
+                  <input
+                    aria-label="Tytuł sekcji"
+                    [ngModel]="section.title"
+                    (ngModelChange)="this.section(section.id, 'title', $event)"
+                    (focus)="select(section.id)"
+                  /><input
+                    class="description-input"
+                    aria-label="Opis sekcji"
+                    [ngModel]="section.description"
+                    placeholder="Opis sekcji"
+                    (ngModelChange)="this.section(section.id, 'description', $event)"
+                  />
+                } @else {
+                  <h2>{{ section.title }}</h2>
+                  <p>{{ section.description }}</p>
+                }
+              </div>
+              <div class="card-tools">
+                @if (mode() === 'edit') {
+                  <button
+                    class="icon-button"
+                    aria-label="Przenieś sekcję w górę"
+                    [disabled]="si === 0"
+                    (click)="shiftSection(si, -1)"
+                  >
+                    <u-icon name="up" /></button
+                  ><button
+                    class="icon-button"
+                    aria-label="Przenieś sekcję w dół"
+                    [disabled]="si === form().sections.length - 1"
+                    (click)="shiftSection(si, 1)"
+                  >
+                    <u-icon name="chevron" /></button
+                  ><button
+                    class="icon-button"
+                    aria-label="Duplikuj sekcję"
+                    (click)="duplicateSection(section.id)"
+                  >
+                    <u-icon name="copy" /></button
+                  ><button
+                    class="icon-button danger"
+                    aria-label="Usuń sekcję"
+                    (click)="removeSection(section.id)"
+                  >
+                    <u-icon name="trash" />
+                  </button>
+                }
+                <button
+                  class="icon-button"
+                  aria-label="Zwiń lub rozwiń sekcję"
+                  [attr.aria-expanded]="!collapsed().has(section.id)"
+                  (click)="toggle(section.id)"
+                >
+                  <u-icon [name]="collapsed().has(section.id) ? 'chevron' : 'up'" />
+                </button>
+              </div>
+            </div>
+            <div class="ornament">✧</div>
+            @if (!collapsed().has(section.id)) {
+              <div
+                cdkDropList
+                [id]="'fields-' + section.id"
+                [cdkDropListData]="section.fields"
+                [cdkDropListConnectedTo]="listIds()"
+                (cdkDropListDropped)="dropField($event, section.id)"
+                class="builder-fields"
+              >
+                @for (field of section.fields; track field.id; let fi = $index) {
+                  <article
+                    class="editable-field"
+                    [class.editing]="selected() === field.id"
+                    cdkDrag
+                    [cdkDragDisabled]="mode() !== 'edit'"
+                  >
+                    @if (mode() === 'preview') {
+                      <u-field
+                        [field]="field"
+                        [value]="answers()[field.id]"
+                        (changed)="previewAnswer(field.id, $event)"
+                      />
+                    } @else {
+                      <div class="field-heading">
+                        <button cdkDragHandle class="drag-handle" aria-label="Przeciągnij pytanie">
+                          <u-icon name="grip" /></button
+                        ><span class="section-number small">{{ si + 1 }}.{{ fi + 1 }}</span
+                        ><button class="field-select" (click)="select(section.id, field.id)">
+                          <span class="eyebrow">PYTANIE · {{ label(field.type) }}</span>
+                          <h3>
+                            {{ field.label }}
+                            @if (field.required) {
+                              <span class="required">*</span>
+                            }
+                          </h3>
+                          <p>{{ field.description || 'Kliknij, aby edytować pytanie.' }}</p>
+                        </button>
+                        <div class="card-tools">
+                          <button
+                            class="icon-button"
+                            aria-label="Duplikuj pytanie"
+                            (click)="duplicateField(section.id, field.id)"
+                          >
+                            <u-icon name="copy" /></button
+                          ><button
+                            class="icon-button danger"
+                            aria-label="Usuń pytanie"
+                            (click)="removeField(section.id, field.id)"
+                          >
+                            <u-icon name="trash" /></button
+                          ><button
+                            class="icon-button"
+                            [attr.aria-expanded]="selected() === field.id"
+                            aria-label="Edytuj lub zwiń pytanie"
+                            (click)="
+                              selected() === field.id
+                                ? selected.set('')
+                                : select(section.id, field.id)
+                            "
+                          >
+                            <u-icon [name]="selected() === field.id ? 'up' : 'edit'" />
+                          </button>
+                        </div>
+                      </div>
+                      @if (selected() === field.id) {
+                        <div class="field-editor">
+                          <div class="field-grid">
+                            <label
+                              >Treść pytania<input
+                                [ngModel]="field.label"
+                                (ngModelChange)="
+                                  patch(section.id, field.id, { label: $event })
+                                " /></label
+                            ><label
+                              >Rodzaj pytania<select
+                                [ngModel]="field.type"
+                                (ngModelChange)="changeType(section.id, field, $event)"
+                              >
+                                @for (t of types; track t.type) {
+                                  <option [value]="t.type">{{ t.label }}</option>
+                                }
+                              </select></label
+                            ><label class="full"
+                              >Opis / wskazówka<input
+                                [ngModel]="field.description"
+                                (ngModelChange)="
+                                  patch(section.id, field.id, { description: $event })
+                                "
+                            /></label>
+                          </div>
+                          @if (field.options) {
+                            <div
+                              cdkDropList
+                              (cdkDropListDropped)="dropOption($event, section.id, field)"
+                            >
+                              @for (option of field.options; track option.id) {
+                                <div class="option-row" cdkDrag>
+                                  <button
+                                    class="drag-handle"
+                                    cdkDragHandle
+                                    aria-label="Przeciągnij odpowiedź"
+                                  >
+                                    <u-icon name="grip" /></button
+                                  ><u-icon
+                                    [name]="field.type === 'multi' ? 'checkbox' : 'radio'"
+                                  /><input
+                                    aria-label="Odpowiedź"
+                                    [ngModel]="option.label"
+                                    (ngModelChange)="
+                                      editOption(section.id, field, option.id, $event)
+                                    "
+                                  /><button
+                                    class="icon-button"
+                                    aria-label="Usuń odpowiedź"
+                                    (click)="removeOption(section.id, field, option.id)"
+                                  >
+                                    <u-icon name="close" />
+                                  </button>
+                                </div>
+                              }
+                            </div>
+                            <button class="add-answer" (click)="addOption(section.id, field)">
+                              <u-icon name="plus" />Dodaj odpowiedź
+                            </button>
+                          }
+                          <div class="field-grid settings">
+                            @if (field.type === 'text' || field.type === 'textarea') {
+                              <label
+                                >Minimum znaków<input
+                                  type="number"
+                                  min="0"
+                                  max="10000"
+                                  [ngModel]="field.minLength ?? 0"
+                                  (ngModelChange)="
+                                    patch(section.id, field.id, { minLength: $event ?? 0 })
+                                  " /></label
+                              ><label
+                                >Maksimum znaków<input
+                                  type="number"
+                                  min="1"
+                                  max="10000"
+                                  [ngModel]="field.maxLength ?? 2000"
+                                  (ngModelChange)="
+                                    patch(section.id, field.id, { maxLength: $event ?? 2000 })
+                                  "
+                              /></label>
+                            }
+                            @if (field.type === 'rating') {
+                              <label
+                                >Od<input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  [ngModel]="field.min"
+                                  (ngModelChange)="
+                                    patch(section.id, field.id, { min: $event })
+                                  " /></label
+                              ><label
+                                >Do<input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  [ngModel]="field.max"
+                                  (ngModelChange)="patch(section.id, field.id, { max: $event })"
+                              /></label>
+                            }
+                            @if (field.type === 'multi') {
+                              <label
+                                >Minimum wyborów<input
+                                  type="number"
+                                  min="0"
+                                  [ngModel]="field.minSelections ?? 0"
+                                  (ngModelChange)="
+                                    patch(section.id, field.id, { minSelections: $event ?? 0 })
+                                  " /></label
+                              ><label
+                                >Maksimum wyborów<input
+                                  type="number"
+                                  min="1"
+                                  [ngModel]="field.maxSelections ?? field.options!.length"
+                                  (ngModelChange)="
+                                    patch(section.id, field.id, {
+                                      maxSelections: $event ?? field.options!.length,
+                                    })
+                                  "
+                              /></label>
+                            }
+                          </div>
+                          <div class="editor-footer">
+                            <label class="checkbox-label"
+                              ><input
+                                type="checkbox"
+                                [ngModel]="field.required"
+                                (ngModelChange)="patch(section.id, field.id, { required: $event })"
+                              />Wymagane</label
+                            >
+                            <div>
+                              <button
+                                class="icon-button"
+                                aria-label="Przenieś pytanie w górę"
+                                [disabled]="fi === 0"
+                                (click)="shiftField(section.id, fi, -1)"
+                              >
+                                <u-icon name="up" /></button
+                              ><button
+                                class="icon-button"
+                                aria-label="Przenieś pytanie w dół"
+                                [disabled]="fi === section.fields.length - 1"
+                                (click)="shiftField(section.id, fi, 1)"
+                              >
+                                <u-icon name="chevron" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="field-mini-preview">
+                          @if (field.options) {
+                            @for (option of field.options.slice(0, 4); track option.id) {
+                              <div class="option-row">
+                                <u-icon
+                                  [name]="field.type === 'multi' ? 'checkbox' : 'radio'"
+                                /><span>{{ option.label }}</span>
+                              </div>
+                            }
+                            @if (field.options.length > 4) {
+                              <small>i {{ field.options.length - 4 }} kolejnych odpowiedzi</small>
+                            }
+                          } @else {
+                            <div class="empty-input">
+                              {{
+                                field.type === 'textarea'
+                                  ? 'Długa odpowiedź…'
+                                  : field.type === 'date'
+                                    ? 'dd.mm.rrrr'
+                                    : field.type === 'rating'
+                                      ? '1     2     3     4     5'
+                                      : field.type === 'file'
+                                        ? 'Wybierz obraz…'
+                                        : 'Odpowiedź uczestnika…'
+                              }}
+                            </div>
+                          }
+                        </div>
+                      }
+                    }
+                  </article>
+                }
+                @if (mode() === 'edit') {
+                  <button
+                    class="add-answer add-field"
+                    (click)="select(section.id); paletteOpen.set(true)"
+                  >
+                    <u-icon name="plus" />Dodaj pytanie do sekcji
+                  </button>
+                }
+              </div>
+            }
+          </section>
+        }
+      </div>
+    </div>
+    @if (mode() === 'edit') {
+      <aside class="sidebar builder-sidebar" [class.palette-open]="paletteOpen()">
+        <section class="paper builder-palette">
+          <div class="palette-heading">
+            <span class="eyebrow">DODAJ NOWY ELEMENT</span
+            ><button
+              class="icon-button palette-close"
+              aria-label="Zamknij panel dodawania"
+              (click)="paletteOpen.set(false)"
+            >
+              <u-icon name="close" />
+            </button>
+          </div>
+          <div class="ornament">✧</div>
+          <div class="tabs">
+            <button [class.active]="tab() === 'questions'" (click)="tab.set('questions')">
+              Pytania</button
+            ><button [class.active]="tab() === 'sections'" (click)="tab.set('sections')">
+              Sekcje
+            </button>
+          </div>
+          @if (tab() === 'questions') {
+            @for (type of types; track type.type) {
+              <button class="palette-item" (click)="add(type.type)">
+                <u-icon [name]="type.icon" /><span
+                  ><strong>{{ type.label }}</strong
+                  ><small>{{ type.description }}</small></span
+                >
+              </button>
+            }
+          } @else {
+            <button class="palette-item" (click)="addSection()">
+              <u-icon name="grid" /><span
+                ><strong>Nowa sekcja</strong><small>Grupa powiązanych pytań</small></span
+              >
+            </button>
+          }
+          <div class="ornament">✧</div>
+          <label class="palette-target"
+            >Dodaj pytanie do<select
+              [ngModel]="selectedSection()"
+              (ngModelChange)="selectedSection.set($event)"
+            >
+              <option value="">Ostatnia sekcja</option>
+              @for (s of form().sections; track s.id) {
+                <option [value]="s.id">{{ s.title }}</option>
+              }
+            </select></label
+          >
+        </section>
+        <section class="paper publish-card">
+          <span class="eyebrow">UDOSTĘPNIJ UCZESTNIKOM</span>
+          <p>Zmiany w szkicu nie wpływają na ankiety już rozpoczęte.</p>
+          @if (problems().length) {
+            <p class="field-error">{{ problems()[0] }}</p>
+          }
+          <button
+            class="button primary"
+            [disabled]="problems().length > 0 || publishing()"
+            (click)="publish()"
+          >
+            <u-icon name="send" />{{ publishing() ? 'Publikowanie…' : 'Opublikuj ankietę' }}</button
+          ><label class="button light import-button"
+            ><u-icon name="file" />Import JSON<input
+              type="file"
+              accept="application/json,.json"
+              (change)="import($event)"
+          /></label>
+        </section>
+      </aside>
+    }
+  </div>
+  @if (mode() === 'edit') {
+    <div class="mobile-actions builder-mobile">
+      <button class="button dark" (click)="paletteOpen.set(!paletteOpen())">
+        <u-icon name="plus" />Dodaj element</button
+      ><button
+        class="button primary"
+        [disabled]="problems().length > 0 || publishing()"
+        (click)="publish()"
+      >
+        Opublikuj<u-icon name="send" />
+      </button>
+    </div>
+  }
+}

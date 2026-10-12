@@ -1,33 +1,103 @@
-<a class="platform-skip" href="#platform-content">Przejdź do treści</a>
-
-<header class="platform-header">
-  <div class="platform-header-inner">
-    <a class="platform-brand" routerLink="/" aria-label="Ursunalia 2027 – strona główna">
-      <span class="platform-brand-mark" aria-hidden="true">✦</span>
-      <span class="platform-brand-copy">
-        <strong>URSUNALIA</strong>
-        <small>NOWE POCZĄTKI I STARE DŁUGI · 2027</small>
-      </span>
-    </a>
-
-    <button type="button" class="platform-menu-toggle" [attr.aria-expanded]="menuOpen()" aria-controls="platform-navigation" [attr.aria-label]="menuOpen() ? 'Zamknij menu' : 'Otwórz menu'" (click)="menuOpen.set(!menuOpen())">{{ menuOpen() ? '✕' : '☰' }}</button>
-    <nav id="platform-navigation" class="platform-nav" [class.platform-nav-open]="menuOpen()" aria-label="Nawigacja główna">
-      @for (item of navigation; track item.id) {
-        <a [routerLink]="item.path" routerLinkActive="platform-nav-active" (click)="closeMenu()"
-          [routerLinkActiveOptions]="{ exact: true }">
-          {{ item.label }}
+<a class="skip-link" href="#main">Przejdź do treści</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="platform-brand" routerLink="/" aria-label="Ursunalia – wydarzenia"
+      ><span class="brand-mark">✦</span
+      ><span><strong>URSUNALIA</strong><small>NOWE POCZĄTKI I STARE DŁUGI · 2027</small></span></a
+    >
+    <nav [class.open]="menu()" id="navigation" aria-label="Menu główne">
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="menu.set(false)"
+        >Wydarzenie</a
+      >
+      <a routerLink="/zgloszenie-postaci" routerLinkActive="active" (click)="menu.set(false)"
+        >Zgłoszenie postaci</a
+      >
+      @if (store.canOrganize()) {
+        <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)"
+          >Ankiety
+          @if (store.mode() === 'demo') {
+            <small>(demo)</small>
+          }
         </a>
       }
     </nav>
+    <div class="header-tools">
+      <button
+        class="icon-button"
+        aria-label="Szukaj ankiet"
+        [attr.aria-expanded]="search()"
+        (click)="search.set(!search())"
+      >
+        <u-icon name="search" />
+      </button>
+      <a class="icon-button notification" routerLink="/moje-postacie" aria-label="Moje zgłoszenia"
+        ><u-icon name="file"
+      /></a>
+      <a class="avatar" routerLink="/konto" aria-label="Moje konto">{{
+        store.user() ? store.user()!.name.slice(0, 2).toUpperCase() : 'AK'
+      }}</a>
+      <button
+        class="icon-button menu-toggle"
+        [attr.aria-expanded]="menu()"
+        aria-controls="navigation"
+        aria-label="Menu"
+        (click)="menu.set(!menu())"
+      >
+        <u-icon [name]="menu() ? 'close' : 'menu'" />
+      </button>
+    </div>
   </div>
+  @if (search()) {
+    <div class="search-panel">
+      <label for="global-search">Znajdź ankietę</label
+      ><input
+        id="global-search"
+        type="search"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+        placeholder="Nazwa ankiety…"
+      />
+      @for (form of store.forms(); track form.id) {
+        @if (form.title.toLowerCase().includes(query().toLowerCase())) {
+          <a [routerLink]="['/wydarzenie', form.eventId]" (click)="search.set(false)"
+            >{{ form.title }} <u-icon name="next"
+          /></a>
+        }
+      }
+    </div>
+  }
 </header>
-
-<div id="platform-content" class="platform-content" tabindex="-1">
-  <router-outlet />
-</div>
-
-<footer class="platform-footer">
-  <span>URSUNALIA 2027</span>
-  <span>{{ event.subtitle }} · {{ event.startsAt }} – {{ event.endsAt }}</span>
-  <span>Wersja robocza platformy</span>
+<main id="main" class="page" tabindex="-1">
+  @if (store.error()) {
+    <section class="paper error-state">
+      <h1>Nie udało się wczytać aplikacji</h1>
+      <p>{{ store.error() }}</p>
+      <p>Sprawdź połączenie i odśwież stronę.</p>
+    </section>
+  } @else if (!store.ready()) {
+    <div class="loading" role="status">
+      <span class="brand-mark">✦</span>
+      <p>Otwieramy księgę…</p>
+    </div>
+  } @else {
+    <router-outlet />
+  }
+</main>
+<footer class="site-footer">
+  <span>✦ URSUNALIA 2027</span><span>Nowe początki. Stare długi.</span
+  ><span>{{
+    store.mode() === 'server' ? 'System zgłoszeń' : 'Wersja demonstracyjna · zapis lokalny'
+  }}</span>
 </footer>
+@if (store.notice()) {
+  <div class="toast" role="status">
+    <u-icon name="info" /><span>{{ store.notice() }}</span
+    ><button class="icon-button" aria-label="Zamknij komunikat" (click)="store.notice.set('')">
+      <u-icon name="close" />
+    </button>
+  </div>
+}
