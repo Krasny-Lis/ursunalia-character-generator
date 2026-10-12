@@ -156,3 +156,14 @@ footer { text-align:center; color:#778da2; margin-top:34px; font-size:10px; lett
   .panel { padding:16px; }
   .sidepanel { padding:16px; box-shadow:none; }
 }
+
+/* Royal Manuscript — podsumowanie i formularz postaci */
+:host {--review-paper:#fffaf0;--review-muted:#f6efE3;--review-line:#d3bea0;--review-ink:#212635;--review-secondary:#575d65;}
+.panel,.sidepanel {background:var(--review-paper);border-color:var(--review-line);}
+.facts div,.lore,.tag-card,.biography,.pillar-row,.checklist li,.private-fields,.validation-warnings {background:var(--review-muted);border-color:var(--review-line);}
+.progress-meter-fill {background:#731b26;}
+.progress-count {color:#805527;}
+.section-header h2,.sidepanel h2 {color:#212635;}
+.section-header .eyebrow,.eyebrow {color:#855e31;}
+:where(.panel,.sidepanel) :is(button,select,input,textarea,summary):focus-visible {outline:3px solid #976523;outline-offset:2px;}
+@media(max-width:700px) {.panel,.sidepanel {box-shadow:none;}}
