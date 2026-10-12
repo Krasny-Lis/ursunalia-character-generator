@@ -280,6 +280,9 @@ export class BuilderPage {
   editOption(sid: string, f: Field, id: string, label: string) {
     this.patch(sid, f.id, { options: f.options?.map((o) => (o.id === id ? { ...o, label } : o)) });
   }
+  editOptionDescription(sid: string, f: Field, id: string, description: string) {
+    this.patch(sid, f.id, { options: f.options?.map(o => o.id === id ? { ...o, description } : o) });
+  }
   removeOption(sid: string, f: Field, id: string) {
     this.patch(sid, f.id, { options: f.options?.filter((o) => o.id !== id) });
   }

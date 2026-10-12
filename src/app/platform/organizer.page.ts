@@ -54,15 +54,27 @@ import { Icon } from './icon';
           <span class="eyebrow">ODPOWIEDZI UCZESTNIKÓW</span>
           <h2>Zgłoszenia</h2>
         </div>
-        <div class="actions">
-          <label class="filter-label"
-            >Status<select [(ngModel)]="filter">
+        <div class="actions review-filters">
+          <label class="filter-label">Użytkownik
+            <input type="search" [(ngModel)]="userQuery" placeholder="Imię, nazwisko, e-mail…" />
+          </label>
+          <label class="filter-label">Rodzaj ankiety
+            <select [(ngModel)]="formFilter">
+              <option value="all">Wszystkie ankiety</option>
+              @for (form of store.forms(); track form.id) {
+                <option [value]="form.id">{{ form.title }}</option>
+              }
+            </select>
+          </label>
+          <label class="filter-label">Status
+            <select [(ngModel)]="filter">
               <option value="all">Wszystkie</option>
               <option value="submitted">Do sprawdzenia</option>
               <option value="accepted">Zaakceptowane</option>
               <option value="changes">Do poprawy</option>
-            </select></label
-          ><button class="button outline" (click)="refresh()" [disabled]="busy()">Odśwież</button>
+            </select>
+          </label>
+          <button class="button outline" (click)="refresh()" [disabled]="busy()">Odśwież</button>
         </div>
       </section>
       @if (store.mode() === 'demo') {
@@ -81,11 +93,11 @@ import { Icon } from './icon';
               [class.selected]="selected()?.id === app.id"
               (click)="select(app)"
             >
-              <span class="eyebrow">{{ app.userName }} · {{ app.form.title }}</span>
+              <span class="review-user">Użytkownik: <strong>{{ app.userName || app.userEmail }}</strong></span>
+              <span class="review-form">Ankieta: <strong>{{ app.form.title }}</strong></span>
               <h3>{{ app.answers['name'] || 'Zgłoszenie' }} {{ app.answers['surname'] }}</h3>
-              <small
-                >{{ app.submittedAt | date: 'dd.MM.yyyy, HH:mm' }} · {{ status(app.status) }}</small
-              >
+              <span class="review-meta"><small>{{ app.submittedAt | date: 'dd.MM.yyyy, HH:mm' }}</small>
+                <strong class="review-status" [attr.data-status]="app.status">{{ status(app.status) }}</strong></span>
             </button>
           } @empty {
             <section class="paper empty-state">
@@ -150,6 +162,8 @@ export class OrganizerPage {
   readonly busy = signal(false);
   readonly error = signal('');
   filter = 'all';
+  formFilter = 'all';
+  userQuery = '';
   feedback = '';
   constructor() {
     void this.refresh();
@@ -158,7 +172,13 @@ export class OrganizerPage {
     return form.sections.reduce((n: number, s: any) => n + s.fields.length, 0);
   }
   filtered() {
-    return this.applications().filter((a) => this.filter === 'all' || a.status === this.filter);
+    const query = this.userQuery.trim().toLocaleLowerCase('pl');
+    return this.applications().filter((a) =>
+      (this.filter === 'all' || a.status === this.filter) &&
+      (this.formFilter === 'all' || a.form.id === this.formFilter) &&
+      (!query || [a.userName, a.userEmail, a.answers['name'], a.answers['surname'], a.form.title]
+        .some(v => String(v ?? '').toLocaleLowerCase('pl').includes(query)))
+    );
   }
   status(s: string) {
     return (

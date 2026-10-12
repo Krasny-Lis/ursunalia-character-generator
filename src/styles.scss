@@ -3069,3 +3069,37 @@ body {
   }
   .paper { box-shadow: inset 0 0 0 3px #ead7b4, inset 0 0 0 5px #fffbf1, inset 0 0 0 6px #c5a778, 0 4px 12px #0005; }
 }
+
+/* v27.2 */
+.field .descriptions-toggle { display:inline-block; margin:0 0 10px; padding:8px 12px; background:#f4e4c9; color:#5c391f; border:1px solid #ad874e; border-radius:6px; font:600 13px Arial,sans-serif; }
+.field .descriptions-toggle[aria-pressed=true] { background:#d6bc90; }
+.field .choice-with-description { position:relative; }
+.field .choice-with-description:not(.show-description):is(:hover,:focus-within)::after { content:attr(data-tooltip); position:absolute; z-index:50; top:calc(100% + 5px); left:0; width:min(380px,calc(100vw - 60px)); box-sizing:border-box; padding:14px; background:#112838; color:#fff1dc; border:1px solid #c39b56; border-radius:8px; box-shadow:0 12px 30px #0007; font:14px/1.5 Arial,sans-serif; white-space:pre-wrap; pointer-events:none; }
+.field .choice.show-description { flex-wrap:wrap; }
+.field .option-full-description { flex-basis:100%; padding:8px 0 3px; border-top:1px solid #bda781; color:#485260; font:13px/1.55 Arial,sans-serif; overflow-wrap:anywhere; }
+.field .choices:has(.show-description) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.field .described-select { position:relative; }
+.field .described-select-trigger { width:100%; min-height:42px; display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid #b9b0a2; border-radius:6px; background:#fffcf5; color:#172638; text-align:left; }
+.field .described-select-options { position:absolute; z-index:70; top:calc(100% + 3px); left:0; width:100%; max-height:340px; overflow:auto; padding:5px; border:1px solid #ad854b; border-radius:8px; background:#fbf3e5; box-shadow:0 13px 32px #08172577; }
+.field .described-select-option { display:block; width:100%; padding:9px 11px; border:1px solid transparent; border-radius:5px; text-align:left; background:transparent; color:#233143; font-family:Arial,sans-serif; }
+.field .described-select-option small { display:block; padding-top:3px; color:#576376; font:12px/1.5 Arial,sans-serif; white-space:pre-wrap; }
+.field .described-select-option:hover,.field .described-select-option:focus-visible,.field .described-select-option.selected { background:#e9d8ba; border-color:#ba9762; }
+.field .selected-description { padding:8px 11px; margin-top:5px; border-left:3px solid #aa8145; background:#f3e8d6; color:#505c6c; font:13px/1.5 Arial,sans-serif; }
+.option-row .option-fields { flex:1; min-width:0; display:grid; gap:5px; }
+.option-row .option-fields textarea { width:100%; min-height:50px; padding:6px 8px; border:1px solid #ccb797; background:#fff9ed; border-radius:5px; color:#293747; font:13px/1.4 Arial,sans-serif; }
+.review-filters { flex-wrap:wrap; align-items:end; }
+.review-filters .filter-label { display:grid !important; gap:5px; font:600 13px/1.4 Arial,sans-serif !important; color:#f3d7a8; }
+.review-filters .filter-label input,.review-filters .filter-label select { width:clamp(155px,18vw,265px); min-height:42px; background:#102637; color:#fff5e5; border:1px solid #aa834e; border-radius:6px; padding:8px 11px; font:14px/1.4 Arial,sans-serif; margin:0; }
+.review-filters input::placeholder { color:#b4c2ca; }
+.review-item { display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+.review-item .review-user { font:14px/1.5 Arial,sans-serif; color:#415368; }
+.review-item .review-user strong { color:#142c45; }
+.review-item .review-form { align-self:flex-start; padding:4px 8px; background:#f0e0c4; border:1px solid #d3b78b; border-radius:5px; color:#75481c; font:12px/1.4 Arial,sans-serif; }
+.review-item .review-meta { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; }
+.review-status { display:inline-block; padding:5px 10px; border:1px solid #ae8958; border-radius:30px; background:#f3e3c9; color:#6c4829; font:700 12px/1.4 Arial,sans-serif; }
+.review-status[data-status=submitted] { background:#f9e4bf; color:#693d0b; border-color:#d19c3f; }
+.review-status[data-status=accepted] { background:#d9efe1; color:#165d38; border-color:#71a989; }
+.review-status[data-status=changes] { background:#f5d8d5; color:#8e282a; border-color:#cc7676; }
+.toast { cursor:pointer; }
+.toast:hover { border-color:#ffe0a2; }
+@media(max-width:700px) { .field .choices:has(.show-description) { grid-template-columns:1fr; } .review-filters,.review-filters .filter-label,.review-filters .filter-label input,.review-filters .filter-label select { width:100%; } }

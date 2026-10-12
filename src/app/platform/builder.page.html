@@ -254,13 +254,14 @@
                                     <u-icon name="grip" /></button
                                   ><u-icon
                                     [name]="field.type === 'multi' ? 'checkbox' : 'radio'"
-                                  /><input
-                                    aria-label="Odpowiedź"
-                                    [ngModel]="option.label"
-                                    (ngModelChange)="
-                                      editOption(section.id, field, option.id, $event)
-                                    "
-                                  /><button
+                                  /><div class="option-fields">
+                                    <input aria-label="Nazwa odpowiedzi" [ngModel]="option.label"
+                                      (ngModelChange)="editOption(section.id, field, option.id, $event)" />
+                                    <textarea rows="2" aria-label="Opis odpowiedzi"
+                                      placeholder="Opis odpowiedzi dla uczestnika"
+                                      [ngModel]="option.description || ''"
+                                      (ngModelChange)="editOptionDescription(section.id, field, option.id, $event)"></textarea>
+                                  </div><button
                                     class="icon-button"
                                     aria-label="Usuń odpowiedź"
                                     (click)="removeOption(section.id, field, option.id)"

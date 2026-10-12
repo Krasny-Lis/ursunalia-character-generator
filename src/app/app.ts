@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlatformStore } from './platform/platform.store';
 import { Icon } from './platform/icon';
@@ -16,6 +16,14 @@ export class App {
   readonly query = signal('');
   constructor() {
     void this.store.initialize();
+    effect((onCleanup) => {
+      const notice = this.store.notice();
+      if (!notice) return;
+      const handle = setTimeout(() => {
+        if (this.store.notice() === notice) this.store.notice.set('');
+      }, 5000);
+      onCleanup(() => clearTimeout(handle));
+    });
   }
   @HostListener('window:beforeunload', ['$event']) protect(event: BeforeUnloadEvent) {
     if (this.store.dirty()) {

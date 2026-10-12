@@ -13,16 +13,9 @@
         (click)="menu.set(false)"
         >Wydarzenie</a
       >
-      <a routerLink="/zgloszenie-postaci" routerLinkActive="active" (click)="menu.set(false)"
-        >Zgłoszenie postaci</a
-      >
+      <a routerLink="/wydarzenie/ursunalia-2027" routerLinkActive="active" (click)="menu.set(false)">Ankiety</a>
       @if (store.canOrganize()) {
-        <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)"
-          >Ankiety
-          @if (store.mode() === 'demo') {
-            <small>(demo)</small>
-          }
-        </a>
+        <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
       }
     </nav>
     <div class="header-tools">
@@ -94,7 +87,9 @@
   }}</span>
 </footer>
 @if (store.notice()) {
-  <div class="toast" role="status">
+  <div class="toast" role="status" tabindex="0" aria-label="Kliknij, aby zamknąć komunikat"
+    (click)="store.notice.set('')" (keydown.enter)="store.notice.set('')"
+    (keydown.space)="$event.preventDefault(); store.notice.set('')">
     <u-icon name="info" /><span>{{ store.notice() }}</span
     ><button class="icon-button" aria-label="Zamknij komunikat" (click)="store.notice.set('')">
       <u-icon name="close" />

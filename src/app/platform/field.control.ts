@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, inject, input, output, signal } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Answer, Field } from './models';
 import { Icon } from './icon';
@@ -59,76 +59,61 @@ import { Icon } from './icon';
         ><small class="counter">{{ textLength() }} / {{ field().maxLength ?? 10000 }}</small>
       }
       @case ('select') {
-        <div class="described-select" [class.open]="dropdownOpen()">
-          <button type="button" class="described-select-trigger"
-            [id]="'input-' + field().id"
-            [disabled]="disabled()"
-            [attr.aria-expanded]="dropdownOpen()"
-            [attr.aria-controls]="'select-options-' + field().id"
-            [attr.aria-required]="field().required"
-            [attr.aria-invalid]="!!error()"
-            (click)="dropdownOpen.set(!dropdownOpen())">
-            {{ selectedOption()?.label || 'Wybierz…' }} <u-icon name="chevron" />
-          </button>
-          @if (dropdownOpen()) {
-            <div class="described-select-options" [id]="'select-options-' + field().id" role="group" [attr.aria-label]="field().label">
-              <button type="button" class="described-select-option" (click)="chooseOption('')">Wybierz…</button>
-              @for (option of field().options; track option.id) {
-                <button type="button" class="described-select-option" [class.selected]="value() === option.id"
-                  [attr.aria-pressed]="value() === option.id" (click)="chooseOption(option.id)">
-                  <strong>{{ option.label }}</strong>
-                  @if (option.description) { <small>{{ option.description }}</small> }
-                </button>
-              }
-            </div>
+        <select
+          [id]="'input-' + field().id"
+          [ngModel]="value() || ''"
+          (ngModelChange)="changed.emit($event)"
+          [disabled]="disabled()"
+          [attr.aria-required]="field().required"
+          [attr.aria-invalid]="!!error()"
+        >
+          <option value="">Wybierz…</option>
+          @for (option of field().options; track option.id) {
+            <option [value]="option.id">{{ option.label }}</option>
           }
-        </div>
+        </select>
         @if (selectedDescription()) {
-          <div class="choice-help selected-description">{{ selectedDescription() }}</div>
+          <details class="choice-help">
+            <summary>O wybranej odpowiedzi</summary>
+            <p>{{ selectedDescription() }}</p>
+          </details>
         }
       }
       @case ('single') {
-        @if (hasDescriptions()) {
-          <button type="button" class="descriptions-toggle" [attr.aria-pressed]="expandedDescriptions()"
-            (click)="expandedDescriptions.set(!expandedDescriptions())">
-            {{ expandedDescriptions() ? 'Zwiń opisy' : 'Pokaż pełne opisy odpowiedzi' }}
-          </button>
-        }
-        <div class="choices" role="radiogroup" [attr.aria-labelledby]="'label-' + field().id" [attr.aria-required]="field().required">
+        <div
+          class="choices"
+          role="radiogroup"
+          [attr.aria-labelledby]="'label-' + field().id"
+          [attr.aria-required]="field().required"
+        >
           @for (option of field().options; track option.id) {
             <label class="choice" [class.selected]="value() === option.id"
-              [class.choice-with-description]="!!option.description"
-              [class.show-description]="expandedDescriptions()"
-              [attr.data-tooltip]="expandedDescriptions() ? null : (option.description || null)">
-              <input type="radio" [name]="field().id" [value]="option.id"
-                [checked]="value() === option.id" (change)="changed.emit(option.id)" [disabled]="disabled()" />
-              <span>{{ option.label }}</span>
-              @if (expandedDescriptions() && option.description) {
-                <small class="option-full-description">{{ option.description }}</small>
-              }
-            </label>
+              ><input
+                type="radio"
+                [name]="field().id"
+                [value]="option.id"
+                [checked]="value() === option.id"
+                (change)="changed.emit(option.id)"
+                [disabled]="disabled()"
+              /><span>{{ option.label }}</span></label
+            >
           }
         </div>
       }
       @case ('multi') {
-        @if (hasDescriptions()) {
-          <button type="button" class="descriptions-toggle" [attr.aria-pressed]="expandedDescriptions()"
-            (click)="expandedDescriptions.set(!expandedDescriptions())">
-            {{ expandedDescriptions() ? 'Zwiń opisy' : 'Pokaż pełne opisy odpowiedzi' }}
-          </button>
-        }
         <div class="choices" role="group" [attr.aria-labelledby]="'label-' + field().id">
           @for (option of visibleOptions(); track option.id) {
-            <label class="choice" [class.selected]="isSelected(option.id)"
-              [class.choice-with-description]="!!option.description"
-              [class.show-description]="expandedDescriptions()"
-              [attr.data-tooltip]="expandedDescriptions() ? null : (option.description || null)">
-              <input type="checkbox" [checked]="isSelected(option.id)" (change)="toggle(option.id)" [disabled]="disabled()" />
-              <span>{{ option.label }}</span>
-              @if (expandedDescriptions() && option.description) {
-                <small class="option-full-description">{{ option.description }}</small>
-              }
-            </label>
+            <label
+              class="choice"
+              [class.selected]="isSelected(option.id)"
+              [title]="option.description || ''"
+              ><input
+                type="checkbox"
+                [checked]="isSelected(option.id)"
+                (change)="toggle(option.id)"
+                [disabled]="disabled()"
+              /><span>{{ option.label }}</span></label
+            >
           }
         </div>
         @if ((field().options?.length ?? 0) > 9) {
@@ -200,27 +185,7 @@ export class FieldControl {
   disabled = input(false);
   changed = output<Answer>();
   expanded = signal(false);
-  expandedDescriptions = signal(false);
-  dropdownOpen = signal(false);
-  private readonly element = inject(ElementRef<HTMLElement>);
   fileError = signal('');
-  @HostListener('document:pointerdown', ['$event'])
-  onOutside(event: PointerEvent) {
-    if (this.dropdownOpen() && !this.element.nativeElement.contains(event.target as Node))
-      this.dropdownOpen.set(false);
-  }
-  @HostListener('document:keydown.escape')
-  onEscape() { this.dropdownOpen.set(false); }
-  hasDescriptions() {
-    return this.field().options?.some((option) => !!option.description) ?? false;
-  }
-  selectedOption() {
-    return this.field().options?.find((option) => option.id === this.value());
-  }
-  chooseOption(id: string) {
-    this.changed.emit(id);
-    this.dropdownOpen.set(false);
-  }
   textLength() {
     return typeof this.value() === 'string' ? (this.value() as string).length : 0;
   }
