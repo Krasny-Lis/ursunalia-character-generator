@@ -1,0 +1,103 @@
+/* Ursunalia 2027 — Królewski Manuskrypt.
+ * Jeden zestaw tokenów oraz odrębne obszary: ciemna oprawa, jasny edytor.
+ * Wersja projektowa: formularze czytelne bez ciężkich tekstur.
+ */
+:root {
+  --man-night:#091522;
+  --man-night-raised:#12283d;
+  --man-paper:#f8f2e6;
+  --man-card:#fffaf0;
+  --man-inset:#f1e8d9;
+  --man-ink:#212635;
+  --man-muted:#575d65;
+  --man-line:#d3bea0;
+  --man-wine:#731b26;
+  --man-wine-hover:#902d38;
+  --man-gold:#be995e;
+  --man-focus:#976523;
+  --man-radius:12px;
+}
+.platform-header { border-bottom-color:#af8953; }
+.platform-content { background:radial-gradient(ellipse at 88% 4%,#243246 0,#091522 52%); }
+.builder-page {
+  --b-surface:var(--man-card);
+  --b-border:var(--man-line);
+  --b-input:#fffdf8;
+  --b-selected:#fff2db;
+  --b-gold:var(--man-gold);
+  color:#f4e4ca;
+  max-width:1440px;
+}
+.builder-page .builder-workspace { max-width:1190px; grid-template-columns:minmax(0,1fr) 58px; gap:14px; }
+.builder-page .builder-canvas { gap:16px; }
+.builder-page .builder-head h1 { color:#f5dfbd; }
+.builder-page :is(.form-meta,.editable-section,.editable-field,.definition-status) {
+  background:var(--man-card);color:var(--man-ink);border:1px solid var(--man-line);
+  box-shadow:0 5px 16px #00000021;border-radius:var(--man-radius);
+}
+.builder-page .form-meta { border-top:6px solid var(--man-gold); }
+.builder-page .form-meta-topline { background:linear-gradient(90deg,var(--man-gold),#f1dcb5 65%,#8c9aa8); height:4px; }
+.builder-page .editable-section { padding:20px; }
+.builder-page .editable-field { background:#fbf7ee;box-shadow:none; }
+.builder-page .editable-field.selected,.builder-page .editable-section.selected { background:#fff5e7; border-color:#a57e49; box-shadow:inset 4px 0 var(--man-wine); }
+.builder-page :is(.form-title-input,.section-title,.section-title strong,.section-title-input,.field-summary,.field-summary strong,.option-heading strong) { color:var(--man-ink)!important; }
+.builder-page :is(.section-title small,.field-summary small,.mock-text,.mock-options,.mock-rating,.definition-status,.field-mock,.check-line,.required-toggle) { color:var(--man-muted); }
+.builder-page :is(.section-head,.field-footer,.option-editor,.help-settings,.field-grip-row .drag-handle,.section-grip-row .section-drag-handle) { border-color:var(--man-line); }
+.builder-page :is(input:not([type=checkbox]):not([type=radio]),textarea,select) {
+  background:#fffdf8;color:var(--man-ink);border:1px solid #bcaa90;border-radius:7px;
+}
+.builder-page :is(input,textarea)::placeholder { color:#69707a; }
+.builder-page label:not(.check-line):not(.required-toggle):not(.file-picker) { color:var(--man-ink); }
+.builder-page .form-description-input {color:var(--man-muted);}
+.builder-page .question-details,.builder-page .help-content { background:#f7f0e5; border-color:var(--man-line); }
+.builder-page :is(.section-actions button,.field-actions button,.option-editor .icon-btn) { color:var(--man-ink); }
+.builder-page :is(.section-actions button,.field-actions button,.option-editor .icon-btn):hover { background:var(--man-inset); }
+.builder-page :is(.drag-handle,.section-grip-row .section-drag-handle) { color:#82623d; }
+.builder-page :is(.field-grip-row .drag-handle,.section-grip-row .section-drag-handle):hover {background:var(--man-inset);color:var(--man-wine);}
+.builder-page :is(.quiet-add,.canvas-add,.drop-end button,.empty-survey button) { color:#785021; }
+.builder-page :is(.canvas-add,.empty-survey,.empty-section,.drop-end) { background:#fbf7ed;border-color:var(--man-line); }
+.builder-page .required-asterisk,.builder-page .error-list { color:#a52e2e; }
+.builder-page .toolbox-buttons { background:var(--man-night-raised);border:1px solid var(--man-gold); }
+.builder-page .toolbox-buttons button { color:#f0cf9a; }
+.builder-page .toolbox-buttons button:hover {background:#31465b;}
+.builder-page .builder-insert-menu {background:var(--man-card);color:var(--man-ink);border-color:var(--man-line);}
+.builder-page .builder-insert-menu > button {color:var(--man-ink);}
+.builder-page .builder-insert-menu > button:hover {background:var(--man-inset);}
+.builder-page .builder-insert-menu > button small {color:var(--man-muted);}
+.builder-page .insert-heading {color:var(--man-wine);}
+.builder-page .insert-heading button {color:var(--man-ink);}
+.builder-page .head-actions button.gold {background:var(--man-wine);border-color:#a45b58;color:#fff;}
+.builder-page .head-actions button.gold:hover {background:var(--man-wine-hover);}
+.builder-page :is(.draft-status,.preview-top,.builder-transfer) {background:var(--man-night-raised);color:#edf0f4;border-color:#516176;}
+.builder-page .builder-transfer p {color:#c8d5e0;}
+.builder-page :is(input,textarea,select,button):focus-visible {outline:3px solid #c59855;outline-offset:2px;}
+.builder-page .field-drop-before::before,.builder-page .field-drop-after::after {background:var(--man-wine);}
+.survey-player-preview .preview-panel {color:var(--man-ink);}
+.generator-content .wizard-stage :is(.panel,.sidepanel,.inline-editor) {background:var(--man-card);color:var(--man-ink);border:1px solid var(--man-line);border-radius:var(--man-radius);}
+.generator-content .wizard-stage :is(.panel,.sidepanel) :is(h2,h3,h4) {color:var(--man-ink);}
+.generator-content .wizard-stage :is(.lore,.tag-card,.biography,.facts div,.checklist li,.option-row,.chosen-catalog,.relation-edit-row) {background:#f6efe3;color:var(--man-ink);border-color:var(--man-line);}
+.generator-content .wizard-stage :is(.section-toggle,.expand-all-button,.secondary-editor-action) {background:#fff7e9;border:1px solid var(--man-line);color:#71451a;}
+.generator-content .wizard-stage :is(.section-toggle,.expand-all-button,.secondary-editor-action):hover {background:var(--man-inset);}
+.generator-content .wizard-stage :is(.option-row:has(input:checked),.chosen-catalog-item) {background:#f2e3cb;border-color:#b68c56;}
+.generator-content .wizard-stage :is(input[type=text],input[type=number],textarea,select) {background:#fffdf8;color:var(--man-ink);border-color:#bba98e;}
+.generator-content .wizard-stage .inline-editor :is(label,h3,h4,.field-heading) {color:var(--man-ink);}
+.generator-content .wizard-stage :is(.concept-explainer,.history-guidance,.summary-additional) {background:#f5ebdc;color:var(--man-ink);border-color:var(--man-line);}
+.generator-content .wizard-stage :is(.section-mini-summary,.muted,.editor-hint) {color:var(--man-muted);}
+.generator-content .wizard-stage :is(input,textarea,select,button):focus-visible {outline:3px solid var(--man-focus);outline-offset:2px;}
+.catalog-info-dialog,.catalog-info-popover:popover-open {background:var(--man-card);color:var(--man-ink);border-color:var(--man-line);}
+.catalog-info-dialog :is(.catalog-modal-item,.catalog-modal-close),.catalog-info-popover .catalog-modal-item {background:#f5ecdc;color:var(--man-ink);border-color:var(--man-line);}
+.catalog-info-dialog :is(h2,h3,p),.catalog-info-popover :is(h2,h3,p) {color:var(--man-ink);}
+@media(min-width:1100px) {
+  .builder-page .builder-workspace {grid-template-columns:minmax(0,1fr) 58px;}
+}
+@media(max-width:620px) {
+  .builder-page {padding:16px 12px 90px;}
+  .builder-page .builder-workspace {display:block;}
+  .builder-page .editable-section {padding:12px;}
+  .builder-page .form-meta {padding-left:17px;padding-right:17px;}
+  .builder-page .builder-insert-menu {width:min(340px,calc(100vw - 32px));}
+  .generator-content .wizard-stage :is(.panel,.inline-editor) {padding:14px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .builder-page :is(.editable-field,.editable-section) {transition:none;}
+}
