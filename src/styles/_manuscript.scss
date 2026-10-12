@@ -231,3 +231,31 @@ app-survey-renderer .survey-renderer {background:var(--man-paper);border:1px sol
  .builder-page .section-actions button {min-width:38px;min-height:42px;}
  .builder-page .toolbox-mobile {gap:6px;}
 }
+
+/* Oryginalna, lekka dekoracja SVG. Nie pokrywa obszarów z tekstem. */
+.platform-content {
+ background-image:
+ linear-gradient(180deg,rgba(9,21,34,.08),rgba(9,21,34,.82) 58%),
+ url('art/manuscript-landscape.svg'),
+ radial-gradient(ellipse at 84% 0,#29374b,#091522 64%);
+ background-position:center, center top, center;
+ background-size:auto, min(1500px,100%) auto, auto;
+ background-repeat:no-repeat;
+}
+.builder-page :is(.form-meta,.editable-section) {background-color:#fff9ef;}
+.generator-content .wizard-stage .panel {background-color:#fff9ef;}
+.generator-toolbar .demo-character {
+ color:#fff4db;background:#741e29;border-color:#bb9564;
+}
+.generator-toolbar .demo-character:hover {background:#8b2633;}
+.generator-toolbar .character-tools {flex-wrap:wrap;justify-content:flex-end;}
+.generator-toolbar .character-picker {min-width:180px;}
+.generator-content .wizard-hero {border-color:#a98b5d;background:linear-gradient(120deg,#0b1c2c,#1e3449);}
+.generator-content .wizard-hero h2 {color:#f6e1bd;}
+@media(max-width:580px) {
+ .generator-toolbar .character-tools {width:100%;display:grid;grid-template-columns:1fr 1fr;align-items:end;}
+ .generator-toolbar .character-picker {grid-column:1/-1;width:100%;}
+ .generator-toolbar .character-picker select {width:100%;}
+ .generator-toolbar .create-character {min-height:44px;white-space:normal;}
+ .platform-content {background-size:auto,950px auto,auto;}
+}
