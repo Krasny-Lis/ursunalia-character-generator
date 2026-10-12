@@ -6,7 +6,7 @@
 
   <header class="builder-head">
     <div>
-      <p class="eyebrow">EDYTOR ANKIET · WERSJA 26.1</p>
+      <p class="eyebrow">EDYTOR ANKIET · KRÓLEWSKI MANUSKRYPT</p>
       <h1>Kreator formularzy</h1>
       <p>Wybierz kartę pytania, aby edytować ją bezpośrednio w formularzu.</p>
     </div>
@@ -280,10 +280,21 @@
       </section>
 
       <aside class="builder-toolbox" aria-label="Dodawanie elementów">
-        <div class="toolbox-buttons">
-          <button type="button" title="Dodaj pytanie" aria-label="Dodaj pytanie"
-            [attr.aria-expanded]="addMenuOpen()" (click)="showAddMenu()">＋</button>
-          <button type="button" title="Dodaj sekcję" aria-label="Dodaj sekcję" (click)="addSection()">▤</button>
+        <div class="toolbox-desktop">
+          <h2>DODAJ NOWY ELEMENT</h2>
+          <p>Wybierz typ pola lub dodaj sekcję.</p>
+          <button class="toolbox-section-action" type="button" (click)="addSection()">＋ Nowa sekcja</button>
+          <div class="toolbox-label">PYTANIA I ELEMENTY</div>
+          @for (type of fieldTypes; track type.id) {
+            <button type="button" class="toolbox-type" (click)="addField(type.id)">
+              <span class="toolbox-type-mark" aria-hidden="true">＋</span>
+              <span><strong>{{ type.label }}</strong><small>{{ type.description }}</small></span>
+            </button>
+          }
+        </div>
+        <div class="toolbox-mobile">
+          <button type="button" [attr.aria-expanded]="addMenuOpen()" (click)="showAddMenu()">＋ Dodaj element</button>
+          <button type="button" (click)="addSection()">▤ Sekcja</button>
         </div>
         @if (addMenuOpen()) {
           <div class="builder-insert-menu" aria-label="Wybierz rodzaj elementu">
