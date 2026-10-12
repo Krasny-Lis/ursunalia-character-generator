@@ -101,3 +101,133 @@
 @media(prefers-reduced-motion:reduce) {
   .builder-page :is(.editable-field,.editable-section) {transition:none;}
 }
+
+/* === Royal Manuscript v27: przebudowa kompozycji, nie tylko kolorystyki === */
+:root {
+ --man-content-width:1460px;
+ --man-hairline:#dcc5a2;
+ --man-paper-shadow:0 12px 28px rgba(0,0,0,.25);
+}
+.platform-header {
+ background:linear-gradient(100deg,#07111d 5%,#0e2131 76%,#091522);
+ border-bottom:1px solid #b89563;
+}
+.platform-header-inner {max-width:var(--man-content-width);}
+.platform-brand-copy strong {font-family:Georgia,serif;letter-spacing:.11em;color:#f5dfba;}
+.platform-nav a.platform-nav-active {color:#f4d9a4;border-color:#b89255;}
+.platform-content {
+ background:
+ radial-gradient(ellipse at 86% 6%,rgba(138,112,74,.15),transparent 36%),
+ radial-gradient(ellipse at 3% 80%,rgba(31,66,83,.45),transparent 45%),
+ repeating-linear-gradient(120deg,transparent 0,transparent 135px,rgba(206,172,112,.025) 136px,transparent 137px),
+ #091522;
+}
+.builder-page {max-width:var(--man-content-width);padding-top:30px;}
+.builder-page .builder-head {margin:25px 0 26px;align-items:end;}
+.builder-page h1 {font-size:clamp(35px,4.3vw,60px);line-height:1.1;}
+.builder-page .builder-head .eyebrow {color:#cfa663;}
+.builder-page .builder-back a {color:#f0d1a0;text-underline-offset:4px;}
+.builder-page .builder-workspace {max-width:100%;grid-template-columns:minmax(0,1fr) 292px;gap:18px;align-items:start;}
+.builder-page .builder-canvas {gap:18px;}
+.builder-page .form-meta,.builder-page .editable-section {
+ position:relative;overflow:hidden;
+ background:
+ linear-gradient(135deg,rgba(199,158,94,.13),transparent 15%),
+ linear-gradient(225deg,rgba(199,158,94,.12),transparent 15%),
+ linear-gradient(180deg,#fffbf2,#f9f1e4);
+ box-shadow:var(--man-paper-shadow);
+}
+.builder-page .form-meta:before,.builder-page .editable-section:before {
+ content:'✧';position:absolute;top:8px;right:12px;font-size:23px;color:#c7a773;
+ pointer-events:none;opacity:.62;
+}
+.builder-page .form-meta {padding:14px 30px 25px;border-top:5px solid #c4a16c;}
+.builder-page .form-meta-topline {display:none;}
+.builder-page .form-meta:after {content:'TYTUŁ FORMULARZA';display:block;position:absolute;top:22px;left:30px;font:700 10px system-ui,sans-serif;letter-spacing:.2em;color:#875f32;}
+.builder-page .form-title-input {margin-top:29px;font-size:clamp(27px,3vw,43px)!important;border-bottom:1px solid #d3bea0!important;}
+.builder-page .form-description-input {font-size:14px;color:#576170;}
+.builder-page .editable-section {padding:18px 22px 22px;}
+.builder-page .editable-field {border-color:#dfd1b8;background:#fffaf2;padding:0 20px 19px;}
+.builder-page .editable-field.selected {background:#fff9ef;}
+.builder-page .section-title strong {font-size:clamp(21px,2.3vw,27px);}
+.builder-page .section-head {padding:0 0 16px;}
+.builder-page .section-head .section-meta {color:#725e4e;}
+.builder-page .field-summary strong {font-size:17px;}
+.builder-page .field-summary small {line-height:1.6;}
+.builder-page .field-grip-row {height:29px;}
+.builder-page .field-grip-row .drag-handle,.builder-page .section-grip-row .section-drag-handle {
+ min-height:34px;font-size:9px;letter-spacing:.19em;color:#997346;
+}
+.builder-page .mock-options>div {padding:9px 12px;border-radius:7px;background:#f4eddf;border:1px solid #e3d8c6;}
+.builder-page .choice-marker {color:#815a32;}
+.builder-page .section-collapse {background:#741e29;color:#fff;border-color:#7f3035;}
+.builder-page .section-collapse:hover {background:#8f303a;color:#fff;}
+.builder-page .head-actions button {min-height:45px;}
+.builder-page .head-actions button.gold {background:#741e29;color:#fff;}
+.builder-page .draft-status {padding:14px 19px;border-color:#53677a;}
+.builder-page .toolbox-desktop {
+ display:grid;gap:8px;background:linear-gradient(180deg,#fffaf0,#f5ecdf);color:#222b34;
+ padding:20px 17px 24px;border:1px solid #ccae7c;border-radius:12px;
+ box-shadow:var(--man-paper-shadow);
+}
+.builder-page .toolbox-desktop h2 {font:700 12px system-ui,sans-serif;letter-spacing:.14em;text-align:center;color:#845b31;margin:0 0 9px;}
+.builder-page .toolbox-desktop p {font-size:12px;color:#6a645f;margin:0 0 12px;text-align:center;}
+.builder-page .toolbox-label {font:750 10px system-ui,sans-serif;letter-spacing:.16em;color:#8d5a31;margin:13px 0 2px;}
+.builder-page .toolbox-section-action {border:1px solid #8f343b;border-radius:8px;background:#741e29;color:#fff;padding:12px;min-height:44px;text-align:center;}
+.builder-page .toolbox-type {
+ display:flex;gap:10px;align-items:center;text-align:left;width:100%;background:#faf5eb;color:#242c32;
+ border:1px solid #ded0ba;border-radius:8px;padding:9px 10px;min-height:55px;
+}
+.builder-page .toolbox-type:hover,.builder-page .toolbox-type:focus-visible {background:#f0e2cb;border-color:#a8814c;}
+.builder-page .toolbox-type-mark {display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;color:#842330;border:1px solid #d8c3a4;border-radius:6px;font-size:18px;}
+.builder-page .toolbox-type strong {display:block;font:650 12px/1.35 system-ui,sans-serif;}
+.builder-page .toolbox-type small {display:block;font:400 11px/1.3 system-ui,sans-serif;color:#677078;margin-top:3px;}
+.builder-page .toolbox-mobile {display:none;}
+.builder-page .builder-insert-menu {right:calc(100% + 14px);width:290px;top:0;}
+.builder-page .builder-transfer {margin-top:38px;max-width:calc(100% - 310px);}
+.survey-player-preview .preview-panel {background:var(--man-paper);border-radius:14px;padding:18px;max-width:1000px;}
+app-survey-renderer .survey-renderer {background:var(--man-paper);border:1px solid var(--man-line);}
+.generator-content .wizard-stage .panel {
+ box-shadow:var(--man-paper-shadow);
+ background:linear-gradient(180deg,#fffaf0,#f7eee0);
+}
+.generator-content .wizard-stage .panel .eyebrow {color:#855b2f;}
+.generator-content .wizard-stage .section-header h2 {font-family:Georgia,serif;}
+.generator-content .wizard-stage .layout {gap:18px;}
+.generator-content .wizard-stage .content {gap:18px;}
+.generator-content .wizard-stage .sidepanel {box-shadow:var(--man-paper-shadow);}
+.generator-content .wizard-stage .facts {gap:12px;}
+.generator-content .wizard-stage .facts div {border:1px solid #ddccb2;padding:12px 14px;}
+.generator-content .wizard-stage .tag-card,.generator-content .wizard-stage .lore {border:1px solid #dec9a7;}
+.generator-content .wizard-stage .checklist li {border:1px solid #dccbb2;}
+.generator-content .wizard-stage .chosen-catalog-item {border-color:#c6a373;}
+@media(max-width:1100px) {
+ .builder-page .builder-workspace {grid-template-columns:minmax(0,1fr) 230px;gap:12px;}
+ .builder-page .toolbox-desktop {padding:15px 12px;}
+ .builder-page .builder-transfer {max-width:calc(100% - 242px);}
+}
+@media(max-width:800px) {
+ .builder-page .builder-workspace {display:block;}
+ .builder-page .builder-transfer {max-width:100%;}
+ .builder-page .toolbox-desktop {display:none;}
+ .builder-page .toolbox-mobile {display:flex;gap:8px;justify-content:center;}
+ .builder-page .toolbox-mobile button {
+   flex:1;min-height:49px;max-width:260px;background:#741e29;border:1px solid #bf995d;
+   border-radius:8px;color:#fff;font-weight:700;padding:11px;
+ }
+ .builder-page .builder-toolbox {position:sticky;bottom:8px;top:auto;margin:12px auto 0;width:100%;z-index:9;}
+ .builder-page .builder-insert-menu {position:absolute;right:0;left:auto;top:auto;bottom:calc(100% + 8px);transform:none;width:min(365px,calc(100vw - 28px));max-height:60vh;overflow:auto;}
+}
+@media(max-width:560px) {
+ .builder-page .form-meta {padding:12px 17px 20px;}
+ .builder-page .form-meta:after {left:17px;}
+ .builder-page .builder-head h1 {font-size:37px;}
+ .builder-page .head-actions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+ .builder-page .head-actions button {font-size:11px;padding:10px 6px;}
+ .builder-page .draft-status {align-items:start;gap:5px;}
+ .builder-page .editable-section {padding:12px;}
+ .builder-page .editable-field {padding:0 12px 16px;}
+ .builder-page .section-actions {gap:1px;}
+ .builder-page .section-actions button {min-width:38px;min-height:42px;}
+ .builder-page .toolbox-mobile {gap:6px;}
+}
