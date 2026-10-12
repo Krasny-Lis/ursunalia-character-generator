@@ -3080,10 +3080,10 @@ body {
 .field .choices:has(.show-description) { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .field .described-select { position:relative; }
 .field .described-select-trigger { width:100%; min-height:42px; display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border:1px solid #b9b0a2; border-radius:6px; background:#fffcf5; color:#172638; text-align:left; }
-.field .described-select-options { position:absolute; z-index:70; top:calc(100% + 3px); left:0; width:100%; max-height:340px; overflow:auto; padding:5px; border:1px solid #ad854b; border-radius:8px; background:#fbf3e5; box-shadow:0 13px 32px #08172577; }
-.field .described-select-option { display:block; width:100%; padding:9px 11px; border:1px solid transparent; border-radius:5px; text-align:left; background:transparent; color:#233143; font-family:Arial,sans-serif; }
-.field .described-select-option small { display:block; padding-top:3px; color:#576376; font:12px/1.5 Arial,sans-serif; white-space:pre-wrap; }
-.field .described-select-option:hover,.field .described-select-option:focus-visible,.field .described-select-option.selected { background:#e9d8ba; border-color:#ba9762; }
+.described-select-options { width:100%; max-height:min(340px,calc(100dvh - 32px)); overflow:auto; overscroll-behavior:contain; padding:5px; border:1px solid #ad854b; border-radius:8px; background:#fbf3e5; box-shadow:0 13px 32px #08172577; }
+.described-select-option { display:block; width:100%; padding:9px 11px; border:1px solid transparent; border-radius:5px; text-align:left; background:transparent; color:#233143; font-family:Arial,sans-serif; }
+.described-select-option small { display:block; padding-top:3px; color:#576376; font:12px/1.5 Arial,sans-serif; white-space:pre-wrap; }
+.described-select-option:hover,.described-select-option:focus-visible,.described-select-option.selected { background:#e9d8ba; border-color:#ba9762; }
 .field .selected-description { padding:8px 11px; margin-top:5px; border-left:3px solid #aa8145; background:#f3e8d6; color:#505c6c; font:13px/1.5 Arial,sans-serif; }
 .option-row .option-fields { flex:1; min-width:0; display:grid; gap:5px; }
 .option-row .option-fields textarea { width:100%; min-height:50px; padding:6px 8px; border:1px solid #ccb797; background:#fff9ed; border-radius:5px; color:#293747; font:13px/1.4 Arial,sans-serif; }

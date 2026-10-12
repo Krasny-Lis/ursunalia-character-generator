@@ -130,6 +130,27 @@ it('multiselect updates through controls and supports revealing all catalog choi
   await fixture.whenStable();
   expect(fixture.nativeElement.querySelectorAll('input[type=checkbox]').length).toBeGreaterThan(9);
 });
+it('renders described select choices in the CDK overlay above the form cards', async () => {
+  const select = seed.forms[0].sections.flatMap(s => s.fields).find(f => f.type === 'select')!;
+  expect(select).toBeDefined();
+  const fixture = TestBed.createComponent(FieldControl);
+  fixture.componentRef.setInput('field', select);
+  fixture.componentRef.setInput('value', '');
+  const changed = vi.fn();
+  fixture.componentInstance.changed.subscribe(changed);
+  await fixture.whenStable();
+  const trigger = fixture.nativeElement.querySelector('.described-select-trigger') as HTMLButtonElement;
+  trigger.click();
+  await fixture.whenStable();
+  const options = document.querySelector('.cdk-overlay-container .described-select-options');
+  expect(options).not.toBeNull();
+  expect(fixture.nativeElement.querySelector('.described-select-options')).toBeNull();
+  (options!.querySelectorAll('button')[1] as HTMLButtonElement).click();
+  await fixture.whenStable();
+  expect(changed).toHaveBeenCalledWith(select.options![0].id);
+  expect(fixture.componentInstance.dropdownOpen()).toBe(false);
+  fixture.destroy();
+});
 it('builder supports creation, edits, duplicate, drag order and an interactive preview', async () => {
   const fixture = TestBed.createComponent(BuilderPage);
   await fixture.whenStable();

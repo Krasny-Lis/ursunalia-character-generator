@@ -1,11 +1,12 @@
-import { Component, ElementRef, HostListener, inject, input, output, signal } from '@angular/core';
+import { Component, HostListener, input, output, signal } from '@angular/core';
+import { CdkConnectedOverlay, CdkOverlayOrigin, type ConnectedPosition } from '@angular/cdk/overlay';
 import { FormsModule } from '@angular/forms';
 import { Answer, Field } from './models';
 import { Icon } from './icon';
 @Component({
   selector: 'u-field',
   standalone: true,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, CdkConnectedOverlay, CdkOverlayOrigin],
   template: ` <div class="field" [class.invalid]="error()" [attr.id]="'field-' + field().id">
     @if (field().type !== 'info') {
       <label
@@ -59,7 +60,8 @@ import { Icon } from './icon';
         ><small class="counter">{{ textLength() }} / {{ field().maxLength ?? 10000 }}</small>
       }
       @case ('select') {
-        <div class="described-select" [class.open]="dropdownOpen()">
+        <div class="described-select" [class.open]="dropdownOpen()"
+          cdkOverlayOrigin #dropdownOrigin="cdkOverlayOrigin">
           <button type="button" class="described-select-trigger"
             [id]="'input-' + field().id"
             [disabled]="disabled()"
@@ -70,19 +72,33 @@ import { Icon } from './icon';
             (click)="dropdownOpen.set(!dropdownOpen())">
             {{ selectedOption()?.label || 'Wybierz…' }} <u-icon name="chevron" />
           </button>
-          @if (dropdownOpen()) {
-            <div class="described-select-options" [id]="'select-options-' + field().id" role="group" [attr.aria-label]="field().label">
-              <button type="button" class="described-select-option" (click)="chooseOption('')">Wybierz…</button>
-              @for (option of field().options; track option.id) {
-                <button type="button" class="described-select-option" [class.selected]="value() === option.id"
-                  [attr.aria-pressed]="value() === option.id" (click)="chooseOption(option.id)">
-                  <strong>{{ option.label }}</strong>
-                  @if (option.description) { <small>{{ option.description }}</small> }
-                </button>
-              }
-            </div>
-          }
         </div>
+        <ng-template cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="dropdownOrigin"
+          [cdkConnectedOverlayOpen]="dropdownOpen()"
+          [cdkConnectedOverlayPositions]="dropdownPositions"
+          [cdkConnectedOverlayWidth]="dropdownOrigin.elementRef.nativeElement.offsetWidth"
+          [cdkConnectedOverlayHasBackdrop]="true"
+          cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+          [cdkConnectedOverlayPush]="true"
+          [cdkConnectedOverlayViewportMargin]="8"
+          (backdropClick)="dropdownOpen.set(false)">
+          <div class="described-select-options"
+            [id]="'select-options-' + field().id"
+            role="group" [attr.aria-label]="'Wybierz: ' + field().label">
+            <button type="button" class="described-select-option"
+              (click)="chooseOption('')">Wybierz…</button>
+            @for (option of field().options; track option.id) {
+              <button type="button" class="described-select-option"
+                [class.selected]="value() === option.id"
+                [attr.aria-pressed]="value() === option.id"
+                (click)="chooseOption(option.id)">
+                <strong>{{ option.label }}</strong>
+                @if (option.description) { <small>{{ option.description }}</small> }
+              </button>
+            }
+          </div>
+        </ng-template>
         @if (selectedDescription()) {
           <div class="choice-help selected-description">{{ selectedDescription() }}</div>
         }
@@ -202,13 +218,11 @@ export class FieldControl {
   expanded = signal(false);
   expandedDescriptions = signal(false);
   dropdownOpen = signal(false);
-  private readonly element = inject(ElementRef<HTMLElement>);
   fileError = signal('');
-  @HostListener('document:pointerdown', ['$event'])
-  onOutside(event: PointerEvent) {
-    if (this.dropdownOpen() && !this.element.nativeElement.contains(event.target as Node))
-      this.dropdownOpen.set(false);
-  }
+  readonly dropdownPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
   @HostListener('document:keydown.escape')
   onEscape() { this.dropdownOpen.set(false); }
   hasDescriptions() {
