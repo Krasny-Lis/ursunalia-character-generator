@@ -1,1 +1,19 @@
-/* You can add global styles to this file, and also import other style files */
+/**
+ * Ursunalia 2027 · style globalne.
+ * Kolejność importów jest celowa: zachowuje kaskadę CSS wersji v10.
+ * Etap 2: usunięto nieużywane animacje starego kreatora.
+ * Pozostałe reguły zachowują ustaloną kolejność kaskady.
+ */
+@use './styles/base';
+@use './styles/app-shell';
+@use './styles/layout-structure';
+@use './styles/form-layout';
+@use './styles/section-controls';
+@use './styles/choices-popovers';
+@use './styles/card-popover-adjustments';
+@use './styles/expand-animation';
+@use './styles/save-notifications';
+@use './styles/summary-transitions';
+@use './styles/section-overview';
+@use './styles/selected-catalog';
+@use './styles/content-guidance';

@@ -1,0 +1,63 @@
+@if (region(); as entry) {
+                <details class="lore"><summary>Stereotyp regionalny · {{ entry.name }}</summary>
+                  <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
+                </details>
+              }
+              @if (culture(); as entry) {
+                <details class="lore"><summary>Stereotyp kulturowy · {{ entry.name }}</summary>
+                  <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
+                </details>
+              }
+              @if (role(); as entry) {
+                <details class="lore"><summary>Opis roli · {{ entry.name }}</summary><p>{{ entry.description }}</p></details>
+              }
+
+              
+                <div class="inline-editor" aria-label="Edycja tożsamości">
+                  <h3>Dane postaci</h3>
+                  <div class="edit-grid">
+                    <label class="identity-field identity-name validation-target" data-validation-field="name" [class.validation-highlight]="highlightedField === 'name'" (pointerdown)="fieldTouched.emit('name')"><span class="identity-label-content">Nazwa postaci</span><input type="text" maxlength="160" [value]="c.name" (input)="changeIdentity('name', $event)" /></label>
+                    <div class="identity-field identity-culture select-field validation-target" data-validation-field="culture" [class.validation-highlight]="highlightedField === 'culture'" (pointerdown)="fieldTouched.emit('culture')">
+                                          <div class="field-heading">
+                                            <label for="form-culture">Kultura</label>
+                                            <button type="button" class="info-button" (click)="requestInfo('cultures', $event)" [attr.aria-expanded]="activeInfoKey === 'cultures'" aria-label="Pełne opisy: Kultura" title="Zobacz wszystkie możliwości i pełne opisy">i</button>
+                                          </div>
+                                          <select id="form-culture" [value]="c.cultureId" (change)="changeIdentity('cultureId', $event)">
+                                            <option value="">— Wybierz —</option>
+                                            @for (item of data.cultures; track item.id) { <option [value]="item.id" [selected]="item.id === c.cultureId">{{ item.name }}</option> }
+                                          </select>
+                                        </div>
+                    <div class="identity-field identity-role select-field validation-target" data-validation-field="role" [class.validation-highlight]="highlightedField === 'role'" (pointerdown)="fieldTouched.emit('role')">
+                                          <div class="field-heading">
+                                            <label for="form-role">Główna rola społeczna</label>
+                                            <button type="button" class="info-button" (click)="requestInfo('roles', $event)" [attr.aria-expanded]="activeInfoKey === 'roles'" aria-label="Pełne opisy: Główna rola społeczna" title="Zobacz wszystkie możliwości i pełne opisy">i</button>
+                                          </div>
+                                          <select id="form-role" [value]="c.roleId" (change)="changeIdentity('roleId', $event)">
+                                            <option value="">— Wybierz —</option>
+                                            @for (item of data.roles; track item.id) { <option [value]="item.id" [selected]="item.id === c.roleId">{{ item.name }}</option> }
+                                          </select>
+                                        </div>
+                    <label class="identity-field identity-occupation validation-target" data-validation-field="occupation" [class.validation-highlight]="highlightedField === 'occupation'" (pointerdown)="fieldTouched.emit('occupation')"><span class="identity-label-content">Zawód lub zajęcie</span><input type="text" [value]="c.occupation" (input)="changeIdentity('occupation', $event)" /></label>
+                    <div class="identity-field identity-region select-field validation-target" data-validation-field="region" [class.validation-highlight]="highlightedField === 'region'" (pointerdown)="fieldTouched.emit('region')">
+                                          <div class="field-heading">
+                                            <label for="form-region">Region pochodzenia</label>
+                                            <button type="button" class="info-button" (click)="requestInfo('regions', $event)" [attr.aria-expanded]="activeInfoKey === 'regions'" aria-label="Pełne opisy: Region pochodzenia" title="Zobacz wszystkie możliwości i pełne opisy">i</button>
+                                          </div>
+                                          <select id="form-region" [value]="c.regionId" (change)="changeIdentity('regionId', $event)">
+                                            <option value="">— Wybierz —</option>
+                                            @for (item of data.regions; track item.id) { <option [value]="item.id" [selected]="item.id === c.regionId">{{ item.name }}</option> }
+                                          </select>
+                                        </div>
+                    <label class="identity-field identity-origin-detail"><span class="identity-label-content">Miejsce pochodzenia / wychowania <span class="optional-note">(opcjonalne)</span></span><input type="text" [value]="c.originDetail" (input)="changeIdentity('originDetail', $event)" /></label>
+                    <div class="identity-field identity-residency select-field validation-target" data-validation-field="residency" [class.validation-highlight]="highlightedField === 'residency'" (pointerdown)="fieldTouched.emit('residency')">
+                                          <div class="field-heading">
+                                            <label for="form-residency">Status na Ziemiach Braci</label>
+                                            <button type="button" class="info-button" (click)="requestInfo('residencies', $event)" [attr.aria-expanded]="activeInfoKey === 'residencies'" aria-label="Pełne opisy: Status na Ziemiach Braci" title="Zobacz wszystkie możliwości i pełne opisy">i</button>
+                                          </div>
+                                          <select id="form-residency" [value]="c.residency ?? ''" (change)="changeResidency($event)">
+                                            <option value="">— Wybierz —</option>
+                                            @for (item of data.residencies; track item.id) { <option [value]="item.id" [selected]="item.id === c.residency">{{ item.name }}</option> }
+                                          </select>
+                                        </div>
+                  </div>
+                </div>

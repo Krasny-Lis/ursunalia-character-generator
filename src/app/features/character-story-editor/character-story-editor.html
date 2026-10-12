@@ -1,0 +1,26 @@
+<div class="inline-editor" aria-label="Edycja historii">
+                  <h3>Opisz historię i motywacje</h3>
+                  <label class="validation-target" data-validation-field="goal" [class.validation-highlight]="highlightedField === 'goal'" (pointerdown)="fieldTouched.emit('goal')">Cel postaci <span class="optional-note">(opcjonalne)</span> <span>({{ c.story.goal.length }}/400)</span>
+                    <textarea maxlength="400" rows="3" [value]="c.story.goal" (input)="changeStory('goal', $event)"></textarea>
+                  </label>
+                  <label class="validation-target" data-validation-field="obstacle" [class.validation-highlight]="highlightedField === 'obstacle'" (pointerdown)="fieldTouched.emit('obstacle')">Przeszkoda <span class="optional-note">(opcjonalne)</span> <span>({{ c.story.obstacle.length }}/400)</span>
+                    <textarea maxlength="400" rows="3" [value]="c.story.obstacle" (input)="changeStory('obstacle', $event)"></textarea>
+                  </label>
+                  <label class="validation-target" data-validation-field="presenceReason" [class.validation-highlight]="highlightedField === 'presenceReason'" (pointerdown)="fieldTouched.emit('presenceReason')">{{ c.residency === 'resident' ? 'Dlaczego uczestniczy w święcie?' : c.residency === 'visitor' ? 'Dlaczego przybyła na Ziemie Braci?' : 'Powód obecności' }} <span class="optional-note">(opcjonalne)</span> <span>({{ c.story.presenceReason.length }}/400)</span>
+                    <textarea maxlength="400" rows="3" [value]="c.story.presenceReason" (input)="changeStory('presenceReason', $event)"></textarea>
+                  </label>
+                  <label class="validation-target" data-validation-field="stakes" [class.validation-highlight]="highlightedField === 'stakes'" (pointerdown)="fieldTouched.emit('stakes')">Co ma do stracenia? <span class="optional-note">(opcjonalne)</span> <span>({{ c.story.stakes.length }}/400)</span>
+                    <textarea maxlength="400" rows="3" [value]="c.story.stakes" (input)="changeStory('stakes', $event)"></textarea>
+                  </label>
+                  <div class="history-guidance" aria-label="Jak napisać biografię postaci">
+                    <strong>Co warto zawrzeć w biografii? <span class="temporary-note">Wskazówka tymczasowa</span></strong>
+                    <p>Opisz najważniejsze wydarzenia, które ukształtowały Twoją postać: rodzinę, pochodzenie, zajęcie, sukcesy, porażki i ważne znajomości. Pokaż, co wydarzyło się w jej życiu i dlaczego ma to znaczenie dzisiaj.</p>
+                    <p>Historia powinna pomóc organizatorom zrozumieć postać i stworzyć dla niej interesujące wątki. Nie musisz pisać kroniki całego życia ani powtarzać każdej odpowiedzi z formularza.</p>
+                  </div>
+                  <label class="validation-target" data-validation-field="history" [class.validation-highlight]="highlightedField === 'history'" (pointerdown)="fieldTouched.emit('history')">Pełna biografia <span>({{ c.story.history.trim().length }} znaków, min. 500)</span>
+                    <textarea rows="10" [value]="c.story.history" (input)="changeStory('history', $event)"></textarea>
+                  </label>
+                  @if (c.story.history.trim().length < 500) {
+                    <p class="editor-hint">Do pełnej biografii brakuje {{ 500 - c.story.history.trim().length }} znaków. Szkic zapisuje się automatycznie.</p>
+                  }
+                </div>

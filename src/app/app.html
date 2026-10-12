@@ -1,1 +1,84 @@
-<router-outlet />
+<button type="button" class="skip-to-content" (click)="skipToContent()">Przejdź do formularza</button>
+
+<header class="shell-header">
+  <div class="shell-headline">
+    <div class="shell-brand" aria-label="Ursunalia 2027">
+      <span class="brand-sigil" aria-hidden="true">✦</span>
+      <span class="brand-copy"><strong>URSUNALIA</strong><small>ZIEMIE BRACI · 2027</small></span>
+    </div>
+    <div class="shell-title"><span>GENERATOR POSTACI</span><h1>Zgłoszenie postaci</h1></div>
+    <div class="character-tools">
+      <div class="character-picker">
+        <label for="shell-active-character">Aktywna postać</label>
+        <select id="shell-active-character" [value]="activeCharacter()?.id ?? ''" (change)="selectCharacter($event)">
+          @for (character of characters(); track character.id) {
+            <option [value]="character.id" [selected]="character.id === activeCharacter()?.id">
+              {{ character.name || 'Nowa postać (bez nazwy)' }}{{ character.id.startsWith('demo-') ? ' · przykład' : '' }}
+            </option>
+          }
+        </select>
+      </div>
+      <button type="button" class="create-character" (click)="createCharacter()">＋ Nowa postać</button>
+    </div>
+  </div>
+  @if (!store.storageAvailable()) {
+    <p class="shell-warning" role="status">Zapis w sessionStorage jest niedostępny – dane mogą zniknąć po odświeżeniu.</p>
+  }
+</header>
+
+<main id="generator-content" class="generator-content" tabindex="-1">
+  <section class="wizard-hero" aria-label="Zgłoszenie postaci">
+    <p class="wizard-eyebrow">ŚWIĘTO BUDZENIA NIEDŹWIEDZI · URSUNALIA 2027</p>
+    @if (view() === 'form') {
+      <h2>Zgłoszenie postaci</h2>
+      <p>Wypełnij wszystkie części zgłoszenia poniżej. Odpowiedzi zapisują się automatycznie; wymagane pola i braki zobaczysz w panelu bocznym.</p>
+    } @else {
+      <h2>Podsumowanie</h2>
+      <p>Sprawdź komplet danych zgłoszenia, preferencje gracza i historię. Znajdziesz tu także Informacje dodatkowe, które pomogą organizatorom zaplanować Twoją grę.</p>
+    }
+  </section>
+
+  <nav class="single-view-tabs" aria-label="Widoki zgłoszenia">
+    <button type="button" [class.active]="view() === 'form'" [attr.aria-current]="view() === 'form' ? 'page' : null" [disabled]="transitionPhase() !== 'idle'" (click)="show('form')">Zgłoszenie postaci</button>
+    <button type="button" [class.active]="view() === 'card'" [attr.aria-current]="view() === 'card' ? 'page' : null" [disabled]="transitionPhase() !== 'idle'" (click)="show('card')">Podsumowanie</button>
+  </nav>
+
+  <!-- Oba widoki zachowują swój stan, ale tylko jeden jest wyświetlany.
+       Podmiana display następuje dopiero po zakończeniu wyciszenia starego widoku. -->
+  <div class="wizard-stage" [attr.data-transition]="transitionPhase()" [attr.data-motion]="transitionDirection()" [attr.aria-busy]="transitionPhase() !== 'idle'">
+    <app-character-review [inactive]="view() === 'card'"
+      [style.display]="view() === 'card' ? 'none' : 'block'" />
+    <app-character-summary [style.display]="view() === 'card' ? 'block' : 'none'" />
+  </div>
+</main>
+
+<nav class="wizard-dock" aria-label="Nawigacja zgłoszenia">
+  <div class="wizard-dock-inner">
+    <button type="button" class="wizard-button wizard-save" (click)="saveDraft()">Zapisz</button>
+    @if (view() === 'form') {
+      <button type="button" class="wizard-button wizard-next" [disabled]="transitionPhase() !== 'idle'" (click)="show('card')">Przejdź do podsumowania <span aria-hidden="true">→</span></button>
+    } @else {
+      <button type="button" class="wizard-button wizard-back" [disabled]="transitionPhase() !== 'idle'" (click)="show('form')"><span aria-hidden="true">←</span> Wróć do zgłoszenia</button>
+    }
+  </div>
+</nav>
+
+@if (saveNotice() === 'saved') {
+  <div class="save-notice" role="status" aria-live="polite">
+    <span class="save-notice-icon" aria-hidden="true">✓</span>
+    <span><strong>Postać zapisana w tej sesji.</strong><small>Placeholder – dodać walidację serwera. Niczego nie wysłano.</small></span>
+    <button type="button" class="save-notice-close" aria-label="Zamknij komunikat" (click)="dismissSaveNotice()">×</button>
+  </div>
+} @else if (saveNotice() === 'error') {
+  <div class="save-notice save-notice-error" role="alert">
+    <span class="save-notice-icon" aria-hidden="true">!</span>
+    <span><strong>Nie udało się zapisać postaci.</strong><small>Przeglądarka blokuje zapis w sessionStorage.</small></span>
+    <button type="button" class="save-notice-close" aria-label="Zamknij komunikat" (click)="dismissSaveNotice()">×</button>
+  </div>
+}
+
+@if (showTopButton()) {
+  <button type="button" class="to-top-button" (click)="scrollToTop()" aria-label="Przewiń na górę strony">
+    <span aria-hidden="true">↑</span> Do góry
+  </button>
+}

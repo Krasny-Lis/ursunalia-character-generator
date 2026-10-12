@@ -1,253 +1,287 @@
 <div class="page">
-  <header class="topbar">
-    <div class="brand-mark" aria-hidden="true">✦</div>
-    <div class="brand"><strong>URSUNALIA</strong><span>ZIEMIE BRACI · 2027</span></div>
-    <nav class="toplinks" aria-label="Etapy generatora">
-      <a routerLink="/">Tożsamość</a>
-      <a routerLink="/traits">Cechy</a>
-      <a routerLink="/hooks">Haki fabularne</a>
-      <a routerLink="/history">Historia</a>
-      <a routerLink="/pillars">Preferencje</a>
-      <a routerLink="/gameplay">Styl gry</a>
-      <a routerLink="/relations">Relacje</a>
-      <a routerLink="/summary" [attr.aria-current]="!cardMode ? 'page' : null">Podsumowanie</a>
-      <a routerLink="/card" [attr.aria-current]="cardMode ? 'page' : null">Karta postaci</a>
-    </nav>
-  </header>
-
   <main>
-    <section class="hero">
-      <p class="eyebrow">ŚWIĘTO BUDZENIA NIEDŹWIEDZI · GENERATOR POSTACI</p>
-      @if (cardMode) {
-        <h1>Karta postaci</h1>
-        <p>Wersja do odczytu: tożsamość, cechy, haki, znajomości oraz historia postaci. Rozwijaj nazwy, aby poznać pełne opisy.</p>
-      } @else {
-        <h1>Podsumowanie formularza</h1>
-        <p>Przejrzyj przygotowaną postać i sprawdź, czego jeszcze brakuje. Każdą część możesz uzupełnić w odpowiednim etapie generatora.</p>
-      }
-    </section>
-
     @if (catalogs(); as data) {
       @if (activeCharacter(); as c) {
         <div class="layout">
           <section class="content" aria-label="Dane postaci">
-            @if (!cardMode) {
-              <section class="panel progress-panel">
+            
+
+            <section class="panel" id="identity">
+              <div class="section-header">
+                <div><p class="eyebrow">TOŻSAMOŚĆ</p><h2>{{ c.name || 'Postać bez nazwy' }}</h2></div>
+              
+              <button type="button" class="section-toggle" [attr.aria-expanded]="!isCollapsed('identity')" aria-controls="section-content-identity" (click)="toggleSection('identity')"
+                [attr.aria-label]="isCollapsed('identity') ? 'Rozwiń: Tożsamość' : 'Zwiń: Tożsamość'">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              
+              </div>
+
+              @if (isCollapsed('identity')) {
+                <p class="section-mini-summary" aria-label="Podsumowanie zwiniętej sekcji">{{ sectionPreview('identity') }}</p>
+              }
+              <div class="section-collapse-content" id="section-content-identity" [class.is-collapsed]="isCollapsed('identity')" [attr.aria-hidden]="isCollapsed('identity')" [attr.inert]="isCollapsed('identity') ? '' : null">
+                <div class="section-collapse-inner">
+                  <app-character-identity-editor
+                    [c]="c"
+                    [data]="data"
+                    [highlightedField]="highlightedField()"
+                    [activeInfoKey]="infoKey()"
+                    (fieldTouched)="acknowledgeHighlight($event)"
+                    (infoRequested)="openInfo($event.key, $event.event)" />
+
+                </div>
+</div>
+</section>
+
+            <section class="panel" id="traits">
+              <div class="section-header">
+                <div><p class="eyebrow">CHARAKTER</p><h2>Cechy postaci <span class="meta-count">{{ selectedTraits().length }}</span></h2></div>
+              
+              <button type="button" class="section-toggle" [attr.aria-expanded]="!isCollapsed('traits')" aria-controls="section-content-traits" (click)="toggleSection('traits')"
+                [attr.aria-label]="isCollapsed('traits') ? 'Rozwiń: Cechy postaci' : 'Zwiń: Cechy postaci'">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              
+              </div>
+
+              @if (isCollapsed('traits')) {
+                <p class="section-mini-summary" aria-label="Podsumowanie zwiniętej sekcji">{{ sectionPreview('traits') }}</p>
+              }
+              <div class="section-collapse-content" id="section-content-traits" [class.is-collapsed]="isCollapsed('traits')" [attr.aria-hidden]="isCollapsed('traits')" [attr.inert]="isCollapsed('traits') ? '' : null">
+                <div class="section-collapse-inner">
+                  <app-character-catalog-editor kind="traits" [c]="c" [data]="data" [selected]="selectedTraits()" />
+
+                </div>
+</div>
+</section>
+
+            <section class="panel" id="hooks">
+              <div class="section-header">
+                <div><p class="eyebrow">WĄTKI I BRZEMIONA</p><h2>Haki fabularne <span class="meta-count">{{ selectedHooks().length }}</span></h2></div>
+              
+              <button type="button" class="section-toggle" [attr.aria-expanded]="!isCollapsed('hooks')" aria-controls="section-content-hooks" (click)="toggleSection('hooks')"
+                [attr.aria-label]="isCollapsed('hooks') ? 'Rozwiń: Haki fabularne' : 'Zwiń: Haki fabularne'">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              
+              </div>
+
+              @if (isCollapsed('hooks')) {
+                <p class="section-mini-summary" aria-label="Podsumowanie zwiniętej sekcji">{{ sectionPreview('hooks') }}</p>
+              }
+              <div class="section-collapse-content" id="section-content-hooks" [class.is-collapsed]="isCollapsed('hooks')" [attr.aria-hidden]="isCollapsed('hooks')" [attr.inert]="isCollapsed('hooks') ? '' : null">
+                <div class="section-collapse-inner">
+                  <app-character-catalog-editor kind="hooks" [c]="c" [data]="data" [selected]="selectedHooks()" />
+
+                </div>
+</div>
+</section>
+
+            <section class="panel" id="story">
+              <div class="section-header">
+                <div><p class="eyebrow">DZIEJE POSTACI</p><h2>Historia i motywacje</h2></div>
+              <button type="button" class="section-toggle" [attr.aria-expanded]="!isCollapsed('story')" aria-controls="section-content-story" (click)="toggleSection('story')"
+                [attr.aria-label]="isCollapsed('story') ? 'Rozwiń: Historia i motywacje' : 'Zwiń: Historia i motywacje'">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              </div>
+
+              @if (isCollapsed('story')) {
+                <p class="section-mini-summary" aria-label="Podsumowanie zwiniętej sekcji">{{ sectionPreview('story') }}</p>
+              }
+              <div class="section-collapse-content" id="section-content-story" [class.is-collapsed]="isCollapsed('story')" [attr.aria-hidden]="isCollapsed('story')" [attr.inert]="isCollapsed('story') ? '' : null">
+                <div class="section-collapse-inner">
+                  <app-character-story-editor [c]="c" [data]="data" [highlightedField]="highlightedField()"
+    (fieldTouched)="acknowledgeHighlight($event)" />
+
+                </div>
+</div>
+</section>
+
+            <section class="panel" id="relations">
+              <div class="section-header">
+                <div><p class="eyebrow">WIĘZI</p><h2>Istotne znajomości <span class="meta-count">{{ c.relations.length }}</span></h2></div>
+              
+              <button type="button" class="section-toggle" [attr.aria-expanded]="!isCollapsed('relations')" aria-controls="section-content-relations" (click)="toggleSection('relations')"
+                [attr.aria-label]="isCollapsed('relations') ? 'Rozwiń: Istotne znajomości' : 'Zwiń: Istotne znajomości'">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              
+              </div>
+
+              @if (isCollapsed('relations')) {
+                <p class="section-mini-summary" aria-label="Podsumowanie zwiniętej sekcji">{{ sectionPreview('relations') }}</p>
+              }
+              <div class="section-collapse-content" id="section-content-relations" [class.is-collapsed]="isCollapsed('relations')" [attr.aria-hidden]="isCollapsed('relations')" [attr.inert]="isCollapsed('relations') ? '' : null">
+                <div class="section-collapse-inner">
+                  <app-character-relations-editor [c]="c" [data]="data" />
+
+                </div>
+</div>
+</section>
+
+            <section class="panel" id="preferences">
+                <div class="section-header"><div><p class="eyebrow">PREFERENCJE GRACZA</p><h2>Rozgrywka, styl i granice</h2></div>
+                
+              <button type="button" class="section-toggle" [attr.aria-expanded]="!isCollapsed('preferences')" aria-controls="section-content-preferences" (click)="toggleSection('preferences')"
+                [attr.aria-label]="isCollapsed('preferences') ? 'Rozwiń: Rozgrywka, styl i granice' : 'Zwiń: Rozgrywka, styl i granice'">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              
+              </div>
+
+              @if (isCollapsed('preferences')) {
+                <p class="section-mini-summary" aria-label="Podsumowanie zwiniętej sekcji">{{ sectionPreview('preferences') }}</p>
+              }
+              <div class="section-collapse-content" id="section-content-preferences" [class.is-collapsed]="isCollapsed('preferences')" [attr.aria-hidden]="isCollapsed('preferences')" [attr.inert]="isCollapsed('preferences') ? '' : null">
+                <div class="section-collapse-inner">
+                  <app-character-preferences-editor [c]="c" [data]="data" [highlightedField]="highlightedField()"
+    [activeInfoKey]="infoKey()" (fieldTouched)="acknowledgeHighlight($event)"
+    (infoRequested)="openInfo($event.key, $event.event)" />
+
+                </div>
+</div>
+</section>
+          </section>
+
+          
+          <aside class="sidepanel" aria-label="Stan przygotowania postaci">
+            <p class="eyebrow">AKTYWNA POSTAĆ</p>
+            <h2>{{ c.name || 'Postać bez nazwy' }}</h2>
+            <p class="small-note">{{ c.occupation || 'Zajęcie nieokreślone' }}</p>
+            <div class="rule"></div>
+            
+              <section class="progress-sidebar" aria-label="Stan przygotowania postaci">
                 <div class="section-header">
-                  <div><p class="eyebrow">KONTROLA WYMAGANYCH PÓL</p><h2>Stan przygotowania postaci</h2></div>
+                  <div><p class="eyebrow">WYMAGANE POLA</p><h2>Stan przygotowania postaci</h2></div>
                   <span class="progress-count">{{ readyCount() }} / {{ requiredSections().length }}</span>
                 </div>
-                <p class="muted">Sprawdzamy osiem obowiązkowych elementów zgłoszenia. Cechy charakteru, haki i relacje są opcjonalne.</p>
+                <p class="muted">8 wymaganych pól.</p>
                 <div class="progress-meter" role="progressbar" aria-label="Uzupełnienie obowiązkowych elementów"
                   [attr.aria-valuenow]="readyCount()" aria-valuemin="0" [attr.aria-valuemax]="requiredSections().length">
                   <div class="progress-meter-fill" [style.width.%]="requiredSections().length ? readyCount() * 100 / requiredSections().length : 0"></div>
                 </div>
-                <ul class="checklist">
-                  @for (section of requiredSections(); track section.id) {
-                    <li [class.incomplete]="!section.ready">
-                      <span class="status-icon" [class.ok]="section.ready" aria-hidden="true">{{ section.ready ? '✓' : '○' }}</span>
-                      <span class="checklist-content">
-                        <strong>{{ section.label }}</strong>
-                        @if (!section.ready) { <small>{{ section.detail }}</small> }
-                      </span>
-                      <a [routerLink]="section.route">{{ section.ready ? 'Edytuj' : 'Uzupełnij' }}</a>
-                    </li>
-                  }
-                </ul>
+                <h3 class="progress-group-heading">Do uzupełnienia ({{ incompleteSections().length }})</h3>
+                @if (incompleteSections().length) {
+                  <ul class="checklist checklist-incomplete">
+                    @for (section of incompleteSections(); track section.id) {
+                      <li class="incomplete">
+                        <span class="status-icon" aria-hidden="true">○</span>
+                        <span class="checklist-content">
+                          <strong>{{ shortLabel(section.id, section.label) }}</strong>
+                          <small>{{ shortDetail(section.id) }}</small>
+                        </span>
+                        <button type="button" class="progress-jump" (click)="scrollToIssue(section.id)" [attr.aria-label]="'Uzupełnij: ' + section.label">Uzupełnij</button>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="progress-all-done">✓ Wszystkie wymagane pola są uzupełnione.</p>
+                }
+                @if (completedSections().length) {
+                  <details class="completed-fields">
+                    <summary>Ukończone pola ({{ completedSections().length }})</summary>
+                    <ul class="checklist checklist-complete">
+                      @for (section of completedSections(); track section.id) {
+                        <li>
+                          <span class="status-icon ok" aria-hidden="true">✓</span>
+                          <span class="checklist-content"><strong>{{ shortLabel(section.id, section.label) }}</strong></span>
+                          <button type="button" class="progress-jump" (click)="scrollToIssue(section.id)" [attr.aria-label]="'Pokaż: ' + section.label">Pokaż</button>
+                        </li>
+                      }
+                    </ul>
+                  </details>
+                }
                 @if (optionalIssues().length) {
                   <div class="validation-warnings" role="status">
-                    <h3>Popraw odpowiedzi przekraczające limit</h3>
+                    <h3>Za długie odpowiedzi</h3>
                     <ul>
                       @for (issue of optionalIssues(); track issue.id) {
-                        <li><strong>{{ issue.label }}</strong>: {{ issue.detail }}
-                          <a [routerLink]="issue.route">Popraw →</a>
+                        <li><strong>{{ issue.label }}</strong>: {{ shortDetail(issue.id) }}
+                          <button type="button" class="progress-jump" (click)="scrollToIssue(issue.id)">Popraw</button>
                         </li>
                       }
                     </ul>
                   </div>
                 }
-                @if (validation()?.complete) {
-                  <p class="success-note">Formularz spełnia sprawdzane wymagania. Zgłoszenie nadal pozostaje lokalnym szkicem – niczego nie wysłano.</p>
-                } @else {
-                  <p class="small-note">Możesz zachować nieukończony szkic i wrócić do niego w tej sesji przeglądarki.</p>
-                }
+                <p class="small-note">Szkic zapisuje się automatycznie.</p>
               </section>
-            }
+            
 
-            <section class="panel" id="identity">
-              <div class="section-header">
-                <div><p class="eyebrow">TOŻSAMOŚĆ</p><h2>{{ c.name || 'Postać bez nazwy' }}</h2></div>
-                @if (!cardMode) { <a class="edit-link" routerLink="/">Edytuj tożsamość →</a> }
-              </div>
-              <dl class="facts">
-                <div><dt>Rola społeczna</dt><dd>{{ role()?.name || 'Nie wybrano' }}</dd></div>
-                <div><dt>Zajęcie</dt><dd>{{ c.occupation || 'Nie określono' }}</dd></div>
-                <div><dt>Region pochodzenia</dt><dd>{{ region()?.name || 'Nie wybrano' }}</dd></div>
-                @if (c.originDetail) { <div><dt>Szczegóły pochodzenia</dt><dd>{{ c.originDetail }}</dd></div> }
-                <div><dt>Status na Ziemiach Braci</dt><dd>{{ residency()?.name || 'Nie określono' }}</dd></div>
-                <div><dt>Kultura</dt><dd>{{ culture()?.name || 'Nie wybrano' }}</dd></div>
-              </dl>
-              @if (region(); as entry) {
-                <details class="lore"><summary>Stereotyp regionalny · {{ entry.name }}</summary>
-                  <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
-                </details>
-              }
-              @if (culture(); as entry) {
-                <details class="lore"><summary>Stereotyp kulturowy · {{ entry.name }}</summary>
-                  <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
-                </details>
-              }
-              @if (role(); as entry) {
-                <details class="lore"><summary>Opis roli · {{ entry.name }}</summary><p>{{ entry.description }}</p></details>
-              }
-            </section>
-
-            <section class="panel" id="traits">
-              <div class="section-header">
-                <div><p class="eyebrow">CHARAKTER</p><h2>Cechy postaci <span class="meta-count">{{ selectedTraits().length }}</span></h2></div>
-                @if (!cardMode) { <a class="edit-link" routerLink="/traits">Edytuj cechy →</a> }
-              </div>
-              @if (selectedTraits().length) {
-                <div class="tag-grid">
-                  @for (entry of selectedTraits(); track entry.id) {
-                    <details class="tag-card">
-                      <summary>{{ entry.name }} <span class="chevron" aria-hidden="true">⌄</span></summary>
-                      @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
-                      <p>{{ entry.description }}</p>
-                    </details>
-                  }
-                </div>
-              } @else { <p class="empty">Nie wybrano cech charakteru.</p> }
-            </section>
-
-            <section class="panel" id="hooks">
-              <div class="section-header">
-                <div><p class="eyebrow">WĄTKI I BRZEMIONA</p><h2>Haki fabularne <span class="meta-count">{{ selectedHooks().length }}</span></h2></div>
-                @if (!cardMode) { <a class="edit-link" routerLink="/hooks">Edytuj haki →</a> }
-              </div>
-              @if (selectedHooks().length) {
-                <div class="tag-grid">
-                  @for (entry of selectedHooks(); track entry.id) {
-                    <details class="tag-card">
-                      <summary>{{ entry.name }} <span class="chevron" aria-hidden="true">⌄</span></summary>
-                      @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
-                      <p>{{ entry.description }}</p>
-                    </details>
-                  }
-                </div>
-              } @else { <p class="empty">Nie wybrano haków fabularnych.</p> }
-            </section>
-
-            <section class="panel" id="story">
-              <div class="section-header">
-                <div><p class="eyebrow">DZIEJE POSTACI</p><h2>Historia i motywacje</h2></div>
-                @if (!cardMode) { <a class="edit-link" routerLink="/history">Edytuj historię →</a> }
-              </div>
-              @if (c.story.goal) { <div class="story-field"><h3>Cel postaci</h3><p>{{ c.story.goal }}</p></div> }
-              @if (c.story.obstacle) { <div class="story-field"><h3>Przeszkoda</h3><p>{{ c.story.obstacle }}</p></div> }
-              @if (c.story.presenceReason) {
-                <div class="story-field"><h3>{{ c.residency === 'resident' ? 'Dlaczego uczestniczy w święcie?' : c.residency === 'visitor' ? 'Dlaczego przybyła na Ziemie Braci?' : 'Powód obecności' }}</h3>
-                  <p>{{ c.story.presenceReason }}</p></div>
-              }
-              @if (c.story.stakes) { <div class="story-field"><h3>Co ma do stracenia?</h3><p>{{ c.story.stakes }}</p></div> }
-              <div class="biography">
-                <h3>Pełna biografia</h3>
-                @if (c.story.history) { <p>{{ c.story.history }}</p> }
-                @else { <p class="empty">Biografia nie została jeszcze napisana.</p> }
-              </div>
-            </section>
-
-            <section class="panel" id="relations">
-              <div class="section-header">
-                <div><p class="eyebrow">WIĘZI</p><h2>Istniejące znajomości <span class="meta-count">{{ c.relations.length }}</span></h2></div>
-                @if (!cardMode) { <a class="edit-link" routerLink="/relations">Edytuj relacje →</a> }
-              </div>
-              @if (c.relations.length) {
-                <div class="relation-grid">
-                  @for (relation of c.relations; track relation.id) {
-                    <article class="relation-item">
-                      <h3>{{ relation.personOrCharacter || 'Osoba bez nazwy' }}</h3>
-                      <p>{{ relation.description || 'Opis relacji nie został uzupełniony.' }}</p>
-                    </article>
-                  }
-                </div>
-              } @else { <p class="empty">Brak zapisanych znajomości.</p> }
-            </section>
-
-            @if (!cardMode) {
-              <section class="panel" id="preferences">
-                <div class="section-header"><div><p class="eyebrow">PREFERENCJE GRACZA</p><h2>Rozgrywka</h2></div>
-                  <a class="edit-link" routerLink="/pillars">Edytuj oceny →</a>
-                </div>
-                <div class="pillar-grid">
-                  @for (pillar of pillars(); track pillar.id) {
-                    <div class="pillar-row"><span>{{ pillar.name }}</span><strong>{{ ratingFor(pillar.id) ?? '–' }} / 5</strong></div>
-                  }
-                </div>
-                <div class="preference-block">
-                  <h3>Dominujący styl gry</h3>
-                  <p>{{ selectedStyle()?.name || 'Nie wybrano' }} <a routerLink="/gameplay">Edytuj →</a></p>
-                  @if (selectedStyle(); as entry) {
-                    <details class="lore"><summary>Pełny opis stylu</summary><p>{{ entry.description }}</p></details>
-                  }
-                </div>
-                <div class="preference-block">
-                  <h3>Otwartość na nowe relacje</h3>
-                  <p>{{ selectedOpenness()?.name || 'Nie określono' }} <a routerLink="/relations">Edytuj →</a></p>
-                </div>
-                <div class="private-fields">
-                  <h3>Pola poufne</h3>
-                  <p>Granice bezpieczeństwa: {{ c.safetyBoundaries?.trim() ? 'uzupełniono' : 'nie uzupełniono' }}.</p>
-                  <p>Wykluczenia relacyjne: {{ c.relationshipExclusions?.trim() ? 'uzupełniono' : 'nie uzupełniono' }}.</p>
-                  <p class="small-note">Treść tych pól nie jest pokazywana ani tutaj, ani na karcie postaci. Możesz ją edytować w odpowiednich formularzach.</p>
-                </div>
-              </section>
-            }
-
-            <div class="bottom-actions">
-              @if (cardMode) { <a class="nav-button" routerLink="/summary">← Powrót do podsumowania</a> }
-              @else { <a class="nav-button" routerLink="/relations">← Wróć do relacji</a><a class="nav-button primary" routerLink="/card">Zobacz kartę postaci →</a> }
-            </div>
-          </section>
-
-          <aside class="sidepanel" aria-label="Przełączanie postaci">
-            <p class="eyebrow">TWOJE POSTACIE</p>
-            <label for="review-character-select">Wybierz postać</label>
-            <select id="review-character-select" [value]="activeCharacter()?.id ?? ''" (change)="selectCharacter($event)">
-              @for (character of characters(); track character.id) {
-                <option [value]="character.id" [selected]="character.id === activeCharacter()?.id">
-                  {{ character.name || 'Nowa postać (bez nazwy)' }}{{ character.id.startsWith('demo-') ? ' · przykład' : '' }}
-                </option>
-              }
-            </select>
-            <button type="button" class="new-character" (click)="createCharacter()">＋ Utwórz pustą postać</button>
-            <div class="rule"></div>
-            <p class="eyebrow">PODGLĄD</p>
-            <h2>{{ c.name || 'Postać bez nazwy' }}</h2>
-            <p class="small-note">{{ c.occupation || 'Zajęcie nieokreślone' }}</p>
-            <div class="rule"></div>
-            <a routerLink="/summary" class="side-link" [attr.aria-current]="!cardMode ? 'page' : null">Podsumowanie formularza →</a>
-            <a routerLink="/card" class="side-link" [attr.aria-current]="cardMode ? 'page' : null">Karta postaci →</a>
-            <a routerLink="/" class="side-link">Edytuj tożsamość →</a>
-            <div class="rule"></div>
-            @if (cardMode) {
-              <p class="private-note">Karta nie zawiera preferencji gracza ani pól poufnych. Jest widoczna tylko w tej aplikacji i przeglądarce, ale nie ma jeszcze kontroli dostępu.</p>
-            } @else {
-              <p class="private-note">To robocze podsumowanie, nie wysłane zgłoszenie. Poufne odpowiedzi pozostają w formularzach.</p>
-            }
+            
+              <p class="private-note">Szkic lokalny. Niczego nie wysłano.</p>
+            
             @if (!store.storageAvailable()) {
-              <p class="warning" role="status">Zapis sesji jest zablokowany. Dane mogą zniknąć po odświeżeniu.</p>
+              <p class="warning" role="status">Zapis sesji niedostępny. Dane mogą zniknąć.</p>
             } @else {
-              <p class="small-note storage">Dane są przechowywane lokalnie w sesji przeglądarki, bez backendu.</p>
+              <p class="small-note storage">Zapis tylko w bieżącej sesji.</p>
             }
           </aside>
+          
+
         </div>
       } @else {
         <p class="loading">Nie znaleziono aktywnej postaci.</p>
       }
-      <footer>URSUNALIA 2027 · PROJEKT GENERATORA POSTACI</footer>
+
     } @else {
       <p class="loading" role="status">Wczytywanie katalogów postaci…</p>
     }
   </main>
+
+
+  <aside #infoPopover popover="manual" class="catalog-info-popover" role="dialog" aria-modal="false" [attr.aria-label]="infoTitle()"
+       [style.top.px]="infoPosition().top" [style.left.px]="infoPosition().left" [style.max-height.px]="infoPosition().maxHeight" [style.--urs-info-height]="infoPosition().maxHeight + 'px'">
+      <header class="popover-header">
+        <h2>{{ infoTitle() }}</h2>
+        <button #popoverClose type="button" class="catalog-modal-close" (click)="closeInfo()" aria-label="Zamknij informacje">×</button>
+      </header>
+      <div class="popover-list" tabindex="0">
+        @for (entry of infoEntries(); track entry.id) {
+          <article class="catalog-modal-item"><h3>{{ entry.name }}</h3>
+            @if (entry.secondary) { <p class="catalog-modal-subtitle">{{ entry.secondary }}</p> }
+            <p>{{ entry.description }}</p>
+          </article>
+        }
+      </div>
+  </aside>
+
+  <dialog #catalogDialog class="catalog-info-dialog" aria-labelledby="catalog-info-title" (click)="onDialogClick($event)" (close)="onInfoClosed()">
+    <div class="catalog-modal-shell">
+      <header class="catalog-modal-header">
+        <div><p class="eyebrow">KOMPENDIUM URSUNALIÓW</p><h2 id="catalog-info-title">{{ infoTitle() }}</h2></div>
+        <button type="button" class="catalog-modal-close" (click)="closeInfo()" aria-label="Zamknij okno opisów">×</button>
+      </header>
+      <p class="catalog-modal-intro">{{ infoEntries().length }} opcji. Pełne opisy pochodzą z katalogów formularza.</p>
+      <div class="catalog-modal-list">
+        @for (entry of infoEntries(); track entry.id) {
+          <article class="catalog-modal-item">
+            <h3>{{ entry.name }}</h3>
+            @if (entry.secondary) { <p class="catalog-modal-subtitle">{{ entry.secondary }}</p> }
+            <p>{{ entry.description }}</p>
+          </article>
+        }
+      </div>
+      <footer class="catalog-modal-footer"><button type="button" (click)="closeInfo()">Zamknij</button></footer>
+    </div>
+  </dialog>
 </div>

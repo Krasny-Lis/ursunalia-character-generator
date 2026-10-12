@@ -1,12 +1,7 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter, withHashLocation } from '@angular/router';
-import { routes } from './app.routes';
 
+// Wszystkie etapy działają wewnątrz jednego widoku. Nie potrzebujemy routingu.
 export const appConfig: ApplicationConfig = {
-  providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withHashLocation()),
-    provideHttpClient(),
-  ],
+  providers: [provideBrowserGlobalErrorListeners(), provideHttpClient()],
 };

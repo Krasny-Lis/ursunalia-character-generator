@@ -1,0 +1,229 @@
+<div class="page">
+  <main>
+    @if (catalogs()) {
+      @if (activeCharacter(); as c) {
+        <div class="layout card-layout">
+          <section class="content" aria-label="Podsumowanie postaci">
+            <section class="panel summary-status" aria-label="Stan przygotowania zgłoszenia">
+              <div class="section-header">
+                <div><p class="eyebrow">ZGŁOSZENIE POSTACI</p><h2>Stan przygotowania</h2></div>
+                <span class="progress-count">{{ readyCount() }} / {{ requiredSections().length }}</span>
+              </div>
+              <div class="progress-meter" role="progressbar" aria-label="Kompletność zgłoszenia"
+                   [attr.aria-valuenow]="readyCount()" aria-valuemin="0"
+                   [attr.aria-valuemax]="requiredSections().length">
+                <div class="progress-meter-fill"
+                     [style.width.%]="requiredSections().length ? readyCount() * 100 / requiredSections().length : 0"></div>
+              </div>
+              @if (validation()?.complete) {
+                <p class="success-note">Wszystkie wymagane elementy wypełnione. Niczego nie wysłano.</p>
+              } @else {
+                <p class="summary-hint">Szkic nie jest jeszcze kompletny. Braki poprawisz w Zgłoszeniu postaci.</p>
+              }
+              <div class="summary-requirements">
+                @for (section of requiredSections(); track section.id) {
+                  <span [class.summary-missing]="!section.ready">{{ section.ready ? '✓' : '○' }} {{ shortLabel(section.id, section.label) }}</span>
+                }
+              </div>
+            </section>
+
+            <section class="panel" id="identity">
+              <div class="section-header">
+                <div><p class="eyebrow">TOŻSAMOŚĆ</p><h2>{{ c.name || 'Postać bez nazwy' }}</h2></div>
+              </div>
+              <div class="section-collapse-content"><div class="section-collapse-inner">
+                <dl class="facts">
+                  <div><dt>Rola społeczna</dt><dd>{{ role()?.name || 'Nie wybrano' }}</dd></div>
+                  <div><dt>Zajęcie</dt><dd>{{ c.occupation || 'Nie określono' }}</dd></div>
+                  <div><dt>Region pochodzenia</dt><dd>{{ region()?.name || 'Nie wybrano' }}</dd></div>
+                  <div><dt>Miejsce pochodzenia / wychowania</dt><dd>{{ c.originDetail || 'Nie uzupełniono (opcjonalne)' }}</dd></div>
+                  <div><dt>Status na Ziemiach Braci</dt><dd>{{ residency()?.name || 'Nie określono' }}</dd></div>
+                  <div><dt>Kultura</dt><dd>{{ culture()?.name || 'Nie wybrano' }}</dd></div>
+                </dl>
+                @if (region(); as entry) {
+                  <details class="lore"><summary>Stereotyp regionalny · {{ entry.name }}</summary>
+                    <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
+                  </details>
+                }
+                @if (culture(); as entry) {
+                  <details class="lore"><summary>Stereotyp kulturowy · {{ entry.name }}</summary>
+                    <p class="tagline">{{ entry.tagline }}</p><p>{{ entry.description }}</p>
+                  </details>
+                }
+                @if (role(); as entry) {
+                  <details class="lore"><summary>Opis roli · {{ entry.name }}</summary><p>{{ entry.description }}</p></details>
+                }
+              </div></div>
+            </section>
+
+            <section class="panel" id="traits">
+              <div class="section-header">
+                <div><p class="eyebrow">CHARAKTER</p><h2>Cechy postaci <span class="meta-count">{{ selectedTraits().length }}</span></h2></div>
+              </div>
+              <div class="section-collapse-content"><div class="section-collapse-inner">
+                @if (selectedTraits().length) {
+                  <div class="card-tags-toolbar">
+                    <button type="button" class="expand-all-button"
+                      [attr.aria-expanded]="allDescriptionsOpen().traits"
+                      [attr.aria-label]="allDescriptionsOpen().traits ? 'Zwiń wszystkie opisy cech' : 'Rozwiń wszystkie opisy cech'"
+                      (click)="toggleAllDescriptions('traits')">
+                      <span class="expand-all-labels" aria-hidden="true">
+                        <span class="expand-label-expand">Rozwiń wszystkie</span>
+                        <span class="expand-label-collapse">Zwiń wszystkie</span>
+                      </span>
+                    </button>
+                  </div>
+                  <div class="tag-grid">
+                    @for (entry of selectedTraits(); track entry.id) {
+                      <details class="tag-card" [open]="allDescriptionsOpen().traits">
+                        <summary>{{ entry.name }}</summary>
+                        @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
+                        <p>{{ entry.description }}</p>
+                      </details>
+                    }
+                  </div>
+                } @else { <p class="empty">Nie wybrano cech charakteru.</p> }
+              </div></div>
+            </section>
+
+            <section class="panel" id="hooks">
+              <div class="section-header">
+                <div><p class="eyebrow">WĄTKI I BRZEMIONA</p><h2>Haki fabularne <span class="meta-count">{{ selectedHooks().length }}</span></h2></div>
+              </div>
+              <div class="section-collapse-content"><div class="section-collapse-inner">
+                @if (selectedHooks().length) {
+                  <div class="card-tags-toolbar">
+                    <button type="button" class="expand-all-button"
+                      [attr.aria-expanded]="allDescriptionsOpen().hooks"
+                      [attr.aria-label]="allDescriptionsOpen().hooks ? 'Zwiń wszystkie opisy haków' : 'Rozwiń wszystkie opisy haków'"
+                      (click)="toggleAllDescriptions('hooks')">
+                      <span class="expand-all-labels" aria-hidden="true">
+                        <span class="expand-label-expand">Rozwiń wszystkie</span>
+                        <span class="expand-label-collapse">Zwiń wszystkie</span>
+                      </span>
+                    </button>
+                  </div>
+                  <div class="tag-grid">
+                    @for (entry of selectedHooks(); track entry.id) {
+                      <details class="tag-card" [open]="allDescriptionsOpen().hooks">
+                        <summary>{{ entry.name }}</summary>
+                        @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
+                        <p>{{ entry.description }}</p>
+                      </details>
+                    }
+                  </div>
+                } @else { <p class="empty">Nie wybrano haków fabularnych.</p> }
+              </div></div>
+            </section>
+
+            <section class="panel" id="story">
+              <div class="section-header">
+                <div><p class="eyebrow">DZIEJE POSTACI</p><h2>Historia i motywacje</h2></div>
+                <button type="button" class="section-toggle"
+                  [attr.aria-expanded]="!storyCollapsed()" aria-controls="summary-content-story"
+                  [attr.aria-label]="storyCollapsed() ? 'Rozwiń: Historia i motywacje' : 'Zwiń: Historia i motywacje'"
+                  (click)="toggleStory()">
+                  <span class="toggle-labels" aria-hidden="true">
+                    <span class="toggle-label-expand">Rozwiń</span>
+                    <span class="toggle-label-collapse">Zwiń</span>
+                  </span><span class="toggle-chevron" aria-hidden="true"></span>
+                </button>
+              </div>
+              <div class="section-collapse-content" id="summary-content-story"
+                   [class.is-collapsed]="storyCollapsed()"
+                   [attr.aria-hidden]="storyCollapsed()"
+                   [attr.inert]="storyCollapsed() ? '' : null">
+                <div class="section-collapse-inner">
+                  <div class="story-field"><h3>Cel postaci</h3><p>{{ c.story.goal || 'Nie uzupełniono (opcjonalne)' }}</p></div>
+                  <div class="story-field"><h3>Przeszkoda</h3><p>{{ c.story.obstacle || 'Nie uzupełniono (opcjonalne)' }}</p></div>
+                  <div class="story-field">
+                    <h3>{{ c.residency === 'resident' ? 'Dlaczego uczestniczy w święcie?' : c.residency === 'visitor' ? 'Dlaczego przybyła na Ziemie Braci?' : 'Powód obecności' }}</h3>
+                    <p>{{ c.story.presenceReason || 'Nie uzupełniono (opcjonalne)' }}</p>
+                  </div>
+                  <div class="story-field"><h3>Co ma do stracenia?</h3><p>{{ c.story.stakes || 'Nie uzupełniono (opcjonalne)' }}</p></div>
+                  <div class="biography">
+                    <h3>Pełna biografia</h3>
+                    @if (c.story.history) { <p>{{ c.story.history }}</p> }
+                    @else { <p class="empty">Biografia nie została jeszcze napisana.</p> }
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel" id="relations">
+              <div class="section-header">
+                <div><p class="eyebrow">WIĘZI</p><h2>Istotne znajomości <span class="meta-count">{{ c.relations.length }}</span></h2></div>
+              </div>
+              <div class="section-collapse-content"><div class="section-collapse-inner">
+                @if (c.relations.length) {
+                  <div class="relation-grid">
+                    @for (relation of c.relations; track relation.id) {
+                      <article class="relation-item">
+                        <h3>{{ relation.personOrCharacter || 'Osoba bez nazwy' }}</h3>
+                        <p>{{ relation.description || 'Opis relacji nie został uzupełniony.' }}</p>
+                      </article>
+                    }
+                  </div>
+                } @else { <p class="empty">Brak zapisanych znajomości.</p> }
+              </div></div>
+            </section>
+
+            <section class="panel" id="preferences">
+              <div class="section-header">
+                <div><p class="eyebrow">PREFERENCJE GRACZA</p><h2>Rozgrywka, styl i granice</h2></div>
+              </div>
+              <div class="section-collapse-content"><div class="section-collapse-inner">
+                <div class="summary-readonly" aria-label="Podsumowanie preferencji gry">
+                  <div class="summary-group">
+                    <h3>Oceny sześciu filarów rozgrywki</h3>
+                    <p class="summary-hint">Zainteresowanie w skali 1–5; brak oceny oznacza pole nieuzupełnione.</p>
+                    <dl class="summary-rating-list">
+                      @for (pillar of pillars(); track pillar.id) {
+                        <div class="summary-rating">
+                          <dt>{{ pillar.name }}</dt>
+                          <dd>{{ ratingFor(pillar.id) === null ? 'Nie oceniono' : ratingFor(pillar.id) + ' / 5' }}</dd>
+                        </div>
+                      }
+                    </dl>
+                  </div>
+                  <div class="summary-columns">
+                    <section class="summary-group">
+                      <h3>Dominujący styl gry</h3>
+                      <p class="summary-value">{{ selectedStyle()?.name || 'Nie wybrano' }}</p>
+                      @if (selectedStyle(); as style) {
+                        <details class="lore"><summary>Pełny opis stylu</summary><p>{{ style.description }}</p></details>
+                      }
+                    </section>
+                    <section class="summary-group">
+                      <h3>Otwartość na nowe relacje</h3>
+                      <p class="summary-value">{{ selectedOpenness()?.name || 'Nie określono' }}</p>
+                      @if (selectedOpenness(); as openness) {
+                        <details class="lore"><summary>Pełny opis otwartości</summary><p>{{ openness.description }}</p></details>
+                      }
+                    </section>
+                  </div>
+                  <section class="summary-additional" aria-label="Informacje dodatkowe">
+                    <div class="summary-additional-heading">
+                      <h3>Informacje dodatkowe</h3>
+                      <p class="summary-hint">Opcjonalne wskazówki dla organizatorów dotyczące tematów, sytuacji i powiązań, których wolisz unikać podczas gry.</p>
+                    </div>
+                    <div class="summary-additional-values">
+                      <div><h4>Granice bezpieczeństwa / Triggery</h4><p>{{ c.safetyBoundaries || 'Nie uzupełniono (opcjonalne)' }}</p></div>
+                      <div><h4>Osoby, z którymi nie chcesz mieć powiązań</h4><p>{{ c.relationshipExclusions || 'Nie uzupełniono (opcjonalne)' }}</p></div>
+                    </div>
+                  </section>
+                </div>
+              </div></div>
+            </section>
+
+            <p class="private-note">Podsumowanie obejmuje wszystkie odpowiedzi, także opcjonalne informacje dodatkowe. Szkic pozostaje w tej przeglądarce i nie jest wysyłany.</p>
+          </section>
+        </div>
+      } @else {
+        <p class="loading">Nie znaleziono aktywnej postaci.</p>
+      }
+    } @else {
+      <p class="loading" role="status">Wczytywanie katalogów postaci…</p>
+    }
+  </main>
+</div>

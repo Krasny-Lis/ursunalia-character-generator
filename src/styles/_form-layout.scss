@@ -1,0 +1,101 @@
+/* ===== Wersja: JEDNO ZGŁOSZENIE + PODGLĄD KARTY ===== */
+/* Zastępuje historyczną nawigację po dziewięciu krokach. */
+.single-view-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 20px;
+  padding: 7px;
+  background: #102339;
+  border: 1px solid #465a70;
+  border-radius: 12px;
+}
+.single-view-tabs button {
+  flex: 1 1 220px;
+  min-height: 47px;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #b9cad9;
+  font: 650 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.single-view-tabs button.active {
+  background: #253d52;
+  border-color: #bda072;
+  color: #f6dfb2;
+  box-shadow: inset 0 0 0 1px #a18b6540;
+}
+.single-view-tabs button:hover { color: #f3dfbf; background-color: #263b4b; }
+.single-view-tabs button:focus-visible { outline: 2px solid #e7c793; outline-offset: 2px; }
+.generator-content .wizard-stage .page > main { padding-inline: 0 !important; }
+.generator-content .wizard-stage .page > main > .layout { margin: 0 !important; }
+.generator-content .wizard-stage .page > main > .layout > .content { min-width: 0; }
+.generator-content .wizard-stage .inline-editor {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+/* Wszystkie pola formularza są od razu widoczne, nie trzeba naciskać „Edytuj”. */
+.generator-content .wizard-stage .inline-option-grid { max-height: none; overflow: visible; }
+.generator-content .wizard-stage .inline-editor .edit-grid { gap: 16px; }
+.generator-content .wizard-stage .panel { scroll-margin-top: 24px; }
+.generator-content .wizard-stage .sidepanel {
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #665a47 #102238;
+}
+.progress-sidebar { display: grid; gap: 9px; }
+.progress-sidebar .section-header { margin: 0; align-items: center; }
+.progress-sidebar .section-header h2 { font-size: 20px; margin: 4px 0; }
+.progress-sidebar .progress-count { font: 26px Georgia, serif; white-space: nowrap; }
+.progress-sidebar .muted { margin: 0; font-size: 12px; line-height: 1.55; }
+.progress-sidebar .checklist { margin: 3px 0; gap: 7px; }
+.progress-sidebar .checklist li { display: grid; grid-template-columns: 16px 1fr; padding: 10px; align-items: start; gap: 7px; }
+.progress-sidebar .status-icon { font-size: 17px; line-height: 1.2; }
+.progress-sidebar .checklist-content { gap: 3px; }
+.progress-sidebar .checklist-content strong { font-size: 12px; line-height: 1.4; }
+.progress-sidebar .checklist-content small { font-size: 11px; }
+.progress-jump {
+  grid-column: 2;
+  border: none;
+  padding: 3px 0;
+  justify-self: start;
+  background: transparent;
+  color: #efc78c;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.progress-jump:hover { color: #fff1c9; }
+.progress-jump:focus-visible { outline: 2px solid #e1bc7d; outline-offset: 2px; }
+.progress-sidebar .validation-warnings { margin: 6px 0; padding: 10px; }
+.progress-sidebar .validation-warnings h3 { font-size: 15px; }
+.progress-sidebar .validation-warnings li { font-size: 12px; }
+.wizard-dock-inner { grid-template-columns: 1fr auto; }
+.dock-hint { color: #c8d3e0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wizard-dock .wizard-button { justify-self: end; }
+.generator-content .wizard-stage .page .sidepanel .rule { margin: 14px 0; }
+@media (max-width: 950px) {
+  .generator-content .wizard-stage .sidepanel { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 580px) {
+  :root { --urs-dock-height: 90px; }
+  .single-view-tabs { flex-wrap: nowrap; padding: 5px; }
+  .single-view-tabs button { flex-basis: 50%; min-width: 0; font-size: 12px; padding: 9px 6px; }
+  .wizard-dock-inner { display: flex; flex-wrap: nowrap; justify-content: space-between; }
+  .wizard-dock .wizard-button { flex: 0 0 auto; }
+  .dock-hint { max-width: 32%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wizard-stage > *.wizard-slide-enter,
+  .wizard-stage > *.wizard-slide-leave { animation: none !important; }
+}
+
+

@@ -1,0 +1,52 @@
+/* v11 – skróty zwiniętych sekcji i działaniowy panel kompletności. */
+.generator-content .wizard-stage .panel .section-mini-summary {
+  margin: -3px 0 14px;
+  color: #c8d4de;
+  font-size: 12px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  max-width: 70ch;
+  padding-left: 12px;
+  border-left: 2px solid #b79a6d;
+}
+.progress-sidebar .progress-group-heading {
+  margin: 10px 0 1px;
+  font: 650 13px system-ui, sans-serif;
+  color: #edd3a5;
+}
+.progress-sidebar .checklist-incomplete { margin: 4px 0 10px; }
+.progress-sidebar .progress-all-done {
+  margin: 5px 0 12px;
+  padding: 10px 12px;
+  color: #d6e5cb;
+  background: #17352d;
+  border: 1px solid #52735e;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.progress-sidebar .completed-fields {
+  border-top: 1px solid #3d5369;
+  margin: 5px 0 9px;
+  padding-top: 10px;
+}
+.progress-sidebar .completed-fields > summary {
+  color: #d5dfec;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 12px;
+  padding: 8px 1px;
+}
+.progress-sidebar .completed-fields > summary:hover { color: #f2ddb9; }
+.progress-sidebar .checklist-complete { margin-top: 8px; }
+.progress-sidebar .checklist-complete li { background: #0c2133; }
+.progress-sidebar .checklist-complete .checklist-content strong { color: #d0e0dd; }
+.progress-sidebar :is(.checklist-incomplete, .checklist-complete) li { min-width: 0; }
+.progress-sidebar :is(.checklist-incomplete, .checklist-complete) .progress-jump {
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.progress-sidebar :is(.checklist-incomplete, .checklist-complete) .progress-jump:hover { border-bottom-color: currentColor; }
+@media (max-width: 580px) {
+  .generator-content .wizard-stage .panel .section-mini-summary { margin-top: 0; }
+}

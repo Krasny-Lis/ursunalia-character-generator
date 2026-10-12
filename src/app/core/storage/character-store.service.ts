@@ -52,6 +52,12 @@ export class CharacterStore {
     this.persist();
   }
 
+  /** Ponowny, ręczny zapis szkicu do bieżącej sesji; bez żądania HTTP. */
+  saveDraft(): boolean {
+    this.persist();
+    return this._storageAvailable();
+  }
+
   createCharacter(): string {
     const character = createEmptyCharacter();
     this._characters.update((all) => [...all, character]);

@@ -1,0 +1,59 @@
+/* ==== Ursunalia v8: animowana szerokość przycisków Rozwiń / Zwiń ==== */
+/* Dwa napisy nakładają się. Zmieniamy szerokość miejsca na tekst,
+   a cały przycisk naturalnie dopasowuje swój rozmiar. */
+.section-toggle .toggle-labels,
+.expand-all-button .expand-all-labels {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 1.35em;
+  white-space: nowrap;
+  vertical-align: middle;
+  transition: inline-size 340ms cubic-bezier(.22, 1, .36, 1);
+}
+.section-toggle .toggle-labels { inline-size: 58px; }
+.section-toggle[aria-expanded='true'] .toggle-labels { inline-size: 34px; }
+
+.expand-all-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-inline-size: 100%;
+}
+.expand-all-button .expand-all-labels { inline-size: 115px; }
+.expand-all-button[aria-expanded='true'] .expand-all-labels { inline-size: 99px; }
+
+.section-toggle .toggle-labels > span,
+.expand-all-button .expand-all-labels > span {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: block;
+  inline-size: 100%;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 320ms cubic-bezier(.22, 1, .36, 1);
+}
+.section-toggle[aria-expanded='false'] .toggle-label-collapse,
+.section-toggle[aria-expanded='true'] .toggle-label-expand,
+.expand-all-button[aria-expanded='false'] .expand-label-collapse,
+.expand-all-button[aria-expanded='true'] .expand-label-expand {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+.section-toggle[aria-expanded='false'] .toggle-label-expand,
+.section-toggle[aria-expanded='true'] .toggle-label-collapse,
+.expand-all-button[aria-expanded='false'] .expand-label-expand,
+.expand-all-button[aria-expanded='true'] .expand-label-collapse {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-toggle .toggle-labels,
+  .expand-all-button .expand-all-labels,
+  .section-toggle .toggle-labels > span,
+  .expand-all-button .expand-all-labels > span { transition: none !important; }
+}
+
+

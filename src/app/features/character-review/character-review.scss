@@ -49,9 +49,9 @@ h1 { font-size:clamp(32px,4vw,50px); color:#f0dec0; margin:9px 0 10px; }
 .lore .tagline,.tag-card .tagline { color:#e6cb8e; }
 .tag-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .tag-card { padding:13px 14px; min-width:0; }
-.tag-card summary { display:flex; gap:8px; justify-content:space-between; list-style:none; }
-.tag-card summary::-webkit-details-marker { display:none; }
-.chevron { color:#d3b67a; }
+/* Natywny, ten sam znacznik <details>, co w stereotypie regionalnym. */
+.tag-card > summary { display: list-item; list-style: inside disclosure-closed; }
+.tag-card[open] > summary { list-style-type: disclosure-open; }
 .meta-count { font:16px system-ui,sans-serif; color:#9daebb; }
 .story-field { margin:13px 0; padding-bottom:12px; border-bottom:1px solid #364f64; }
 .story-field h3,.biography h3 { color:#e6d3ae; font-size:20px; margin:0 0 7px; }

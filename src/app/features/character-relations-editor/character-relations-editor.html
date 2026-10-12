@@ -1,0 +1,16 @@
+<div class="inline-editor" aria-label="Edycja znajomości">
+                  <p class="editor-hint relation-intro">Dodaj najważniejsze według Ciebie znajomości Twojej postaci. Zarówno te pozytywne jak i negatywne.</p>
+                  @for (relation of c.relations; track relation.id) {
+                    <div class="relation-edit-row">
+                      <label>Osoba lub postać <input type="text" [value]="relation.personOrCharacter" (input)="updateRelation(relation.id, 'personOrCharacter', $event)" /></label>
+                      <label>Opis znajomości <textarea rows="3" [value]="relation.description" (input)="updateRelation(relation.id, 'description', $event)"></textarea></label>
+                      <button type="button" class="secondary-editor-action" (click)="removeRelation(relation.id)">Usuń znajomość</button>
+                    </div>
+                  }
+                  <div class="relation-edit-row">
+                    <h4>Dodaj znajomość <span class="optional-note">(opcjonalne)</span></h4>
+                    <label>Osoba lub postać <input type="text" [value]="relationPerson()" (input)="relationPerson.set($any($event.target).value)" /></label>
+                    <label>Opis znajomości <textarea rows="3" [value]="relationDescription()" (input)="relationDescription.set($any($event.target).value)"></textarea></label>
+                    <button type="button" class="secondary-editor-action" [disabled]="!relationPerson().trim() || !relationDescription().trim()" (click)="addRelation()">Dodaj znajomość +</button>
+                  </div>
+                </div>

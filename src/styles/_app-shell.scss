@@ -1,0 +1,212 @@
+/* Zgłoszenie postaci jest jedną stroną: podrzędne formularze nie tworzą osobnych stron. */
+.wizard-stage .page { min-height: 0 !important; background: transparent !important; }
+.wizard-stage > * { min-height: 0 !important; background: transparent !important; }
+.wizard-stage footer { display: none; }
+
+/* Wspólny design system i nawigacja całej aplikacji. */
+* { box-sizing: border-box; }
+
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 30;
+  padding: 12px 16px;
+  background: #ead3a6;
+  color: #112236;
+  border-radius: 6px;
+  font-weight: 700;
+  &:focus { top: 10px; }
+}
+
+.shell-header {
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(135deg, #081523, #12263b 70%, #162d40);
+  border-bottom: 1px solid #8a744f;
+  box-shadow: 0 12px 32px #0004;
+}
+
+.shell-headline {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 17px clamp(16px, 3vw, 44px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  flex-shrink: 0;
+
+  .brand-sigil {
+    display: grid;
+    place-items: center;
+    width: 47px;
+    height: 47px;
+    border: 1px solid #b69763;
+    border-radius: 50%;
+    font-size: 28px;
+    color: #e0be80;
+  }
+  .brand-copy { display: grid; gap: 2px; }
+  strong {
+    font: 700 24px Georgia, 'Times New Roman', serif;
+    letter-spacing: .055em;
+    color: #f4e2be;
+  }
+  small { font: 9px system-ui, sans-serif; letter-spacing: .19em; color: #a7b7c8; }
+}
+
+.character-tools { display: flex; align-items: end; gap: 10px; min-width: 0; }
+.character-picker {
+  display: grid;
+  gap: 5px;
+  min-width: 170px;
+  label { color: #bbcada; font-size: 11px; }
+  select {
+    width: min(340px, 36vw);
+    min-width: 170px;
+    border: 1px solid #61758a;
+    border-radius: 8px;
+    background: #10283c;
+    color: #f6e8d2;
+    padding: 11px 12px;
+    font: 14px system-ui, sans-serif;
+    cursor: pointer;
+  }
+}
+.create-character {
+  padding: 11px 15px;
+  min-height: 43px;
+  border: 1px solid #b59664;
+  border-radius: 8px;
+  background: #633b41;
+  color: #fae7d4;
+  font: 600 13px system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  &:hover { background: #85464b; }
+}
+
+.shell-nav-row {
+  max-width: 1500px;
+  padding: 0 clamp(16px, 3vw, 44px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 15px;
+  align-items: center;
+  border-top: 1px solid #294158;
+}
+
+.generator-nav {
+  display: flex;
+  min-width: 0;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #576b7c #101f30;
+  button {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 65px;
+    padding: 10px 11px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    color: #bfccda;
+    font: 600 12px system-ui, sans-serif;
+    transition: color .15s, background .15s, border-color .15s;
+    &:hover { color: #f7e2bd; background: #ffffff0b; }
+    &.active { color: #f0d6a7; border-color: #c8a36c; background: #bb945913; }
+  }
+  .nav-number { color: #8294a6; font-size: 10px; letter-spacing: .07em; }
+  button.active .nav-number { color: #d3ac74; }
+}
+
+.completion {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 3px 12px;
+  min-width: 168px;
+  padding: 8px 0 8px 13px;
+  text-decoration: none;
+  border-left: 1px solid #3e5369;
+  color: #c1cfdf;
+  .completion-title { font-size: 10px; line-height: 1.4; }
+  strong { text-align: right; color: #eed3a2; font: 22px Georgia, serif; white-space: nowrap; }
+  strong span { color: #8fa2b4; font-size: 12px; }
+  .completion-meter {
+    grid-column: 1 / -1;
+    height: 5px;
+    overflow: hidden;
+    background: #293f52;
+    border-radius: 10px;
+  }
+  .completion-meter > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #a18254, #edcb90);
+    transition: width .2s;
+  }
+}
+.shell-warning { margin: 0; padding: 8px 25px; color: #ffe2a3; background: #704628; font-size: 12px; text-align: center; }
+.generator-content { min-height: 65vh; }
+
+.shell-header :is(a, button, select):focus-visible {
+  outline: 2px solid #edc990;
+  outline-offset: 3px;
+}
+
+@media (max-width: 880px) {
+  .shell-nav-row { grid-template-columns: 1fr; gap: 0; padding-top: 5px; }
+  .completion {
+    border-left: 0;
+    border-top: 1px solid #294158;
+    grid-template-columns: auto auto 140px;
+    justify-content: end;
+    padding: 8px 0;
+    gap: 10px;
+    min-width: 0;
+    .completion-meter { grid-column: 3; }
+  }
+  .generator-nav a { min-height: 58px; }
+}
+
+@media (max-width: 580px) {
+  .shell-headline { flex-direction: column; align-items: stretch; gap: 13px; }
+  .shell-brand .brand-sigil { width: 39px; height: 39px; font-size: 23px; }
+  .shell-brand strong { font-size: 21px; }
+  .character-tools { align-items: end; }
+  .character-picker { flex: 1; min-width: 0; }
+  .character-picker select { min-width: 0; width: 100%; }
+  .create-character { padding: 9px 11px; font-size: 12px; }
+  .shell-nav-row { padding: 0 12px; }
+  .generator-nav a { padding: 8px 11px; }
+  .completion { grid-template-columns: minmax(0, 1fr) auto 74px; }
+}
+
+
+.shell-title { min-width: 0; flex: 1; text-align: center; }
+.shell-title > span { color: #c8ad7c; font-size: 10px; font-weight: 700; letter-spacing: .18em; }
+.shell-title h1 { font: 400 clamp(19px, 2.5vw, 30px) Georgia,serif; color: #f2dfba; margin: 5px 0 0; }
+.generator-nav button.active { color: #f0d6a7; border-color: #c8a36c; background: #bb945913; }
+.generator-nav button.active .nav-number { color: #d3ac74; }
+.generator-nav button:focus-visible, .completion:focus-visible { outline: 2px solid #f5cd84; outline-offset: -3px; }
+.completion { background: transparent; border: 0; border-left: 1px solid #3e5369; cursor: pointer; text-align: left; font: inherit; }
+.completion:hover { background: #d2b0760a; }
+.generator-content { overflow: clip; min-height: 55vh; }
+.wizard-stage { min-width: 0; }

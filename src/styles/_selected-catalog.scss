@@ -1,0 +1,100 @@
+/* v12 – pasek wybranych cech i haków (tylko edytor zgłoszenia). */
+.generator-content .wizard-stage .inline-editor .chosen-catalog {
+  display: grid;
+  gap: 11px;
+  padding: 13px 14px;
+  background: #112b3d;
+  border: 1px solid #5e7181;
+  border-radius: 10px;
+  min-width: 0;
+}
+.generator-content .wizard-stage .chosen-catalog-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 16px;
+  row-gap: 4px;
+}
+.generator-content .wizard-stage .chosen-catalog-heading h4 {
+  margin: 0;
+  font: 650 17px/1.4 Georgia, 'Times New Roman', serif;
+  color: #f1dcbc;
+}
+.generator-content .wizard-stage .chosen-catalog-heading h4 span {
+  color: #d3b67a;
+  font-size: 13px;
+}
+.generator-content .wizard-stage .chosen-catalog-hint,
+.generator-content .wizard-stage .chosen-catalog-empty {
+  margin: 0;
+  color: #acc0cf;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.generator-content .wizard-stage .chosen-catalog-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+}
+.generator-content .wizard-stage .chosen-catalog-item {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 0;
+  max-width: 100%;
+  background: #203b4d;
+  border: 1px solid #8b795e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.generator-content .wizard-stage :is(.chosen-catalog-link, .chosen-catalog-remove) {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #f5e7cb;
+  cursor: pointer;
+  font: 600 13px/1.4 system-ui, sans-serif;
+}
+.generator-content .wizard-stage .chosen-catalog-link {
+  padding: 8px 10px;
+  text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.generator-content .wizard-stage .chosen-catalog-link:hover {
+  background: #324b5c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.generator-content .wizard-stage .chosen-catalog-remove {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  border-left: 1px solid #647080;
+  color: #f2cecb;
+  font-size: 19px;
+}
+.generator-content .wizard-stage .chosen-catalog-remove:hover {
+  background: #753b46;
+  color: #fff;
+}
+.generator-content .wizard-stage :is(.chosen-catalog-link, .chosen-catalog-remove):focus-visible {
+  outline: 2px solid #eac882;
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+/* Identyfikatory wpisów mają format "traits-option-id" / "hooks-option-id". */
+.generator-content .wizard-stage .inline-option-grid .option-row[id^='traits-option-'],
+.generator-content .wizard-stage .inline-option-grid .option-row[id^='hooks-option-'] {
+  scroll-margin-top: 22vh;
+}
+@media (max-width: 620px) {
+  .generator-content .wizard-stage .chosen-catalog-hint { flex-basis: 100%; }
+  .generator-content .wizard-stage .chosen-catalog-item { max-width: 100%; }
+}

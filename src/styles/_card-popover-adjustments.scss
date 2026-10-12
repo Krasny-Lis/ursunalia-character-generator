@@ -1,0 +1,126 @@
+/* === Ursunalia v6: poprawa okien informacji i karty postaci === */
+/* Nagłówki sekcji przewijają się razem z zawartością. */
+/* Brak bocznego panelu w karcie: pełna szerokość dla treści postaci. */
+.generator-content .wizard-stage .layout.card-layout { grid-template-columns: minmax(0, 1fr); }
+.card-tags-toolbar { display: flex; justify-content: flex-end; margin: 3px 0 12px; }
+.card-tags-toolbar .expand-all-button { margin: 0; }
+/* Wycentrowany znak x zarówno w popoverze, jak i w modalu mobilnym. */
+.catalog-info-popover .catalog-modal-close,
+.catalog-info-dialog .catalog-modal-close {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1;
+}
+.catalog-info-popover:popover-open {
+  /* Maksymalna wysokość dodatkowo wyliczana w TS względem stałej stopki. */
+  max-height: calc(100dvh - var(--urs-dock-height, 92px) - 22px);
+}
+.catalog-info-popover .popover-header { flex: 0 0 auto; }
+.catalog-info-popover .popover-list {
+  min-height: 0;
+  flex: 1 1 auto;
+  scrollbar-gutter: stable;
+}
+
+
+/* === Ursunalia v7: pozycjonowanie popovera i spójne pary pól === */
+/* Sekcje nie mają przyklejanych nagłówków (cofnięcie zachowania v6). */
+.generator-content .wizard-stage .panel > .section-header {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  background: transparent;
+  padding: 0;
+  margin: 0 0 15px;
+  border-radius: 0;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+/* Popover jest na warstwie przeglądarki, a TS zapewnia wysokość <= widocznej przestrzeni. */
+.catalog-info-popover:popover-open {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  height: var(--urs-info-height, 420px);
+  max-height: var(--urs-info-height, 420px);
+  min-height: 0;
+  overflow: hidden;
+}
+.catalog-info-popover .popover-header { flex-shrink: 0; }
+.catalog-info-popover .popover-list {
+  display: block;  /* unikamy min-content height tworzonego przez CSS grid */
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 14px;
+  scrollbar-gutter: stable;
+}
+.catalog-info-popover .popover-list .catalog-modal-item + .catalog-modal-item { margin-top: 9px; }
+
+/* Równa linia tytułu każdego pola, również przy etykiecie „opcjonalne” i ikonie i. */
+.inline-editor .edit-grid > .identity-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(40px, auto) 44px;
+  row-gap: 7px;
+  align-content: start;
+  align-items: center;
+  min-width: 0;
+  padding: 6px;
+  margin: 0;
+}
+.inline-editor .edit-grid > .identity-field > .field-heading,
+.inline-editor .edit-grid > .identity-field > .identity-label-content {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 25px;
+  margin: 0;
+  line-height: 1.4;
+}
+.inline-editor .edit-grid > .identity-field > .identity-label-content {
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 650;
+}
+.inline-editor .edit-grid > .identity-field :is(input[type='text'], select) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  min-height: 0;
+}
+/* Tekst opcjonalności jest częścią etykiety, nie osobnym wierszem gridu. */
+.identity-label-content .optional-note { white-space: nowrap; }
+
+/* Ramka podświetlenia nie wychodzi poza komórkę i nie jest obcinana przez overflow animacji. */
+.generator-content .wizard-stage .validation-target.validation-highlight {
+  background: rgba(214, 165, 70, .16) !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 2px #e6b85f !important;
+  border-radius: 9px;
+}
+.inline-editor .validation-target:has(> .field-heading),
+.inline-editor label.validation-target,
+.inline-editor .select-field.validation-target {
+  margin: 0;
+}
+/* Dla szerszych sekcji zachowaj wewnętrzny odstęp wokół złotej ramki. */
+.inline-editor .validation-target:has(> .field-heading) { padding: 8px; }
+@media (max-width: 720px) {
+  .inline-editor .edit-grid > .identity-field { grid-template-rows: minmax(40px, auto) 44px; }
+}
+
+/* Ta sama wewnętrzna odległość w obu polach każdej pary. */
+.inline-editor .edit-grid > .identity-field { padding: 6px; }
+
+
