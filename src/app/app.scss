@@ -22,3 +22,16 @@
 
 /* Dolna belka formularza jest fixed; tylko ta trasa potrzebuje na nia miejsca. */
 .platform-content:has(app-character-generator-page) + .platform-footer { margin-bottom: var(--urs-dock-height); }
+
+/* Royal Manuscript — mobilna nawigacja */
+.platform-menu-toggle {display:none;}
+@media(max-width:700px) {
+ .platform-header-inner {display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:12px;align-items:center;}
+ .platform-brand-copy strong {font-size:19px;}
+ .platform-brand-copy small {font-size:8px;line-height:1.45;}
+ .platform-menu-toggle {display:grid;place-items:center;width:46px;height:46px;color:#e9c891;background:#15293b;border:1px solid #b39663;border-radius:8px;font-size:25px;cursor:pointer;}
+ .platform-menu-toggle:focus-visible {outline:3px solid #cfaa70;outline-offset:2px;}
+ .platform-nav {display:none;grid-column:1 / -1;width:100%;padding:10px 0 2px;border-top:1px solid #5a503e;}
+ .platform-nav.platform-nav-open {display:grid;gap:5px;}
+ .platform-nav a {width:100%;padding:12px 14px;min-height:44px;}
+}
