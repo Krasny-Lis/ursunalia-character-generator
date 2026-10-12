@@ -43,3 +43,28 @@
 .survey-success,.survey-alert{ padding:14px;border-radius:8px;border:1px solid #649b8a;background:#14372e;}
 .survey-alert{ border-color:#c38778;background:#382329;}
 @media(max-width:620px){ .section-heading,.section-fields{ padding-left:14px;padding-right:14px;} .field{ padding:13px;} .choice-cards{ grid-template-columns:1fr;} .survey-actions button{ flex:1;}}
+
+/* v26.5c — jasny renderer również przy izolacji stylów komponentu. */
+:host { color-scheme:light; color:#263341; }
+.survey-renderer { background:#f7f5f0; padding:clamp(14px,2.5vw,28px); border-radius:14px; }
+.survey-intro h2,.section-heading h3 { color:#263341; }
+.survey-intro p,.section-heading p,.field-description,.char-counter,.rating-labels,.choice small { color:#536170; }
+.survey-section,.field,.choice { background:#fffefa; color:#263341; border-color:#d7d7d1; }
+.field { background:#faf9f6; }
+.choice.chosen { background:#fbefd8; border-color:#a67c43; }
+.choice:hover { background:#fcf6e9; border-color:#b39565; }
+.field input[type=text],.field textarea,.field select { background:#fff; color:#263341; border-color:#aeb9c3; }
+.field input::placeholder,.field textarea::placeholder { color:#687786; }
+.rating-options button { background:#fff; color:#263341; border-color:#b9c2c9; }
+.rating-options button.selected { background:#cda86d; color:#1f2933; border-color:#97703a; }
+.collapse-button,.secondary-button,.field-help summary { color:#795628; border-color:#b3a184; }
+.help-content { background:#fffdf8; color:#263341; border-color:#ab8a55; }
+.help-content p,.informational p { color:#536170; }
+.informational { color:#263341; background:#f4eee1; border-left-color:#b18a50; }
+.field-error { color:#a12f29; }
+.field.invalid { border-color:#bd4940; }
+.survey-success { background:#e7f4ed; color:#21583b; border-color:#9dc5ad; }
+.survey-alert { background:#fff0eb; color:#922d24; border-color:#d9a396; }
+.field :is(input[type=text],textarea,select):focus-visible,.choice:focus-within,
+.rating-options button:focus-visible { outline:3px solid #bd9452; outline-offset:2px; }
+@media(max-width:620px) { .survey-renderer { padding:12px; } }
