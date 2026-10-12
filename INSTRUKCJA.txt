@@ -1,0 +1,11 @@
+Ursunalia 2027 - poprawka skryptu weryfikacji v24
+
+Problem: Windows PowerShell 5.1 odczytuje plik UTF-8 bez BOM jako kodowanie ANSI. Polskie znaki mogly spowodowac blad parsera.
+
+Podmien tylko scripts/verify-platform-v24.ps1 w katalogu repozytorium.
+
+Uruchom:
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-platform-v24.ps1
+
+Skrypt sprawdza, ze aktywna galaz to feature/platform-foundation-v24, nastepnie uruchamia npm run build i npm test -- --watch=false.
+Nie zmienia kodu aplikacji, plikow formularza ani danych.

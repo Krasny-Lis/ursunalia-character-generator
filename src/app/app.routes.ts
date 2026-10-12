@@ -13,6 +13,11 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/character/pages/character-generator-page/character-generator-page').then(m => m.CharacterGeneratorPage),
   },
   {
+    path: 'organizator/ankiety/edytor',
+    canMatch: [moduleEnabledGuard('surveys')],
+    loadComponent: () => import('./modules/surveys/pages/survey-builder-page/survey-builder-page').then(m => m.SurveyBuilderPage),
+  },
+  {
     path: 'organizator/ankiety/podglad',
     canMatch: [moduleEnabledGuard('surveys')],
     loadComponent: () => import('./modules/surveys/pages/survey-preview-page/survey-preview-page').then(m => m.SurveyPreviewPage),

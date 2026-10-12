@@ -1,0 +1,338 @@
+/* Ursunalia – edytor inline (Google Forms workflow, Kislev palette).
+ * Edytor celowo nie ma paneli bocznych; konfiguracja odbywa się w kartach.
+ */
+.builder-page {
+  --b-gold: #dfbd80;
+  --b-border: #415b72;
+  --b-surface: #142a40;
+  --b-selected: #182f46;
+  --b-input: #0c2031;
+  max-width: 1200px;
+  padding: 26px clamp(16px, 3vw, 40px) 100px;
+  margin: 0 auto;
+  color: #eaf1f9;
+  box-sizing: border-box;
+
+  *, *::before, *::after { box-sizing: border-box; }
+  button, input, textarea, select { font: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; opacity: .35; }
+  a { color: #ebc890; }
+  .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .builder-back, .builder-head, .head-actions, .draft-status, .section-head,
+  .section-actions, .question-topline, .field-footer, .field-actions, .option-editor,
+  .option-heading, .field-grip-row, .transfer-actions, .preview-top, .insert-heading {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .builder-back { justify-content: space-between; flex-wrap: wrap; font-size: 12px; }
+  .builder-back span, .draft-status { color: #a9bfd2; }
+  .builder-head { margin: 26px 0 20px; align-items: end; justify-content: space-between; flex-wrap: wrap; }
+  .builder-head .eyebrow { color: var(--b-gold); font: 700 11px system-ui,sans-serif; letter-spacing: .14em; }
+  h1 { margin: 6px 0; font: 400 clamp(30px,4vw,46px) Georgia,serif; color: #f3d9b1; }
+  .builder-head p:not(.eyebrow) { color: #b8c9d9; margin: 5px 0; line-height: 1.5; }
+  h2 { font: 400 23px Georgia,serif; color: #f4d7aa; margin: 0 0 10px; }
+  .head-actions { flex-wrap: wrap; }
+  .head-actions button, .preview-top button, .transfer-actions button, .transfer-actions label, .import-form button {
+    color: #eaf1f9; background: #1b3349; border: 1px solid #49647c; padding: 10px 14px; border-radius: 9px;
+  }
+  .head-actions button.active { border-color: var(--b-gold); color: #f4d69c; }
+  .head-actions button.gold, .import-form button.gold { background: var(--b-gold); border-color: var(--b-gold); color: #0d1c2a; font-weight: 700; }
+  .head-actions button:hover, .preview-top button:hover, .transfer-actions button:hover { border-color: var(--b-gold); }
+  .draft-status { justify-content: space-between; flex-wrap: wrap; font-size: 12px; background: #12283b; border: 1px solid #365069; border-radius: 9px; padding: 12px 16px; margin-bottom: 24px; }
+
+  /* Jeden czytelny obszar edycji + waski pasek narzedzi. */
+  .builder-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 56px; align-items: start; gap: 12px; max-width: 955px; margin: 0 auto; }
+  .builder-canvas { display: grid; gap: 16px; min-width: 0; }
+  .builder-toolbox { position: sticky; top: 90px; align-self: start; z-index: 6; }
+  .toolbox-buttons { display: grid; gap: 4px; padding: 7px; background: #20374c; border: 1px solid #546d81; box-shadow: 0 6px 22px #030d18a8; border-radius: 12px; }
+  .toolbox-buttons button { display: grid; place-items: center; width: 40px; height: 40px; border: 0; color: #e8c994; background: transparent; border-radius: 8px; font-size: 27px; }
+  .toolbox-buttons button:hover, .toolbox-buttons button:focus-visible { background: #3b5061; }
+  .builder-insert-menu { position: absolute; left: auto; right: calc(100% + 12px); top: 0; width: min(265px, 70vw); background: #192e43; border: 1px solid #7891a6; box-shadow: 0 16px 44px #020c19db; border-radius: 12px; padding: 8px; max-height: 75vh; overflow-y: auto; }
+  .insert-heading { justify-content: space-between; padding: 8px 8px 12px; color: #f1d5a5; font-size: 13px; }
+  .insert-heading button { border: 0; background: transparent; color: #b6c6d5; padding: 3px 6px; }
+  .builder-insert-menu > button { display: block; text-align: left; padding: 11px 12px; width: 100%; background: transparent; color: #f2f5f9; border: 0; border-radius: 8px; }
+  .builder-insert-menu > button:hover, .builder-insert-menu > button:focus-visible { background: #30465c; }
+  .builder-insert-menu > button span, .builder-insert-menu > button small { display: block; }
+  .builder-insert-menu > button span { font-size: 13px; font-weight: 650; }
+  .builder-insert-menu > button small { font-size: 11px; line-height: 1.4; color: #afc2d2; margin-top: 3px; }
+
+  /* Naglowek ankiety */
+  .form-meta, .editable-section, .editable-field, .definition-status { background: var(--b-surface); border: 1px solid var(--b-border); border-radius: 12px; min-width: 0; }
+  .form-meta { padding: 0 26px 24px; overflow: hidden; }
+  .form-meta-topline { height: 9px; margin: 0 -26px 22px; background: linear-gradient(90deg, #bd9556, #ead1a0 70%, #466b8a); }
+  input, textarea, select { color: #f5f7fa; border: 1px solid #506c82; background: var(--b-input); border-radius: 7px; outline-offset: 2px; outline-color: var(--b-gold); }
+  input[type="text"], input[type="number"], textarea, select { display: block; width: 100%; min-width: 0; padding: 12px 13px; }
+  textarea { resize: vertical !important; line-height: 1.65; }
+  input::placeholder, textarea::placeholder { color: #9eb3c5; opacity: 1; }
+  label:not(.check-line):not(.required-toggle):not(.file-picker) { display: block; margin: 12px 0 7px; color: #d3e0ea; font: 650 13px system-ui,sans-serif; }
+  .form-title-input { width: 100%; border: 0 !important; border-bottom: 1px solid #536c81 !important; border-radius: 0 !important; background: transparent !important; font: 400 clamp(28px,3.8vw,40px) Georgia,serif !important; color: #f6dbb4 !important; padding: 9px 0; }
+  .form-description-input { border: 0 !important; background: transparent !important; color: #d2dfeb; padding: 9px 0; min-height: 88px; }
+
+  /* Sekcje i ich uchwyty */
+  .editable-section { padding: 18px 18px 16px; position: relative; }
+  .editable-section.selected { border-color: #d0b57e; }
+  .section-head { align-items: flex-start; padding: 3px 0 14px; border-bottom: 1px solid #3a546b; }
+  .section-title { border: 0; padding: 0; background: transparent; text-align: left; flex: 1; min-width: 0; color: #f0d9b7; }
+  .section-title strong { font: 400 clamp(20px,2.8vw,26px) Georgia,serif; }
+  .section-title small { display: block; margin-top: 7px; color: #b8c9d7; font-size: 13px; font-weight: 400; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .section-title .section-meta { font-size: 11px; color: #94a9ba; }
+  .section-edit { flex: 1; min-width: 0; }
+  .section-title-input { font: 400 24px Georgia,serif !important; color: #f3dab3 !important; }
+  .section-actions { gap: 4px; }
+  .section-actions button, .field-actions button, .option-editor .icon-btn { display: grid; place-items: center; min-width: 35px; min-height: 35px; padding: 0 7px; color: #dce8f1; background: transparent; border: 1px solid transparent; border-radius: 7px; font-size: 16px; }
+  .section-actions button:hover, .field-actions button:hover, .option-editor .icon-btn:hover { border-color: #5f7a92; background: #284158; }
+  .section-actions .danger, .field-actions .danger, .option-editor .danger { color: #f4b7a5; }
+  .drag-handle { color: #c9b38b; background: transparent; border: 0; border-radius: 7px; cursor: grab !important; user-select: none; font-size: 22px; line-height: 1; padding: 4px 7px; touch-action: none; }
+  .drag-handle:hover, .drag-handle:focus-visible { color: #f8daa5; background: #2a4559; }
+  .drag-handle:active { cursor: grabbing !important; }
+  .section-grip { margin-left: -7px; }
+  .fields-area { display: grid; gap: 14px; padding-top: 17px; }
+
+  /* Karty: prosty podglad; po wybraniu wlasciwosci wewnatrz karty */
+  .editable-field { position: relative; background: #10263a; padding: 0 22px 20px; transition: border-color .15s ease, background .15s ease; }
+  .editable-field:hover { border-color: #6c8295; }
+  .editable-field.selected { background: var(--b-selected); border-color: #dfbd80; box-shadow: inset 5px 0 #d4ac6b, 0 0 0 1px #b48d5744; }
+  .field-grip-row { justify-content: center; height: 26px; }
+  .field-grip-row .drag-handle { font-size: 19px; padding: 0 12px; line-height: 20px; }
+  .field-summary { display: block; width: 100%; border: 0; background: transparent; padding: 2px 0 8px; color: #eaf1f8; text-align: left; }
+  .field-summary strong { font: 650 16px system-ui,sans-serif; display: block; }
+  .required-asterisk { color: #f0a58d; }
+  .field-summary small { display: block; color: #bfd0df; font: 400 13px system-ui,sans-serif; white-space: pre-wrap; margin: 7px 0; line-height: 1.5; }
+  .field-mock, .mock-rating, .mock-text, .mock-options { padding-top: 14px; color: #b6c7d7; font-size: 13px; }
+  .mock-text { border-bottom: 1px dotted #728ba0; width: min(300px,80%); padding-bottom: 8px; }
+  .mock-rating { display: inline-block; border: 1px solid #546e84; border-radius: 7px; padding: 8px 16px; margin-top: 7px; }
+  .mock-options { display: grid; gap: 12px; }
+  .mock-options > div { display: flex; align-items: center; gap: 12px; }
+  .choice-marker { flex: 0 0 23px; color: #c2af89; font-size: 21px; }
+  .field-editor { padding: 4px 3px 0; }
+  .question-topline { align-items: start; }
+  .question-name { min-width: 0; flex: 1; }
+  .question-type { flex: 0 0 min(240px, 40%); min-width: 0; }
+  .field-title-input { font: 550 17px system-ui,sans-serif !important; min-height: 49px; }
+  .question-type select { height: 49px; padding-right: 22px; }
+  .description-area {
+    display: block; width: 100%; min-height: 118px !important; height: auto;
+    resize: vertical !important; font: 400 14px/1.65 system-ui,sans-serif;
+    margin: 6px 0 20px; overflow: auto;
+  }
+  .question-details { margin: 20px 0 0; padding: 18px; background: #0e2235; border: 1px solid #364e63; border-radius: 10px; }
+  .settings-pair { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+  .settings-pair label { margin-top: 13px; }
+  .option-heading { align-items: start; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px; }
+  .option-heading strong { color: #f0d4a9; font-size: 14px; }
+  .option-heading label { display: flex !important; align-items: center; gap: 9px; margin: 0 !important; }
+  .option-heading select { width: auto; max-width: 210px; min-width: 160px; margin-left: 5px; }
+  .option-editor { align-items: flex-start; gap: 12px; border-bottom: 1px solid #334d61; padding: 11px 0; }
+  .option-editor:last-of-type { border-bottom: 0; }
+  .option-editor .choice-marker { padding-top: 9px; }
+  .option-fields { flex: 1; min-width: 0; }
+  .option-editor input { margin: 0 0 8px; }
+  .option-editor .option-description { min-height: 74px; font-size: 13px; resize: vertical !important; }
+  .option-editor .icon-btn { margin-top: 8px; }
+  .quiet-add { margin: 11px 0 0; border: 1px dashed #ac9268; border-radius: 8px; background: transparent; color: #edcb92; padding: 10px 14px; text-align: left; }
+  .quiet-add:hover { background: #1b354a; }
+  .settings-compact { margin-top: 13px; }
+  .help-settings { border-top: 1px solid #41566b; margin-top: 24px; padding-top: 15px; }
+  .check-line { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #d5e3ef; padding: 7px 0; cursor: pointer; }
+  .check-line input, .required-toggle input { accent-color: var(--b-gold); min-width: 17px; min-height: 17px; }
+  .help-content { margin-top: 12px; padding: 15px; border: 1px solid #456075; border-radius: 9px; }
+  .help-content textarea { margin-bottom: 0; }
+  .field-footer { justify-content: flex-end; flex-wrap: wrap; gap: 14px; border-top: 1px solid #455d72; margin-top: 22px; padding-top: 14px; }
+  .field-actions { gap: 5px; }
+  .required-toggle { display: flex; align-items: center; gap: 10px; padding-left: 14px; border-left: 1px solid #4a6479; font-size: 13px; cursor: pointer; }
+
+  /* Wyrazne miejsce upuszczenia, rowniez na duzej karcie. */
+  .field-drop-before::before, .field-drop-after::after,
+  .section-drop-before::before, .section-drop-after::after {
+    content: ''; display: block; position: absolute; left: 12px; right: 12px; height: 5px;
+    background: #f5d18b; box-shadow: 0 0 0 2px #8a653d, 0 0 15px #e0b76c88;
+    border-radius: 12px; z-index: 8; pointer-events: none;
+  }
+  .field-drop-before::before, .section-drop-before::before { top: -10px; }
+  .field-drop-after::after, .section-drop-after::after { bottom: -10px; }
+  .builder-workspace.is-dragging .editable-field:not(.selected) { transition: none; }
+  .drop-end { border: 1px dashed #526c83; border-radius: 9px; text-align: center; padding: 9px; }
+  .drop-end button { color: #e4c38e; background: transparent; border: 0; font-size: 13px; padding: 7px 12px; }
+  .drop-end:hover { border-color: #e4c38e; }
+  .drop-end.field-drop-end { border: 2px solid #efcc8b; background: #284359; }
+  .empty-section, .empty-survey { padding: 22px; text-align: center; font-size: 13px; color: #a9c0d4; border: 1px dashed #516b82; border-radius: 8px; }
+  .empty-survey button { background: transparent; color: #f5d193; border: 0; text-decoration: underline; }
+  .canvas-add { padding: 15px; border: 1px dashed #897957; border-radius: 9px; background: #13283c; color: #ebca93; }
+  .canvas-add:hover { border-color: #e4c38e; background: #19344a; }
+  .definition-status { padding: 15px 20px; color: #ccdce9; font-size: 13px; }
+  .valid { color: #b6dbc4; font-size: 12px; }
+  .error-list { padding-left: 19px; color: #ffbbab; font-size: 12px; line-height: 1.7; }
+
+  /* Tryb podgladu i eksport pozostaja wspolne dla v25/v26. */
+  .preview-panel { max-width: 1000px; margin: 0 auto; }
+  .preview-top { justify-content: space-between; flex-wrap: wrap; background: #142c41; border: 1px solid #466278; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; }
+  .builder-transfer { margin: 34px auto 0; max-width: 955px; background: #12283d; border: 1px solid #435d75; border-radius: 12px; padding: 22px; }
+  .builder-transfer h2 { margin-bottom: 6px; }
+  .builder-transfer p { font-size: 13px; color: #aec0cf; line-height: 1.6; }
+  .transfer-actions { flex-wrap: wrap; margin: 16px 0; }
+  .file-picker { position: relative; overflow: hidden; cursor: pointer; }
+  .file-picker input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .import-form textarea { min-height: 140px; resize: vertical; }
+  .import-form button { margin: 9px 9px 0 0; }
+  .builder-error { background: #3c2729; color: #ffd3cb; border: 1px solid #ad716e; border-radius: 9px; padding: 13px; }
+
+  @media (max-width: 830px) {
+    .builder-head { align-items: start; }
+    .editable-section { padding: 13px; }
+    .editable-field { padding: 0 14px 15px; }
+    .question-topline { flex-wrap: wrap; }
+    .question-type { flex-basis: 100%; }
+  }
+  @media (max-width: 620px) {
+    padding: 16px 12px 90px;
+    .builder-workspace { display: block; padding-bottom: 70px; }
+    .builder-canvas { gap: 12px; }
+    .builder-toolbox { position: sticky; bottom: 8px; top: auto; margin: 12px auto 0; width: fit-content; z-index: 9; }
+    .toolbox-buttons { display: flex; gap: 6px; }
+    .builder-insert-menu { position: absolute; left: 50%; right: auto; top: auto; bottom: calc(100% + 10px); transform: translateX(-50%); max-height: 55vh; }
+    .head-actions { width: 100%; }
+    .head-actions button { flex: 1; }
+    .section-head { flex-wrap: wrap; }
+    .section-title, .section-edit { flex-basis: calc(100% - 50px); }
+    .section-actions { width: 100%; justify-content: flex-end; }
+    .option-heading { gap: 12px; }
+    .option-heading label { width: 100%; justify-content: space-between; }
+    .option-heading select { flex: 1; }
+    .settings-pair { grid-template-columns: 1fr; gap: 2px; }
+    .builder-transfer { padding: 16px; }
+    .form-meta { padding-left: 18px; padding-right: 18px; }
+    .form-meta-topline { margin-left: -18px; margin-right: -18px; }
+  }
+}
+
+
+/* v26.2 – live CDK drag-sort, large accessible grip and selection positioning. */
+.builder-page {
+  .sortable-sections { display: grid; gap: 16px; min-width: 0; }
+  .editable-section, .editable-field { scroll-margin-top: 110px; }
+  .field-grip-row { height: auto; margin: 0 -22px 12px; }
+  .field-grip-row .drag-handle {
+    display: flex; align-items: center; justify-content: center; width: 100%;
+    min-height: 46px; padding: 11px 16px; font: 700 10px/1.5 system-ui,sans-serif;
+    letter-spacing: .17em; border-radius: 11px 11px 0 0;
+    border-bottom: 1px dashed #35566c; color: #bca77c;
+  }
+  .field-grip-row .drag-handle:hover, .field-grip-row .drag-handle:focus-visible {
+    color: #ffe0a1; background: #244055; border-bottom-color: #d7b776;
+  }
+  .section-head { scroll-margin-top: 110px; }
+  .fields-area.cdk-drop-list-dragging .editable-field:not(.cdk-drag-placeholder),
+  .sortable-sections.cdk-drop-list-dragging .editable-section:not(.cdk-drag-placeholder) {
+    transition: transform 180ms cubic-bezier(.2,.85,.25,1);
+  }
+  .editable-field.cdk-drag-animating, .editable-section.cdk-drag-animating {
+    transition: transform 180ms cubic-bezier(.2,.85,.25,1);
+  }
+  .cdk-drag-placeholder { opacity: .24; border: 2px dashed #e1b96f !important; background: #30495d !important; }
+  .cdk-drag-preview { background: #172d40; border: 2px solid #e1c188;
+    border-radius: 12px; box-shadow: 0 20px 55px #0009; overflow: hidden; }
+  .builder-workspace.is-dragging .editable-field:not(.selected) { transition: transform 180ms ease; }
+  @media(max-width:830px) { .field-grip-row { margin-left: -14px; margin-right: -14px; } }
+}
+/* Preview intentionally lives OUTSIDE builder-page selectors: no editor CSS may restyle player controls. */
+.survey-player-preview { max-width: 1100px; padding: 24px 20px 90px; margin: 0 auto; color: #ecf2f8; }
+.survey-player-preview .builder-back, .survey-player-preview .builder-head,
+.survey-player-preview .draft-status, .survey-player-preview .preview-top {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.survey-player-preview .builder-back { font-size: 12px; }
+.survey-player-preview a { color: #ebc890; }
+.survey-player-preview .builder-head { margin: 24px 0; }
+.survey-player-preview .builder-head h1 { font: 400 clamp(28px,4vw,45px) Georgia,serif; color: #f3d9b1; }
+.survey-player-preview .builder-head .eyebrow { color: #e3bb77; font-size: 11px; letter-spacing: .13em; }
+.survey-player-preview .head-actions { display: flex; gap: 9px; }
+.survey-player-preview .head-actions button, .survey-player-preview .preview-top button {
+  padding: 9px 14px; color: #eaf1f9; border-radius: 8px; border: 1px solid #5e7589;
+  background: #20374c; cursor: pointer;
+}
+.survey-player-preview .draft-status, .survey-player-preview .preview-top {
+  padding: 14px; border: 1px solid #435d74; background: #162d41; border-radius: 9px; margin: 12px auto 18px;
+}
+.survey-player-preview .preview-panel { width: 100%; margin: 0 auto; max-width: 930px; }
+.survey-player-preview .builder-transfer { display: none; }
+
+/* v26.3 – drag only questions; section order uses up/down arrows. */
+.builder-page {
+  .section-collapse {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid #526e86;
+    border-radius: 9px;
+    background: #20394f;
+    color: #e6c48d;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .section-collapse:hover, .section-collapse:focus-visible {
+    background: #304c63;
+    border-color: #d7b776;
+  }
+  .fields-area[hidden] { display: none !important; }
+}
+/* CDK attaches drag previews to the document body, not the builder container. */
+.field-drag-preview {
+  width: min(520px, 72vw);
+  height: 68px;
+  border: 2px solid #d7b776;
+  border-radius: 12px;
+  background: rgba(22, 46, 66, .96);
+  box-shadow: 0 12px 30px #0008;
+  pointer-events: none;
+}
+
+
+/* v26.4 – full-width section grip; collapse button and arrow controls remain. */
+.builder-page {
+  .section-grip-row {
+    display: flex;
+    margin: -18px -18px 12px;
+    min-width: 0;
+  }
+  .section-grip-row .section-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    padding: 11px 16px;
+    border: 0;
+    border-bottom: 1px dashed #35566c;
+    border-radius: 11px 11px 0 0;
+    background: transparent;
+    color: #bca77c;
+    font: 700 10px/1.5 system-ui, sans-serif;
+    letter-spacing: .17em;
+    cursor: grab;
+    touch-action: none;
+  }
+  .section-grip-row .section-drag-handle:hover,
+  .section-grip-row .section-drag-handle:focus-visible {
+    color: #ffe0a1;
+    background: #244055;
+    border-bottom-color: #d7b776;
+  }
+  .section-grip-row .section-drag-handle:active { cursor: grabbing; }
+  @media (max-width: 830px) {
+    .section-grip-row { margin: -13px -13px 12px; }
+  }
+}
+/* Drag overlay lives in document.body, outside .builder-page. */
+.section-drag-preview {
+  width: min(600px, 76vw);
+  height: 76px;
+  border: 2px solid #d7b776;
+  border-radius: 12px;
+  background: rgba(22, 46, 66, .96);
+  box-shadow: 0 12px 30px #0008;
+  pointer-events: none;
+}

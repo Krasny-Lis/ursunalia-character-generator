@@ -1,0 +1,324 @@
+<main [class]="mode() === 'preview' ? 'survey-player-preview' : 'builder-page builder-v26-inline'">
+  <nav class="builder-back" aria-label="Powrót do ankiet">
+    <a routerLink="/organizator/ankiety">← Ankiety organizatora</a>
+    <span>TRYB DEWELOPERSKI · ZAPIS WYŁĄCZNIE LOKALNY</span>
+  </nav>
+
+  <header class="builder-head">
+    <div>
+      <p class="eyebrow">EDYTOR ANKIET · WERSJA 26.1</p>
+      <h1>Kreator formularzy</h1>
+      <p>Wybierz kartę pytania, aby edytować ją bezpośrednio w formularzu.</p>
+    </div>
+    <div class="head-actions">
+      <button type="button" [class.active]="mode() === 'edit'" (click)="mode.set('edit')">✎ Edycja</button>
+      <button type="button" [class.active]="mode() === 'preview'" (click)="mode.set('preview')">◉ Podgląd</button>
+      <button type="button" class="gold" (click)="exportJson()">↓ Eksport JSON</button>
+    </div>
+  </header>
+
+  <div class="draft-status" role="status">
+    <span>{{ notice() }}</span>
+    <span>{{ survey().sections.length }} sekcji · {{ totalFields() }} elementów</span>
+  </div>
+  @if (!storageAvailable()) {
+    <p class="builder-error" role="alert">Zapis lokalny niedostępny. Wyeksportuj projekt jako plik JSON.</p>
+  }
+
+  @if (mode() === 'preview') {
+    <div class="preview-panel">
+      <div class="preview-top">
+        <strong>Podgląd formularza dynamicznego – identyczny renderer jak dla gracza</strong>
+        <button type="button" (click)="mode.set('edit')">← Wróć do edycji</button>
+      </div>
+      <app-survey-renderer [survey]="survey()" />
+    </div>
+  } @else {
+    <div class="builder-workspace" [class.is-dragging]="dragging()">
+      <section class="builder-canvas" aria-label="Edytor formularza">
+        <div class="form-meta">
+          <div class="form-meta-topline"></div>
+          <label class="visually-hidden" for="survey-title">Tytuł ankiety</label>
+          <input id="survey-title" class="form-title-input" type="text" placeholder="Tytuł formularza"
+            [value]="survey().title" (input)="editMeta('title',$event)" />
+          <label class="visually-hidden" for="survey-description">Opis ankiety</label>
+          <textarea id="survey-description" class="form-description-input" rows="2" placeholder="Opis formularza (opcjonalny)"
+            [value]="survey().description ?? ''" (input)="editMeta('description',$event)"></textarea>
+        </div>
+
+        <div class="sortable-sections" cdkDropList id="survey-sections-drop-list"
+          [cdkDropListData]="survey().sections"
+          (cdkDropListDropped)="dropSection($event)">
+        @for (section of survey().sections; track section.id; let si = $index) {
+          <section class="editable-section" cdkDrag [cdkDragData]="section.id"
+            (cdkDragStarted)="dragging.set(true)" (cdkDragEnded)="dragging.set(false)"
+            [class.selected]="isSelected(section.id)"
+            [attr.data-section-id]="section.id"
+            [attr.aria-label]="section.title">
+            <div class="section-grip-row">
+              <button type="button" class="drag-handle section-drag-handle" cdkDragHandle
+                title="Przeciągnij sekcję" aria-label="Przeciągnij sekcję">
+                ⠿&nbsp; PRZECIĄGNIJ SEKCJĘ &nbsp;⠿
+              </button>
+            </div>
+            <ng-template cdkDragPreview>
+              <div class="section-drag-preview" aria-hidden="true"></div>
+            </ng-template>
+            <div class="section-head">
+              <button type="button" class="section-collapse" 
+                [attr.aria-expanded]="!isSectionCollapsed(section.id)"
+                [attr.aria-controls]="'section-fields-'+section.id"
+                [attr.aria-label]="isSectionCollapsed(section.id) ? 'Rozwiń sekcję' : 'Zwiń sekcję'"
+                [title]="isSectionCollapsed(section.id) ? 'Rozwiń sekcję' : 'Zwiń sekcję'"
+                (click)="toggleSectionCollapsed(section.id)">{{ isSectionCollapsed(section.id) ? '▾' : '▴' }}</button>
+              @if (isSelected(section.id)) {
+                <div class="section-edit">
+                  <label class="visually-hidden" [attr.for]="'section-title-'+section.id">Tytuł sekcji</label>
+                  <input [attr.id]="'section-title-'+section.id" class="section-title-input" type="text"
+                    placeholder="Tytuł sekcji" [value]="section.title" (input)="editSection('title',$event)" />
+                  <label class="visually-hidden" [attr.for]="'section-description-'+section.id">Opis sekcji</label>
+                  <textarea [attr.id]="'section-description-'+section.id" rows="3" class="description-area"
+                    placeholder="Opis sekcji (opcjonalny)" [value]="section.description ?? ''"
+                    (input)="editSection('description',$event)"></textarea>
+                  <label class="check-line"><input type="checkbox" [checked]="section.collapsible" (change)="toggleCollapsible($event)" /> Uczestnik może zwijać sekcję</label>
+                </div>
+              } @else {
+                <button type="button" class="section-title" (click)="selectSection(section.id)" [attr.aria-label]="'Edytuj sekcję '+section.title">
+                  <strong>{{ section.title || 'Sekcja bez nazwy' }}</strong>
+                  @if (section.description) { <small>{{ section.description }}</small> }
+                  <small class="section-meta">{{ section.fields.length }} pól · Kliknij, aby edytować sekcję</small>
+                </button>
+              }
+              <div class="section-actions">
+                <button type="button" title="Sekcja w górę" aria-label="Przesuń sekcję w górę" [disabled]="si === 0" (click)="shiftSection(section.id,-1)">↑</button>
+                <button type="button" title="Sekcja w dół" aria-label="Przesuń sekcję w dół" [disabled]="si === survey().sections.length-1" (click)="shiftSection(section.id,1)">↓</button>
+                <button type="button" class="danger" title="Usuń sekcję" aria-label="Usuń sekcję" (click)="removeSection(section.id)">✕</button>
+              </div>
+            </div>
+
+            <div class="fields-area" cdkDropList
+              [id]="'survey-fields-'+section.id" [cdkDropListData]="section.fields"
+              [hidden]="isSectionCollapsed(section.id)"
+              [cdkDropListDisabled]="isSectionCollapsed(section.id)"
+              [cdkDropListConnectedTo]="fieldListIds()"
+              (cdkDropListDropped)="dropField($event,section.id)">
+              @for (field of section.fields; track field.id; let fi = $index) {
+                <article class="editable-field" cdkDrag [cdkDragData]="field.id"
+                  (cdkDragStarted)="dragging.set(true)" (cdkDragEnded)="dragging.set(false)"
+                  [class.selected]="isSelected(section.id,field.id)"
+                  [attr.data-field-id]="field.id"
+                  (click)="selectField(section.id,field.id)">
+                  <div class="field-grip-row">
+                    <button type="button" class="drag-handle" cdkDragHandle
+                      title="Przeciągnij pytanie" aria-label="Przeciągnij pytanie">⠿&nbsp; PRZECIĄGNIJ PYTANIE &nbsp;⠿</button>
+                  </div>
+                  <!-- Minimal preview: CDK does not duplicate the text of the dragged card. -->
+                  <ng-template cdkDragPreview>
+                    <div class="field-drag-preview" aria-hidden="true"></div>
+                  </ng-template>
+
+                  @if (isSelected(section.id,field.id)) {
+                    <div class="field-editor">
+                      <div class="question-topline">
+                        <div class="question-name">
+                          <label class="visually-hidden" [attr.for]="'field-name-'+field.id">Nazwa pytania</label>
+                          <input [attr.id]="'field-name-'+field.id" type="text" class="field-title-input"
+                            [attr.placeholder]="field.type==='info' ? 'Tytuł informacji' : 'Pytanie bez tytułu'"
+                            [value]="field.type==='info' ? field.title : field.label"
+                            (input)="editFieldText(field.type==='info' ? 'title' : 'label',$event)" />
+                        </div>
+                        <div class="question-type">
+                          <label class="visually-hidden" [attr.for]="'field-type-'+field.id">Rodzaj pytania</label>
+                          <select [attr.id]="'field-type-'+field.id" [value]="field.type" (change)="changeFieldType($event)">
+                            @for (type of fieldTypes; track type.id) {
+                              <option [value]="type.id">{{ type.label }}</option>
+                            }
+                          </select>
+                        </div>
+                      </div>
+                      @if (field.type === 'info') {
+                        <label [attr.for]="'field-content-'+field.id">Treść informacji (każda linia to akapit)</label>
+                        <textarea [attr.id]="'field-content-'+field.id" class="description-area" rows="5"
+                          [value]="field.paragraphs.join('\n')" (input)="editInfoParagraphs($event)"></textarea>
+                      } @else {
+                        <label [attr.for]="'field-desc-'+field.id">Opis pomocniczy</label>
+                        <textarea [attr.id]="'field-desc-'+field.id" class="description-area" rows="4"
+                          placeholder="Dodaj opis, wskazówki lub wyjaśnienie pytania…"
+                          [value]="field.description ?? ''" (input)="editFieldText('description',$event)"></textarea>
+
+                        @if (field.type === 'short-text' || field.type === 'long-text') {
+                          <div class="question-details">
+                            <label [attr.for]="'placeholder-'+field.id">Podpowiedź w pustym polu</label>
+                            <input [attr.id]="'placeholder-'+field.id" type="text" [value]="field.placeholder ?? ''"
+                              placeholder="Tekst podpowiedzi" (input)="editFieldText('placeholder',$event)" />
+                            <div class="settings-pair">
+                              <div><label [attr.for]="'min-length-'+field.id">Minimum znaków</label>
+                                <input [attr.id]="'min-length-'+field.id" type="number" min="0" [value]="field.minLength ?? ''" (input)="editFieldNumber('minLength',$event)" /></div>
+                              <div><label [attr.for]="'max-length-'+field.id">Maksimum znaków</label>
+                                <input [attr.id]="'max-length-'+field.id" type="number" min="1" [value]="field.maxLength ?? ''" (input)="editFieldNumber('maxLength',$event)" /></div>
+                            </div>
+                          </div>
+                        } @else if (field.type === 'single-choice' || field.type === 'multi-choice') {
+                          <div class="question-details options-config">
+                            <div class="option-heading">
+                              <strong>Możliwe odpowiedzi</strong>
+                              <label>Wygląd
+                                <select aria-label="Sposób prezentacji odpowiedzi" [value]="field.appearance ?? 'radio'" (change)="editFieldAppearance($event)">
+                                  @if (field.type === 'single-choice') { <option value="select">Lista rozwijana</option> }
+                                  <option value="radio">Lista odpowiedzi</option>
+                                  <option value="cards">Kafelki z opisami</option>
+                                </select>
+                              </label>
+                            </div>
+                            @for (option of field.options; track option.id) {
+                              <div class="option-editor">
+                                <span class="choice-marker" aria-hidden="true">{{ field.type === 'single-choice' ? '◯' : '☐' }}</span>
+                                <div class="option-fields">
+                                  <label class="visually-hidden" [attr.for]="'option-'+option.id">Nazwa odpowiedzi {{ $index+1 }}</label>
+                                  <input [attr.id]="'option-'+option.id" type="text" [value]="option.label"
+                                    (input)="editOption(option.id,'label',$event)" placeholder="Nazwa opcji" />
+                                  <label class="visually-hidden" [attr.for]="'option-description-'+option.id">Opis odpowiedzi {{ $index+1 }}</label>
+                                  <textarea [attr.id]="'option-description-'+option.id" class="option-description" rows="2"
+                                    [value]="option.description ?? ''" (input)="editOption(option.id,'description',$event)"
+                                    placeholder="Opcjonalny opis odpowiedzi"></textarea>
+                                </div>
+                                <button type="button" class="icon-btn danger" title="Usuń odpowiedź" [disabled]="field.options.length===1"
+                                  [attr.aria-label]="'Usuń odpowiedź '+option.label" (click)="removeOption(option.id)">✕</button>
+                              </div>
+                            }
+                            <button type="button" class="quiet-add" (click)="addOption()">+ Dodaj opcję</button>
+                            @if (field.type === 'multi-choice') {
+                              <div class="settings-pair settings-compact">
+                                <div><label [attr.for]="'multi-min-'+field.id">Min. wyborów</label><input [attr.id]="'multi-min-'+field.id" type="number" min="0" [value]="field.minSelections ?? ''" (input)="editFieldNumber('minSelections',$event)" /></div>
+                                <div><label [attr.for]="'multi-max-'+field.id">Maks. wyborów</label><input [attr.id]="'multi-max-'+field.id" type="number" min="1" [value]="field.maxSelections ?? ''" (input)="editFieldNumber('maxSelections',$event)" /></div>
+                              </div>
+                            }
+                          </div>
+                        } @else if (field.type === 'rating') {
+                          <div class="question-details">
+                            <div class="settings-pair">
+                              <div><label [attr.for]="'rating-min-'+field.id">Skala od</label><input [attr.id]="'rating-min-'+field.id" type="number" [value]="field.min" (input)="editFieldNumber('min',$event)" /></div>
+                              <div><label [attr.for]="'rating-max-'+field.id">Skala do</label><input [attr.id]="'rating-max-'+field.id" type="number" [value]="field.max" (input)="editFieldNumber('max',$event)" /></div>
+                            </div>
+                            <div class="settings-pair">
+                              <div><label [attr.for]="'rating-min-label-'+field.id">Opis minimum</label><input [attr.id]="'rating-min-label-'+field.id" type="text" [value]="field.minLabel ?? ''" (input)="editFieldText('minLabel',$event)" /></div>
+                              <div><label [attr.for]="'rating-max-label-'+field.id">Opis maksimum</label><input [attr.id]="'rating-max-label-'+field.id" type="text" [value]="field.maxLabel ?? ''" (input)="editFieldText('maxLabel',$event)" /></div>
+                            </div>
+                          </div>
+                        }
+                        <div class="help-settings">
+                          <label class="check-line"><input type="checkbox" [checked]="!!field.help" (change)="editHelpEnabled($event)" /> Dodaj objaśnienie pod przyciskiem ⓘ</label>
+                          @if (field.help; as help) {
+                            <div class="help-content">
+                              <label [attr.for]="'help-title-'+field.id">Tytuł informacji</label>
+                              <input [attr.id]="'help-title-'+field.id" type="text" [value]="help.title" (input)="editHelpTitle($event)" />
+                              <label [attr.for]="'help-paragraphs-'+field.id">Treść objaśnienia</label>
+                              <textarea [attr.id]="'help-paragraphs-'+field.id" class="description-area" rows="4"
+                                placeholder="Dodaj tekst objaśnienia…" [value]="help.paragraphs.join('\n')"
+                                (input)="editHelpParagraphs($event)"></textarea>
+                            </div>
+                          }
+                        </div>
+                      }
+                      <div class="field-footer">
+                        <div class="field-actions">
+                          <button type="button" class="icon-btn" title="Przesuń wyżej" aria-label="Przesuń pytanie wyżej"
+                            [disabled]="fi === 0" (click)="shiftField(section.id,field.id,-1)">↑</button>
+                          <button type="button" class="icon-btn" title="Przesuń niżej" aria-label="Przesuń pytanie niżej"
+                            [disabled]="fi === section.fields.length-1" (click)="shiftField(section.id,field.id,1)">↓</button>
+                          <button type="button" class="icon-btn" title="Duplikuj pytanie" aria-label="Duplikuj pytanie" (click)="duplicateField(section.id,field.id)">⧉</button>
+                          <button type="button" class="icon-btn danger" title="Usuń pytanie" aria-label="Usuń pytanie" (click)="removeField(section.id,field.id)">▤</button>
+                        </div>
+                        @if (field.type !== 'info') {
+                          <label class="required-toggle"><span>Wymagane</span><input type="checkbox" [checked]="field.required" (change)="editFieldRequired($event)" /></label>
+                        }
+                      </div>
+                    </div>
+                  } @else {
+                    <button type="button" class="field-summary" (click)="selectField(section.id,field.id)"
+                      [attr.aria-label]="'Edytuj pole: '+(field.type==='info' ? field.title : field.label)">
+                      <strong>{{ field.type === 'info' ? field.title : field.label || 'Pytanie bez tytułu' }} @if (field.type !== 'info' && field.required) { <span class="required-asterisk">*</span> }</strong>
+                      @if (field.type !== 'info' && field.description) { <small>{{ field.description }}</small> }
+                      @if (field.type === 'info') {
+                        <div class="field-mock"><span>{{ field.paragraphs.join(' ') }}</span></div>
+                      } @else if (field.type === 'single-choice' || field.type === 'multi-choice') {
+                        <div class="mock-options">
+                          @for (option of field.options.slice(0, 3); track option.id) {
+                            <div><span class="choice-marker">{{ field.type === 'single-choice' ? '◯' : '☐' }}</span>{{ option.label }}</div>
+                          }
+                          @if (field.options.length > 3) { <small>+ {{ field.options.length - 3 }} pozostałych</small> }
+                        </div>
+                      } @else if (field.type === 'rating') {
+                        <div class="mock-rating">Skala {{ field.min }} – {{ field.max }}</div>
+                      } @else {
+                        <div class="mock-text">{{ field.type === 'long-text' ? 'Odpowiedź w kilku zdaniach…' : 'Krótka odpowiedź…' }}</div>
+                      }
+                    </button>
+                  }
+                </article>
+              } @empty {
+                <div class="empty-section">Nie ma jeszcze pytań w tej sekcji.</div>
+              }
+              <div class="drop-end">
+                <button type="button" (click)="showAddMenu(section.id)">＋ Dodaj pytanie</button>
+              </div>
+            </div>
+          </section>
+        } @empty {
+          <div class="empty-survey">Ankieta nie ma jeszcze sekcji.
+            <button type="button" (click)="addSection()">Dodaj pierwszą sekcję</button>
+          </div>
+        }
+        </div>
+        <button type="button" class="canvas-add" (click)="addSection()">＋ Dodaj kolejną sekcję</button>
+        <div class="definition-status">
+          <strong>Sprawdzenie definicji</strong>
+          @if (problems().length) {
+            <ul class="error-list">@for (issue of problems(); track $index) { <li>{{ issue }}</li> }</ul>
+          } @else { <p class="valid">✓ Definicja ankiety jest poprawna.</p> }
+        </div>
+      </section>
+
+      <aside class="builder-toolbox" aria-label="Dodawanie elementów">
+        <div class="toolbox-buttons">
+          <button type="button" title="Dodaj pytanie" aria-label="Dodaj pytanie"
+            [attr.aria-expanded]="addMenuOpen()" (click)="showAddMenu()">＋</button>
+          <button type="button" title="Dodaj sekcję" aria-label="Dodaj sekcję" (click)="addSection()">▤</button>
+        </div>
+        @if (addMenuOpen()) {
+          <div class="builder-insert-menu" aria-label="Wybierz rodzaj elementu">
+            <div class="insert-heading"><strong>Nowe pytanie</strong><button type="button" aria-label="Zamknij wybór typu" (click)="addMenuOpen.set(false)">✕</button></div>
+            @for (type of fieldTypes; track type.id) {
+              <button type="button" (click)="addField(type.id,insertSectionId() ?? undefined)">
+                <span>{{ type.label }}</span><small>{{ type.description }}</small>
+              </button>
+            }
+          </div>
+        }
+      </aside>
+    </div>
+  }
+
+  <section class="builder-transfer" aria-label="Import i zarządzanie szkicem">
+    <div>
+      <h2>Przenoszenie projektu</h2>
+      <p>Przenosisz samą definicję formularza, bez odpowiedzi uczestników. Po każdej większej zmianie warto wyeksportować kopię.</p>
+    </div>
+    <div class="transfer-actions">
+      <label class="file-picker">Wybierz plik JSON<input type="file" accept=".json,application/json" (change)="importFile($event)" /></label>
+      <button type="button" (click)="importOpen.set(!importOpen())">Wklej JSON</button>
+      <button type="button" class="danger-soft" (click)="resetToDemo()">Przywróć przykład</button>
+    </div>
+    @if (importOpen()) {
+      <div class="import-form">
+        <label for="import-source">Treść definicji ankiety</label>
+        <textarea id="import-source" rows="8" [value]="importText()" (input)="importText.set($any($event.target).value)"></textarea>
+        @if (importError()) { <p class="builder-error" role="alert">{{ importError() }}</p> }
+        <button type="button" class="gold" (click)="applyImport()">Sprawdź i zaimportuj</button>
+        <button type="button" (click)="importOpen.set(false)">Anuluj</button>
+      </div>
+    } @else if (importError()) {
+      <p class="builder-error" role="alert">{{ importError() }}</p>
+    }
+  </section>
+</main>
