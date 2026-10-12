@@ -102,3 +102,57 @@ footer { text-align:center; color:#778da2; margin-top:34px; font-size:10px; lett
 .validation-warnings li { margin: 7px 0; }
 .validation-warnings a { margin-left: 6px; }
 @media (prefers-reduced-motion: reduce) { .progress-meter-fill { transition: none; } }
+
+/* v26.5c — karty zgłoszenia. Komponentowe reguły muszą obsługiwać jasny motyw
+   niezależnie od kolejności dołączenia stylów globalnych Angulara. */
+:host {
+  --review-paper:#fffefa;
+  --review-muted:#f7f5f0;
+  --review-line:#d7d7d1;
+  --review-ink:#263341;
+  --review-secondary:#536170;
+}
+.panel,.sidepanel {
+  color-scheme:light;
+  color:var(--review-ink);
+  background:var(--review-paper);
+  border-color:var(--review-line);
+  box-shadow:0 4px 16px #00000014;
+}
+.section-header h2,.sidepanel h2,.story-field h3,.biography h3,
+.relation-item h3,.preference-block h3,.private-fields h3 { color:var(--review-ink); }
+.muted,.empty,.small-note,.private-note,.section-mini-summary { color:var(--review-secondary); }
+.facts div,.lore,.tag-card,.biography,.pillar-row,.checklist li,
+.private-fields,.validation-warnings {
+  background:var(--review-muted);
+  border-color:var(--review-line);
+  color:var(--review-ink);
+}
+.facts dt,.meta-count,.lore p,.tag-card p,.story-field p,
+.biography p,.relation-item p { color:var(--review-secondary); }
+.facts dd,.lore summary,.tag-card summary,.story-field h3,
+.pillar-row strong,.checklist-content strong { color:var(--review-ink); }
+.lore .tagline,.tag-card .tagline { color:#785526; }
+.story-field,.rule,.storage { border-color:var(--review-line); }
+.sidepanel label { color:var(--review-ink); }
+.sidepanel select { background:#fff; color:var(--review-ink); border-color:#abb7c2; }
+.side-link,.checklist a { color:#755323; }
+.status-icon { color:#627281; }
+.status-icon.ok,.success-note { color:#276b49; }
+.checklist-content small { color:var(--review-secondary); }
+.checklist li.incomplete { border-color:#bb9660; }
+.progress-meter { background:#e9e6de; border-color:#c6c4bb; }
+.validation-warnings { background:#fff5e5; border-color:#bd9256; }
+.validation-warnings h3 { color:#6f4c21; }
+.private-fields { border-color:#bda77e; }
+.private-note { border-left-color:#ab864f; }
+.warning { color:#a12f29; }
+.loading { color:var(--review-secondary); }
+:where(.panel,.sidepanel) :is(a,button,select,input,textarea,summary):focus-visible {
+  outline:3px solid #b88c4c;
+  outline-offset:2px;
+}
+@media(max-width:700px) {
+  .panel { padding:16px; }
+  .sidepanel { padding:16px; box-shadow:none; }
+}
