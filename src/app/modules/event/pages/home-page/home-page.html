@@ -1,26 +1,33 @@
 <main class="event-home">
   <section class="event-hero">
-    <p class="event-eyebrow">ŚWIĘTO BUDZENIA NIEDŹWIEDZI · KISLEV</p>
+    <p class="event-eyebrow">KISLEV · ŚWIĘTO BUDZENIA NIEDŹWIEDZI · 2027</p>
     <h1>{{ event.name }}<span>{{ event.subtitle }}</span></h1>
     <p class="event-dates">22–24 kwietnia 2027</p>
-    <p class="event-intro">Przygotowania do kolejnej odsłony wydarzenia trwają. Tutaj stopniowo pojawią się informacje organizacyjne, ogłoszenia i materiały do gry.</p>
+    <p class="event-intro">Północne pogranicze budzi się po zimie. Na ziemiach Braci spotykają się żołnierze, podróżni i wierni Ursuna, Darza oraz Tora. Stare zobowiązania wciąż czekają na spłatę.</p>
     <div class="event-actions">
-      <a class="event-primary" routerLink="/zgloszenie-postaci">Otwórz zgłoszenie postaci <span aria-hidden="true">→</span></a>
-      <span class="event-status">Formularz w fazie przygotowania · dane zapisywane lokalnie</span>
+      <a class="event-primary" routerLink="/zgloszenie-postaci">Poznaj swoją postać <span aria-hidden="true">→</span></a>
+      <a class="event-secondary" routerLink="/organizator/ankiety">Kreator formularzy <span aria-hidden="true">↗</span></a>
     </div>
+    <p class="event-status">Wersja demonstracyjna · zgłoszenia pozostają zapisane lokalnie</p>
+    <div class="event-hero-sigil" aria-hidden="true">✦</div>
   </section>
-
+  <section class="event-introduction" aria-label="O wydarzeniu">
+    <p class="event-step">NA POGRANICZU KISLEVA</p>
+    <h2>Nowe początki. Stare długi.</h2>
+    <p>Fort Żaryń i stanica Krywulka szykują się do święta. Możesz stworzyć własną postać, poznać dostępne role oraz zaplanować jej historię i relacje. Twój szkic jest dostępny w tej przeglądarce.</p>
+  </section>
   <section class="event-modules" aria-label="Dostępne sekcje">
     <article class="event-module-card">
-      <span class="event-step">01 / AKTYWNE</span>
+      <span class="event-step">01 · STWÓRZ POSTAĆ</span>
       <h2>Zgłoszenie postaci</h2>
-      <p>Przygotuj swoją postać, wybierz cechy i haki fabularne, opisz historię oraz preferencje rozgrywki. Obecnie to wersja demonstracyjna – nic nie jest wysyłane do organizatorów.</p>
-      <a routerLink="/zgloszenie-postaci">Przejdź do formularza <span aria-hidden="true">↗</span></a>
+      <p>Wybierz rolę, kulturę, region, cechy i haki fabularne. Wypełnij historię, relacje oraz preferencje gry. Możesz od razu wyświetlić gotową postać przykładową.</p>
+      <a routerLink="/zgloszenie-postaci">Otwórz zgłoszenie <span aria-hidden="true">→</span></a>
     </article>
-    <article class="event-module-card event-module-planned">
-      <span class="event-step">02 / W PRZYGOTOWANIU</span>
-      <h2>Centrum wydarzenia</h2>
-      <p>Ogłoszenia, kompendium wiedzy, galeria postaci i panel uczestnika zostaną udostępnione w kolejnych etapach rozwoju platformy.</p>
+    <article class="event-module-card">
+      <span class="event-step">02 · NARZĘDZIE ORGANIZATORA</span>
+      <h2>Kreator formularzy</h2>
+      <p>Projektuj ankiety z sekcjami, pytaniami, opcjami i podglądem na żywo. Zachowaj projekt jako JSON, aby móc kontynuować pracę później.</p>
+      <a routerLink="/organizator/ankiety">Przejdź do ankiet <span aria-hidden="true">→</span></a>
     </article>
   </section>
 </main>
