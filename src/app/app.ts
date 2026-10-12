@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, Scroll } from '@angular/router';
 import { filter, take } from 'rxjs';
 
@@ -16,6 +16,9 @@ import { ModuleRegistry } from './core/modules/module-registry.service';
 export class App implements OnDestroy {
   protected readonly event = EVENT_CONFIG;
   protected readonly navigation = inject(ModuleRegistry).navigation();
+  protected readonly menuOpen = signal(false);
+
+  protected closeMenu(): void { this.menuOpen.set(false); }
 
   private readonly router = inject(Router);
   private readonly scrollKey = 'ursunalia:platform:reload-scroll:v1';
