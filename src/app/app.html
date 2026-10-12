@@ -10,9 +10,10 @@
       </span>
     </a>
 
-    <nav class="platform-nav" aria-label="Nawigacja główna">
+    <button type="button" class="platform-menu-toggle" [attr.aria-expanded]="menuOpen()" aria-controls="platform-navigation" [attr.aria-label]="menuOpen() ? 'Zamknij menu' : 'Otwórz menu'" (click)="menuOpen.set(!menuOpen())">{{ menuOpen() ? '✕' : '☰' }}</button>
+    <nav id="platform-navigation" class="platform-nav" [class.platform-nav-open]="menuOpen()" aria-label="Nawigacja główna">
       @for (item of navigation; track item.id) {
-        <a [routerLink]="item.path" routerLinkActive="platform-nav-active"
+        <a [routerLink]="item.path" routerLinkActive="platform-nav-active" (click)="closeMenu()"
           [routerLinkActiveOptions]="{ exact: true }">
           {{ item.label }}
         </a>
