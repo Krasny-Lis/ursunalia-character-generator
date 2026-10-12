@@ -1,0 +1,89 @@
+/* Ursunalia v26.5 — jasne formularze w ciemnej oprawie platformy.
+   Importowane jako ostatnie: bez zmiany logiki i bez nadpisywania globalnej nawigacji. */
+:root {
+  --urs-paper: #f7f5f0;
+  --urs-paper-card: #fffefa;
+  --urs-paper-muted: #f0eee8;
+  --urs-ink: #263341;
+  --urs-ink-soft: #536170;
+  --urs-paper-border: #d7d7d1;
+  --urs-paper-gold: #9b6d34;
+}
+.builder-page {
+  --b-surface: var(--urs-paper-card);
+  --b-selected: #fff8e9;
+  --b-input: #fff;
+  --b-border: var(--urs-paper-border);
+  --b-gold: #b18a50;
+  .form-meta, .editable-section, .editable-field, .definition-status { color:var(--urs-ink); background:var(--urs-paper-card); border-color:var(--urs-paper-border); box-shadow:0 3px 14px #00000016; }
+  .editable-field, .question-details { background:var(--urs-paper-muted); }
+  .editable-field.selected, .editable-section.selected { background:#fff9ef; border-color:#aa814a; box-shadow:inset 4px 0 #aa814a; }
+  .section-head,.field-footer,.option-editor,.help-settings { border-color:var(--urs-paper-border); }
+  .section-title,.section-title strong,.section-title-input,.field-summary,.field-summary strong,
+  .option-heading strong,.form-title-input { color:var(--urs-ink) !important; }
+  .section-title small,.field-summary small,.field-mock,.mock-text,.mock-options,.mock-rating,
+  .definition-status,.check-line,.required-toggle { color:var(--urs-ink-soft); }
+  input:not([type='checkbox']):not([type='radio']), textarea, select {
+    color:var(--urs-ink); background:#fff; border-color:#b7c0c8;
+  }
+  input::placeholder, textarea::placeholder { color:#687786; }
+  label:not(.check-line):not(.required-toggle):not(.file-picker) { color:var(--urs-ink); }
+  .form-description-input { color:var(--urs-ink-soft); }
+  .question-details,.help-content { background:#faf9f5; border-color:var(--urs-paper-border); }
+  .section-actions button,.field-actions button,.option-editor .icon-btn { color:var(--urs-ink); }
+  .section-actions button:hover,.field-actions button:hover,.option-editor .icon-btn:hover { background:#ebe6da; border-color:#b7ab98; }
+  .drag-handle,.section-grip-row .section-drag-handle { color:#876338; }
+  .field-grip-row .drag-handle,.section-grip-row .section-drag-handle { border-bottom-color:#c8bfae; }
+  .field-grip-row .drag-handle:hover,.section-grip-row .section-drag-handle:hover { color:#63451d; background:#f2e9da; }
+  .quiet-add,.canvas-add,.drop-end button,.empty-survey button { color:#785321; }
+  .canvas-add,.drop-end,.empty-section,.empty-survey { background:#faf8f2; border-color:#c6ac81; color:var(--urs-ink-soft); }
+  .mock-rating { border-color:#c1b7a8; }
+  .choice-marker { color:#947042; }
+  .valid { color:#276b49; }
+  .error-list,.required-asterisk { color:#a52e2e; }
+  .preview-top,.builder-transfer,.draft-status { background:#142a40; color:#eaf1f9; }
+  .builder-transfer p,.draft-status { color:#d4e0ea; }
+  .builder-transfer input,.builder-transfer textarea { color:var(--urs-ink); }
+}
+.survey-player-preview { 
+  .preview-panel { color:var(--urs-ink); }
+}
+app-survey-renderer {
+  display:block;
+  color:var(--urs-ink);
+  .survey-renderer { background:var(--urs-paper); padding:clamp(14px,2.5vw,28px); border-radius:14px; }
+  .survey-intro h2,.section-heading h3 { color:var(--urs-ink); }
+  .survey-intro p,.section-heading p,.field-description,.char-counter,.rating-labels,.choice small { color:var(--urs-ink-soft); }
+  .survey-section,.field,.choice,.informational { background:var(--urs-paper-card); border-color:var(--urs-paper-border); color:var(--urs-ink); }
+  .field { background:#faf9f6; }
+  .choice.chosen { background:#fbefd8; border-color:#a67c43; }
+  .field input[type=text],.field textarea,.field select { background:#fff; color:var(--urs-ink); border-color:#aeb9c3; }
+  .field input::placeholder,.field textarea::placeholder { color:#687786; }
+  .rating-options button { background:#fff; color:var(--urs-ink); border-color:#b9c2c9; }
+  .rating-options button.selected { background:#cda86d; border-color:#97703a; color:#1f2933; }
+  .collapse-button,.secondary-button,.field-help summary { color:#795628; border-color:#b3a184; }
+  .help-content { background:#fffdf8; color:var(--urs-ink); border-color:#ab8a55; }
+  .help-content p,.informational p { color:var(--urs-ink-soft); }
+  .informational { background:#f4eee1; }
+  .field-error { color:#a12f29; }
+  .survey-success { background:#e7f4ed; color:#21583b; border-color:#9dc5ad; }
+  .survey-alert { background:#fff0eb; color:#922d24; border-color:#d9a396; }
+}
+/* Jasne karty generatora postaci, bez zmiany jego ciemnego hero ani docka. */
+.generator-content .wizard-stage {
+  .page, .page main { color:var(--urs-ink); }
+  :is(input[type='text'],input[type='number'],textarea,select) { background:#fff; color:var(--urs-ink); border-color:#b3bdc5; }
+  :is(input,textarea)::placeholder { color:#657583; }
+  .inline-editor { background:var(--urs-paper-card); color:var(--urs-ink); border:1px solid var(--urs-paper-border); padding:20px; border-radius:12px; }
+  .inline-editor :is(h3,h4,label,.editor-hint) { color:var(--urs-ink); }
+  .inline-editor label span { color:var(--urs-ink-soft); }
+  .inline-editor :is(input[type='text'],select,textarea) { background:#fff; color:var(--urs-ink); border-color:#afb9c2; }
+  .option-row,.relation-edit-row,.inline-rating-row,.sensitive-editor { background:#faf9f5; color:var(--urs-ink); border-color:var(--urs-paper-border); }
+  .option-row details,.option-row details summary,.inline-rating-row strong { color:var(--urs-ink); }
+  .rating-actions button { background:#fff; color:var(--urs-ink); border-color:#abb6c0; }
+  .rating-actions button.active { background:#d5b477; }
+}
+@media (max-width:620px) {
+  app-survey-renderer .survey-renderer { padding:12px; }
+  .builder-page .form-meta,.builder-page .editable-section { box-shadow:none; }
+}
