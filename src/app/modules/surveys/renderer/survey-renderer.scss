@@ -68,3 +68,29 @@
 .field :is(input[type=text],textarea,select):focus-visible,.choice:focus-within,
 .rating-options button:focus-visible { outline:3px solid #bd9452; outline-offset:2px; }
 @media(max-width:620px) { .survey-renderer { padding:12px; } }
+
+/* Royal Manuscript — komponentowy wygląd formularza gracza */
+:host {color:#212635;color-scheme:light;}
+.survey-renderer {background:#f8f2e6;border:1px solid #d3bea0;}
+.survey-section {background:#fffaf0;border:1px solid #d3bea0;box-shadow:0 4px 15px #00000014;}
+.section-heading {border-bottom:1px solid #d3bea0;}
+.section-heading h3,.survey-intro h2 {color:#212635;}
+.field {background:#f8f2e6;border-color:#d3bea0;}
+.field-heading>label {color:#212635;}
+.choice {background:#fffaf0;border-color:#d3bea0;}
+.choice.chosen {background:#f4e4ce;border-color:#8b3b37;box-shadow:inset 3px 0 #731b26;}
+.choice input {accent-color:#731b26;}
+.field :is(input[type=text],textarea,select) {background:#fffdf8;border-color:#bba98e;color:#212635;}
+.field :is(input[type=text],textarea,select):focus-visible {outline-color:#976523;}
+.rating-options button.selected {background:#731b26;color:#fff;border-color:#731b26;}
+.primary-button {background:#731b26;color:#fff;border-color:#9e5960;}
+.primary-button:hover {background:#902d38;}
+.secondary-button,.collapse-button {background:#fff8ec;border-color:#be995e;color:#654322;}
+.informational,.help-content {background:#f3e8d6;border-color:#d3bea0;color:#212635;}
+.survey-intro .eyebrow {color:#815d2b;}
+@media(max-width:620px) {
+ .survey-section {margin:12px 0;}
+ .section-heading {padding:15px;}
+ .section-fields {padding:0 14px 15px;gap:12px;}
+ .field {padding:14px;}
+}
