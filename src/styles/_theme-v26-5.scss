@@ -116,3 +116,60 @@ app-survey-renderer {
 .generator-content .wizard-stage {
   .inline-editor, .option-row, .relation-edit-row { color-scheme:light; }
 }
+
+/* v26.5b — spójne papierowe karty generatora; ciemne hero, pasek nawigacji
+   i stała belka zapisu pozostają bez zmian. */
+.generator-content .wizard-stage {
+  .panel, .sidepanel, .section-card {
+    background:var(--urs-paper-card);
+    color:var(--urs-ink);
+    border-color:var(--urs-paper-border);
+  }
+  .panel :is(h2,h3,h4), .sidepanel :is(h2,h3,h4) { color:var(--urs-ink); }
+  .panel :is(.muted,.section-mini-summary), .sidepanel .muted { color:var(--urs-ink-soft); }
+  .inline-editor .chosen-catalog {
+    background:#f8f4eb; border-color:#cfbea0; color:var(--urs-ink);
+  }
+  .chosen-catalog-heading h4, .chosen-catalog-heading h4 span { color:#4a3923; }
+  .chosen-catalog-hint, .chosen-catalog-empty { color:var(--urs-ink-soft); }
+  .chosen-catalog-item { background:#fffcf5; border-color:#c6ad83; }
+  :is(.chosen-catalog-link,.chosen-catalog-remove) { color:var(--urs-ink); }
+  .chosen-catalog-link:hover { background:#eee5d5; }
+  .chosen-catalog-remove { border-left-color:#d5c8b4; color:#9e3030; }
+  .chosen-catalog-remove:hover { background:#fbe3dc; color:#842421; }
+  .option-row:has(input[type='radio']:checked),
+  .option-row:has(input[type='checkbox']:checked) {
+    background:#f7ecd8; border-color:#b18b53;
+  }
+  .concept-explainer, .history-guidance {
+    color:var(--urs-ink-soft); background:#f5f0e5; border-left-color:#aa844c;
+  }
+  .concept-explainer strong, .history-guidance > strong { color:var(--urs-ink); }
+  .temporary-note, .inline-editor .optional-note { color:#64717b; }
+  .summary-additional, .summary-additional-values > div {
+    background:#faf9f5; border-color:var(--urs-paper-border); color:var(--urs-ink);
+  }
+  .summary-additional h3, .summary-additional-values h4,
+  .summary-additional-values p { color:var(--urs-ink); }
+  .private-preferences,.additional-information { border-top-color:var(--urs-paper-border); }
+  :is(.inline-editor,.panel) :is(input,select,textarea):focus-visible {
+    outline:3px solid #b98b47; outline-offset:2px;
+  }
+}
+/* Status kompletności jest częścią formularza, więc również ma jasny wariant. */
+.generator-content .wizard-stage .progress-sidebar {
+  .progress-group-heading,.completed-fields > summary { color:var(--urs-ink); }
+  .checklist-complete li { background:#f2efe8; }
+  .checklist-complete .checklist-content strong { color:#315947; }
+  .progress-all-done { background:#e5f2e9; color:#285d3e; border-color:#93b49f; }
+  .progress-jump { color:#785321; }
+  .completed-fields { border-color:var(--urs-paper-border); }
+}
+@media(max-width:720px) {
+  .generator-content .wizard-stage {
+    .panel, .sidepanel { min-width:0; }
+    .inline-editor { padding:14px; }
+    .chosen-catalog-list { gap:6px; }
+    .chosen-catalog-item { max-width:100%; }
+  }
+}
