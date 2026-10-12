@@ -1,0 +1,100 @@
+<div class="survey-renderer">
+  @if (definitionIssues.length) {
+    <section class="survey-alert" role="alert">
+      <h2>Niepoprawna definicja ankiety</h2>
+      @for (error of definitionIssues; track $index) { <p>{{ error }}</p> }
+    </section>
+  } @else {
+    <header class="survey-intro">
+      <p class="eyebrow">PODGLĄD FORMULARZA · WERSJA {{ survey.revision }}</p>
+      <h2>{{ survey.title }}</h2>
+      @if (survey.description) { <p>{{ survey.description }}</p> }
+    </header>
+    <form (submit)="$event.preventDefault(); validatePreview()" novalidate>
+      @for (section of survey.sections; track section.id) {
+        <section class="survey-section" [attr.aria-label]="section.title">
+          <header class="section-heading">
+            <div>
+              <h3>{{ section.title }}</h3>
+              @if (section.description) { <p>{{ section.description }}</p> }
+            </div>
+            @if (section.collapsible) {
+              <button type="button" class="collapse-button" (click)="toggleSection(section.id)" [attr.aria-expanded]="!isCollapsed(section.id)">
+                {{ isCollapsed(section.id) ? 'Rozwiń' : 'Zwiń' }}
+              </button>
+            }
+          </header>
+          @if (!isCollapsed(section.id)) {
+            <div class="section-fields">
+              @for (field of section.fields; track field.id) {
+                @if (field.type === 'info') {
+                  <aside class="informational" [id]="fieldId(field)">
+                    <strong>{{ field.title }}</strong>
+                    @for (paragraph of field.paragraphs; track $index) { <p>{{ paragraph }}</p> }
+                  </aside>
+                } @else {
+                  <div class="field" [id]="fieldId(field)" [class.invalid]="!!issueFor(field.id)">
+                    <div class="field-heading">
+                      <label [attr.for]="field.id + '-input'">{{ field.label }} @if (field.required) { <span class="required" aria-label="Wymagane">*</span> }</label>
+                      @if (field.help) {
+                        <details class="field-help">
+                          <summary [attr.aria-label]="'Informacje o polu: ' + field.label" title="Więcej informacji">ⓘ</summary>
+                          <div class="help-content">
+                            <strong>{{ field.help.title }}</strong>
+                            @for (paragraph of field.help.paragraphs; track $index) { <p>{{ paragraph }}</p> }
+                          </div>
+                        </details>
+                      }
+                    </div>
+                    @if (field.description) { <p class="field-description">{{ field.description }}</p> }
+                    @if (field.type === 'short-text') {
+                      <input [id]="field.id + '-input'" type="text" [value]="textAnswer(field.id)" [placeholder]="field.placeholder ?? ''" [attr.maxlength]="field.maxLength ?? null" [attr.aria-invalid]="!!issueFor(field.id)" [attr.aria-describedby]="issueFor(field.id) ? field.id + '-error' : null" (input)="updateText(field.id, $event)" />
+                    } @else if (field.type === 'long-text') {
+                      <textarea [id]="field.id + '-input'" rows="5" [value]="textAnswer(field.id)" [placeholder]="field.placeholder ?? ''" [attr.maxlength]="field.maxLength ?? null" [attr.aria-invalid]="!!issueFor(field.id)" [attr.aria-describedby]="issueFor(field.id) ? field.id + '-error' : null" (input)="updateText(field.id, $event)"></textarea>
+                      <p class="char-counter">{{ textAnswer(field.id).trim().length }} znaków</p>
+                    } @else if (field.type === 'single-choice' && field.appearance === 'select') {
+                      <select [id]="field.id + '-input'" [value]="textAnswer(field.id)" [attr.aria-invalid]="!!issueFor(field.id)" (change)="updateSelect(field.id, $event)">
+                        <option value="">Wybierz...</option>
+                        @for (option of field.options; track option.id) { <option [value]="option.id">{{ option.label }}</option> }
+                      </select>
+                    } @else if (field.type === 'single-choice' || field.type === 'multi-choice') {
+                      <div class="choice-list" [class.choice-cards]="field.appearance === 'cards'" role="group" [attr.aria-label]="field.label">
+                        @for (option of field.options; track option.id) {
+                          <label class="choice" [class.chosen]="isChosen(field.id, option.id)">
+                            @if (field.type === 'single-choice') {
+                              <input type="radio" [name]="field.id" [value]="option.id" [checked]="isChosen(field.id, option.id)" (change)="setAnswer(field.id, option.id)" />
+                            } @else {
+                              <input type="checkbox" [checked]="isChosen(field.id, option.id)" (change)="updateMulti(field.id, option.id, $event)" />
+                            }
+                            <span><strong>{{ option.label }}</strong>@if (option.description) { <small>{{ option.description }}</small> }</span>
+                          </label>
+                        }
+                      </div>
+                    } @else if (field.type === 'rating') {
+                      <div class="rating-options" role="group" [attr.aria-label]="field.label">
+                        @for (step of ratingSteps(field.min, field.max); track step) {
+                          <button type="button" [class.selected]="ratingValue(field.id) === step" [attr.aria-pressed]="ratingValue(field.id) === step" (click)="setAnswer(field.id, ratingValue(field.id) === step ? null : step)">{{ step }}</button>
+                        }
+                      </div>
+                      <div class="rating-labels"><span>{{ field.minLabel ?? '' }}</span><span>{{ field.maxLabel ?? '' }}</span></div>
+                    }
+                    @if (issueFor(field.id); as error) { <p class="field-error" [id]="field.id + '-error'" role="alert">{{ error.message }}</p> }
+                  </div>
+                }
+              }
+            </div>
+          }
+        </section>
+      }
+      <footer class="survey-actions">
+        <button type="button" class="secondary-button" (click)="resetPreview()">Wyczyść odpowiedzi</button>
+        <button type="submit" class="primary-button">Sprawdź odpowiedzi</button>
+      </footer>
+      @if (successfulPreview()) {
+        <p class="survey-success" role="status">Formularz poprawny. To wyłącznie podgląd – odpowiedzi nie zostały nigdzie wysłane.</p>
+      } @else if (attempted() && issues().length) {
+        <p class="survey-alert" role="status">Pola wymagają poprawek: {{ issues().length }}.</p>
+      }
+    </form>
+  }
+</div>
