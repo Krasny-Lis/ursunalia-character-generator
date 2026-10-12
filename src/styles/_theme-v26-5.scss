@@ -1,6 +1,7 @@
 /* Ursunalia v26.5 — jasne formularze w ciemnej oprawie platformy.
    Importowane jako ostatnie: bez zmiany logiki i bez nadpisywania globalnej nawigacji. */
-:root {
+:is(.builder-page, .survey-player-preview, app-survey-renderer, .generator-content .wizard-stage) {
+  color-scheme: light;
   --urs-paper: #f7f5f0;
   --urs-paper-card: #fffefa;
   --urs-paper-muted: #f0eee8;
@@ -86,4 +87,32 @@ app-survey-renderer {
 @media (max-width:620px) {
   app-survey-renderer .survey-renderer { padding:12px; }
   .builder-page .form-meta,.builder-page .editable-section { box-shadow:none; }
+}
+
+/* v26.5a: dopracowanie kontrastu i czytelności klawiaturowej. */
+.builder-page {
+  .form-meta, .editable-section, .editable-field { color-scheme:light; }
+  .editable-section .section-meta, .editable-field .field-summary small { color:#4e5b68; }
+  .form-title-input::placeholder,.section-title-input::placeholder { color:#657383 !important; }
+  .head-actions button:focus-visible, .section-actions button:focus-visible,
+  .field-actions button:focus-visible, .toolbox-buttons button:focus-visible {
+    outline:3px solid #e9be6e; outline-offset:2px;
+  }
+  .editable-field.selected .field-grip-row .drag-handle { color:#795725; }
+  .question-details .option-heading,.question-details .check-line { color:var(--urs-ink); }
+}
+app-survey-renderer {
+  .survey-section,.field,.choice { color-scheme:light; }
+  .field:focus-within { border-color:#a37b42; }
+  .field.invalid { border-color:#bd4940; }
+  .field :is(input[type=text],textarea,select):focus-visible,
+  .choice:focus-within, .rating-options button:focus-visible {
+    outline:3px solid #bd9452; outline-offset:2px;
+  }
+  .choice:hover { border-color:#b39565; background:#fcf6e9; }
+  .choice.chosen:hover { background:#f8ebd0; }
+  .rating-options button:hover { border-color:#94703a; }
+}
+.generator-content .wizard-stage {
+  .inline-editor, .option-row, .relation-edit-row { color-scheme:light; }
 }
