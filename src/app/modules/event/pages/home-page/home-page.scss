@@ -17,3 +17,57 @@
 .event-module-card a { color:#e9c888; font-weight:700; text-underline-offset:4px; }
 .event-module-planned { opacity:.8; }
 @media(max-width:680px) { .event-home { padding-top:20px; } .event-modules { grid-template-columns:1fr; } }
+
+/* Royal Manuscript — strona wydarzenia */
+.event-home {max-width:1480px;padding-top:35px;}
+.event-hero {
+ border:1px solid #b99b68;
+ border-radius:16px;
+ padding:clamp(35px,6vw,85px);
+ min-height:480px;
+ background:
+ linear-gradient(90deg,rgba(8,18,29,.95) 10%,rgba(9,24,39,.84) 60%,rgba(9,24,39,.25)),
+ url('art/manuscript-landscape.svg') right center/auto 100% no-repeat,
+ linear-gradient(120deg,#0a1928,#233548);
+ box-shadow:0 20px 45px #0005;
+}
+.event-hero h1 {max-width:780px;font:400 clamp(45px,6vw,86px)/1.09 Georgia,serif;color:#f9e4c1;}
+.event-hero h1 span {margin-top:16px;color:#e6cfab;letter-spacing:.02em;}
+.event-eyebrow,.event-step {color:#d5b076;letter-spacing:.19em;}
+.event-dates {color:#f1d5a3;margin-top:24px;}
+.event-intro {font-size:clamp(15px,1.3vw,18px);max-width:720px;color:#d1dbe3;}
+.event-secondary {
+ display:inline-flex;align-items:center;gap:10px;border:1px solid #ba955e;
+ color:#f1d8af;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:700;
+}
+.event-secondary:hover {background:#ffffff12;}
+.event-primary {background:#771e28;color:#fff4ea;border:1px solid #b78964;}
+.event-primary:hover {background:#95313c;}
+.event-hero-sigil {position:absolute;right:9%;top:23%;font-size:125px;line-height:1;color:#bda06a;opacity:.2;}
+.event-introduction {
+ text-align:center;max-width:790px;margin:55px auto 34px;padding:15px 24px;
+ color:#ced8e1;
+}
+.event-introduction h2 {font:400 clamp(30px,4vw,50px) Georgia,serif;color:#f4deb8;margin:8px 0;}
+.event-introduction p:last-child {line-height:1.8;font-size:15px;}
+.event-modules {gap:22px;margin-top:20px;}
+.event-module-card {
+ padding:clamp(24px,3vw,42px);
+ background:linear-gradient(180deg,#fffaf0,#f6eddf);
+ color:#212635;border:1px solid #d3bea0;box-shadow:0 12px 24px #0003;
+}
+.event-module-card h2 {color:#212635;font-size:clamp(27px,3vw,37px);}
+.event-module-card p {color:#575d65;}
+.event-module-card .event-step {color:#835f35;}
+.event-module-card a {display:inline-flex;gap:15px;color:#771e28;font-weight:750;}
+.event-module-card a:hover {color:#a63a41;}
+@media(max-width:680px) {
+ .event-home {padding:17px 12px 65px;}
+ .event-hero {min-height:0;padding:27px 22px;}
+ .event-hero h1 {font-size:46px;}
+ .event-hero-sigil {display:none;}
+ .event-actions {align-items:stretch;flex-direction:column;}
+ .event-primary,.event-secondary {justify-content:center;}
+ .event-introduction {margin:32px auto 20px;}
+ .event-modules {grid-template-columns:1fr;gap:14px;}
+}
