@@ -1,0 +1,8 @@
+/* Most między istniejącym generatorem a platformowym App Shell. */
+.generator-toolbar { display:flex; flex-wrap:wrap; gap:12px 24px; align-items:center; justify-content:space-between; max-width:1500px; margin:auto; padding:15px clamp(16px,3vw,44px); border-bottom:1px solid #344d63; }
+.generator-toolbar-copy { display:grid; gap:4px; }
+.generator-toolbar-kicker { color:#d7b87f; font:700 10px system-ui,sans-serif; letter-spacing:.15em; }
+.generator-toolbar-copy p { color:#b6c6d4; font-size:12px; margin:0; }
+.generator-test-label { color:#d1b98e; }
+.generator-toolbar .shell-warning { width:100%; margin:0; }
+@media(max-width:560px) { .generator-toolbar .character-tools { width:100%; flex-wrap:wrap; } .generator-toolbar .character-picker { flex:1; } .generator-toolbar .character-picker select { width:100%; } }

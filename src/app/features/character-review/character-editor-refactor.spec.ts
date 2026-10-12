@@ -69,6 +69,43 @@ describe('Edytory po refaktorze v18–v23', () => {
     expect(store.removeHook).toHaveBeenCalledWith('debt');
   });
 
+
+  it('cechy: reczne rozwiniecie wszystkich opisow synchronizuje przycisk i pierwsze klikniecie zwija', async () => {
+    const { character, data, store } = fixtures();
+    data.traits.push({ id: 'brave', name: 'Odwazny', description: 'Nie ucieka.' } as typeof data.traits[number]);
+    const fixture = await setup<CharacterCatalogEditor>(CharacterCatalogEditor,
+      { kind: 'traits', c: character, data, selected: data.traits }, store);
+    const root = fixture.nativeElement as HTMLElement;
+    const details = [...root.querySelectorAll<HTMLDetailsElement>('.inline-option-grid details')];
+    const button = root.querySelector<HTMLButtonElement>('.expand-all-button')!;
+    for (const detail of details) {
+      detail.open = true;
+      detail.dispatchEvent(new Event('toggle'));
+    }
+    fixture.detectChanges();
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    button.click();
+    fixture.detectChanges();
+    expect(details.every(detail => !detail.open)).toBe(true);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('haki: reczne zamkniecie jednego opisu nie zamyka pozostalych', async () => {
+    const { character, data, store } = fixtures();
+    data.hooks.push({ id: 'secret', name: 'Sekret', description: 'Ukryta przeszlosc.' } as typeof data.hooks[number]);
+    const fixture = await setup<CharacterCatalogEditor>(CharacterCatalogEditor,
+      { kind: 'hooks', c: character, data, selected: data.hooks }, store);
+    const root = fixture.nativeElement as HTMLElement;
+    const button = root.querySelector<HTMLButtonElement>('.expand-all-button')!;
+    button.click();
+    fixture.detectChanges();
+    const details = [...root.querySelectorAll<HTMLDetailsElement>('.inline-option-grid details')];
+    details[0].open = false;
+    details[0].dispatchEvent(new Event('toggle'));
+    fixture.detectChanges();
+    expect(details[1].open).toBe(true);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+  });
   it('historia: edycja nie nadpisuje pozostałych pól opowieści', async () => {
     const { character, data, store } = fixtures();
     const fixture = await setup<CharacterStoryEditor>(CharacterStoryEditor, { c: character, data }, store);

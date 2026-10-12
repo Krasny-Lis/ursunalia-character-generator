@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import type { PillarId } from '../../core/models/character.model';
@@ -21,6 +21,7 @@ import { validateCharacter } from '../../core/validation/character-validation';
 })
 export class CharacterSummary {
   protected readonly store = inject(CharacterStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
   protected readonly activeCharacter = this.store.activeCharacter;
   protected readonly catalogs = toSignal(inject(CatalogService).catalogs$, { initialValue: null });
 
@@ -63,7 +64,22 @@ export class CharacterSummary {
   }
 
   protected toggleAllDescriptions(group: 'traits' | 'hooks'): void {
-    this.allDescriptionsOpen.update(current => ({ ...current, [group]: !current[group] }));
+    const nextOpen = !this.allDescriptionsOpen()[group];
+    for (const detail of this.descriptions(group)) detail.open = nextOpen;
+    this.allDescriptionsOpen.update(current => ({ ...current, [group]: nextOpen }));
+  }
+
+  protected onDescriptionToggle(group: 'traits' | 'hooks'): void {
+    const descriptions = this.descriptions(group);
+    const allOpen = descriptions.length > 0 && descriptions.every(detail => detail.open);
+    this.allDescriptionsOpen.update(current =>
+      current[group] === allOpen ? current : { ...current, [group]: allOpen }
+    );
+  }
+
+  private descriptions(group: 'traits' | 'hooks'): HTMLDetailsElement[] {
+    const root: HTMLElement = this.host.nativeElement as HTMLElement;
+    return Array.from(root.querySelectorAll<HTMLDetailsElement>(`#${group} .tag-grid details.tag-card`));
   }
 
   protected toggleStory(): void {

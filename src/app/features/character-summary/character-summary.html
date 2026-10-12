@@ -75,7 +75,7 @@
                   </div>
                   <div class="tag-grid">
                     @for (entry of selectedTraits(); track entry.id) {
-                      <details class="tag-card" [open]="allDescriptionsOpen().traits">
+                      <details class="tag-card" (toggle)="onDescriptionToggle('traits')">
                         <summary>{{ entry.name }}</summary>
                         @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
                         <p>{{ entry.description }}</p>
@@ -105,7 +105,7 @@
                   </div>
                   <div class="tag-grid">
                     @for (entry of selectedHooks(); track entry.id) {
-                      <details class="tag-card" [open]="allDescriptionsOpen().hooks">
+                      <details class="tag-card" (toggle)="onDescriptionToggle('hooks')">
                         <summary>{{ entry.name }}</summary>
                         @if (entry.subtitle) { <p class="tagline">{{ entry.subtitle }}</p> }
                         <p>{{ entry.description }}</p>

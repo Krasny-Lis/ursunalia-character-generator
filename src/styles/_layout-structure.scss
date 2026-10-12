@@ -21,9 +21,9 @@
 
 /* === Ursunalia · wspólny hero, postęp pod hero, fixed nawigacja === */
 :root { --urs-dock-height: 92px; }
-body { padding-bottom: var(--urs-dock-height); }
+/* Zapas na belke formularza tylko na jego stronie, nie na calym body platformy. */
 .shell-header { box-shadow: 0 9px 26px #0003; }
-.generator-content { max-width: 1500px; margin: 0 auto; padding: 0 clamp(16px,3vw,44px) 28px; overflow: clip; }
+.generator-content { max-width: 1500px; margin: 0 auto; padding: 0 clamp(16px,3vw,44px) calc(28px + var(--urs-dock-height)); overflow: clip; }
 .wizard-hero {
   margin: 24px 0 18px; padding: clamp(23px,3.6vw,44px);
   border-radius: 15px; border: 1px solid #637284;

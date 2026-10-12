@@ -1,0 +1,26 @@
+<main class="event-home">
+  <section class="event-hero">
+    <p class="event-eyebrow">ŚWIĘTO BUDZENIA NIEDŹWIEDZI · KISLEV</p>
+    <h1>{{ event.name }}<span>{{ event.subtitle }}</span></h1>
+    <p class="event-dates">22–24 kwietnia 2027</p>
+    <p class="event-intro">Przygotowania do kolejnej odsłony wydarzenia trwają. Tutaj stopniowo pojawią się informacje organizacyjne, ogłoszenia i materiały do gry.</p>
+    <div class="event-actions">
+      <a class="event-primary" routerLink="/zgloszenie-postaci">Otwórz zgłoszenie postaci <span aria-hidden="true">→</span></a>
+      <span class="event-status">Formularz w fazie przygotowania · dane zapisywane lokalnie</span>
+    </div>
+  </section>
+
+  <section class="event-modules" aria-label="Dostępne sekcje">
+    <article class="event-module-card">
+      <span class="event-step">01 / AKTYWNE</span>
+      <h2>Zgłoszenie postaci</h2>
+      <p>Przygotuj swoją postać, wybierz cechy i haki fabularne, opisz historię oraz preferencje rozgrywki. Obecnie to wersja demonstracyjna – nic nie jest wysyłane do organizatorów.</p>
+      <a routerLink="/zgloszenie-postaci">Przejdź do formularza <span aria-hidden="true">↗</span></a>
+    </article>
+    <article class="event-module-card event-module-planned">
+      <span class="event-step">02 / W PRZYGOTOWANIU</span>
+      <h2>Centrum wydarzenia</h2>
+      <p>Ogłoszenia, kompendium wiedzy, galeria postaci i panel uczestnika zostaną udostępnione w kolejnych etapach rozwoju platformy.</p>
+    </article>
+  </section>
+</main>

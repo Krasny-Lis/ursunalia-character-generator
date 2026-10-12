@@ -1,116 +1,84 @@
-import { Component, HostListener, OnDestroy, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, inject } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, Scroll } from '@angular/router';
+import { filter, take } from 'rxjs';
 
-import { CharacterStore } from './core/storage/character-store.service';
-import { CharacterReview } from './features/character-review/character-review';
-import { CharacterSummary } from './features/character-summary/character-summary';
+import { EVENT_CONFIG } from './core/config/event.config';
+import { ModuleRegistry } from './core/modules/module-registry.service';
 
-type GeneratorView = 'form' | 'card';
-const VIEW_KEY = 'ursunalia:character-generator:single-form-view:v1';
-const OLD_STEP_KEY = 'ursunalia:character-generator:wizard-step:v1';
-
+/** Wspólna powłoka platformy. Formularz ma własną stronę i zachowuje stan lokalny. */
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CharacterReview, CharacterSummary],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App implements OnDestroy {
-  protected readonly store = inject(CharacterStore);
-  protected readonly characters = this.store.characters;
-  protected readonly activeCharacter = this.store.activeCharacter;
-  protected readonly view = signal<GeneratorView>(this.restoreView());
-  protected readonly showTopButton = signal(false);
-  protected readonly transitionPhase = signal<'idle' | 'out' | 'in'>('idle');
-  protected readonly transitionDirection = signal<'forward' | 'backward'>('forward');
-  private viewTransitionTimer?: ReturnType<typeof setTimeout>;
-  // Wynik ręcznego zapisu sesji. Nie oznacza wysłania zgłoszenia do organizatora.
-  protected readonly saveNotice = signal<'saved' | 'error' | null>(null);
-  private saveNoticeTimer?: ReturnType<typeof setTimeout>;
+  protected readonly event = EVENT_CONFIG;
+  protected readonly navigation = inject(ModuleRegistry).navigation();
 
-  protected saveDraft(): void {
-    if (this.saveNoticeTimer) clearTimeout(this.saveNoticeTimer);
-    const saved = this.store.saveDraft();
-    this.saveNotice.set(saved ? 'saved' : 'error');
-    this.saveNoticeTimer = setTimeout(() => this.saveNotice.set(null), 6000);
+  private readonly router = inject(Router);
+  private readonly scrollKey = 'ursunalia:platform:reload-scroll:v1';
+  private readonly refreshY = this.readReloadScroll();
+  private restoreFrame: number | undefined;
+
+  constructor() {
+    // Nawigacje SPA i historia (Wstecz/Dalej) obsluguje withInMemoryScrolling.
+    // Tylko F5 potrzebuje dodatkowego odtworzenia pozycji po lazy loadingu.
+    if (this.refreshY !== null) {
+      this.router.events.pipe(filter(event => event instanceof Scroll), take(1)).subscribe(() => {
+        this.restoreReloadScroll(this.refreshY!);
+      });
+    }
   }
 
-  protected dismissSaveNotice(): void {
-    if (this.saveNoticeTimer) clearTimeout(this.saveNoticeTimer);
-    this.saveNotice.set(null);
+  @HostListener('window:pagehide')
+  protected saveReloadScroll(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      window.sessionStorage.setItem(this.scrollKey, JSON.stringify({
+        url: window.location.pathname + window.location.search + window.location.hash,
+        y: window.scrollY,
+      }));
+    } catch { /* Storage moze byc niedostepny. */ }
+  }
+
+  private readReloadScroll(): number | null {
+    if (typeof window === 'undefined' || typeof performance === 'undefined') return null;
+    // Nie odtwarzamy pozycji dla nowo otwartej trasy ani w trakcie zwyklej nawigacji.
+    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (navigation?.type !== 'reload') return null;
+    try {
+      const raw = window.sessionStorage.getItem(this.scrollKey);
+      if (!raw) return null;
+      const value: unknown = JSON.parse(raw);
+      if (!value || typeof value !== 'object') return null;
+      const saved = value as { url?: unknown; y?: unknown };
+      const url = window.location.pathname + window.location.search + window.location.hash;
+      return saved.url === url && typeof saved.y === 'number' && Number.isFinite(saved.y) && saved.y >= 0
+        ? saved.y : null;
+    } catch { return null; }
+  }
+
+  private restoreReloadScroll(y: number): void {
+    if (typeof window === 'undefined' || y === 0) return;
+    let frames = 0;
+    const attempt = () => {
+      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      // Formularz laduje sie leniwie i moze jeszcze nie miec pelnej wysokosci.
+      if (maxY >= y - 2 || frames++ >= 120) {
+        window.scrollTo({ top: Math.min(y, maxY), behavior: 'instant' });
+        this.restoreFrame = undefined;
+      } else {
+        this.restoreFrame = window.requestAnimationFrame(attempt);
+      }
+    };
+    this.restoreFrame = window.requestAnimationFrame(attempt);
   }
 
   ngOnDestroy(): void {
-    if (this.saveNoticeTimer) clearTimeout(this.saveNoticeTimer);
-    if (this.viewTransitionTimer) clearTimeout(this.viewTransitionTimer);
-  }
-
-
-  @HostListener('window:scroll')
-  protected onScroll(): void {
-    this.showTopButton.set(window.scrollY > 420);
-  }
-
-  protected scrollToTop(): void {
-    if (typeof window === 'undefined') return;
-    const reduced = typeof window.matchMedia !== 'function'
-      || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.scrollTo({ top:0, behavior: reduced ? 'instant' : 'smooth' });
-  }
-
-
-  protected show(view: GeneratorView): void {
-    if (view === this.view() || this.transitionPhase() !== 'idle') return;
-
-    const reducedMotion = typeof window === 'undefined'
-      || typeof window.matchMedia !== 'function'
-      || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (reducedMotion) {
-      this.setCurrentView(view);
-      return;
+    if (this.restoreFrame !== undefined && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(this.restoreFrame);
     }
-
-    this.transitionDirection.set(view === 'card' ? 'forward' : 'backward');
-    this.transitionPhase.set('out');
-    this.viewTransitionTimer = setTimeout(() => {
-      // Podmieniamy treść dopiero po zakończeniu wygaszania poprzedniej.
-      this.setCurrentView(view);
-      this.transitionPhase.set('in');
-      this.viewTransitionTimer = setTimeout(() => {
-        this.transitionPhase.set('idle');
-      }, 45);
-    }, 255);
-  }
-
-  private setCurrentView(view: GeneratorView): void {
-    this.view.set(view);
-    if (typeof window !== 'undefined') {
-      try { window.sessionStorage.setItem(VIEW_KEY, view); }
-      catch { /* Przeglądarka może blokować sessionStorage. */ }
-    }
-  }
-
-  protected selectCharacter(event: Event): void {
-    this.store.selectCharacter((event.target as HTMLSelectElement).value);
-  }
-
-  protected createCharacter(): void {
-    this.store.createCharacter();
-    this.show('form');
-  }
-
-  protected skipToContent(): void {
-    if (typeof document !== 'undefined') document.getElementById('generator-content')?.focus();
-  }
-
-  private restoreView(): GeneratorView {
-    if (typeof window === 'undefined') return 'form';
-    try {
-      const saved = window.sessionStorage.getItem(VIEW_KEY);
-      if (saved === 'card' || saved === 'form') return saved;
-      // Przy aktualizacji stary krok „Karta postaci” zachowuje swój podgląd.
-      return window.sessionStorage.getItem(OLD_STEP_KEY) === '8' ? 'card' : 'form';
-    } catch { return 'form'; }
   }
 }

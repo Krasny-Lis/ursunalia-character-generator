@@ -35,7 +35,7 @@
                     @for (entry of data.traits; track entry.id) {
                       <div class="option-row" [id]="'traits-option-' + entry.id">
                         <label><input type="checkbox" [checked]="c.traitIds.includes(entry.id)" (change)="store.toggleTrait(entry.id)" /> {{ entry.name }}</label>
-                        <details [open]="allDescriptionsOpen()"><summary>Opis</summary><p>{{ entry.description }}</p></details>
+                        <details (toggle)="onDescriptionToggle()"><summary>Opis</summary><p>{{ entry.description }}</p></details>
                       </div>
                     }
                   </div>
@@ -79,7 +79,7 @@
                     @for (entry of data.hooks; track entry.id) {
                       <div class="option-row" [id]="'hooks-option-' + entry.id">
                         <label><input type="checkbox" [checked]="c.hookIds.includes(entry.id)" (change)="store.toggleHook(entry.id)" /> {{ entry.name }}</label>
-                        <details [open]="allDescriptionsOpen()"><summary>Opis</summary><p>{{ entry.description }}</p></details>
+                        <details (toggle)="onDescriptionToggle()"><summary>Opis</summary><p>{{ entry.description }}</p></details>
                       </div>
                     }
                   </div>

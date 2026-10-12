@@ -1,4 +1,4 @@
-import { Component, Input, inject, signal } from '@angular/core';
+import { Component, ElementRef, Input, inject, signal } from '@angular/core';
 import type { Character } from '../../core/models/character.model';
 import type { CatalogData } from '../../core/models/catalog-data.model';
 import { CharacterStore } from '../../core/storage/character-store.service';
@@ -14,6 +14,7 @@ import { CharacterStore } from '../../core/storage/character-store.service';
 })
 export class CharacterCatalogEditor {
   protected readonly store = inject(CharacterStore);
+  private readonly host = inject(ElementRef<HTMLElement>);
   @Input({ required: true }) c!: Character;
   @Input({ required: true }) data!: CatalogData;
   
@@ -22,7 +23,23 @@ export class CharacterCatalogEditor {
 
   
   protected readonly allDescriptionsOpen = signal(false);
-  protected toggleAllDescriptions(): void { this.allDescriptionsOpen.update(value => !value); }
+  /** Otwieramy / zamykamy realne <details>, niezaleznie od klikniec recznych. */
+  protected toggleAllDescriptions(): void {
+    const nextOpen = !this.allDescriptionsOpen();
+    for (const detail of this.descriptions()) detail.open = nextOpen;
+    this.allDescriptionsOpen.set(nextOpen);
+  }
+
+  /** Element <details> wysyla toggle takze po recznym otwarciu/zamknieciu. */
+  protected onDescriptionToggle(): void {
+    const descriptions = this.descriptions();
+    this.allDescriptionsOpen.set(descriptions.length > 0 && descriptions.every(detail => detail.open));
+  }
+
+  private descriptions(): HTMLDetailsElement[] {
+    const root: HTMLElement = this.host.nativeElement as HTMLElement;
+    return Array.from(root.querySelectorAll<HTMLDetailsElement>('.inline-option-grid details'));
+  }
 
   protected scrollToCatalogItem(id: string): void {
     if (typeof document === 'undefined') return;
