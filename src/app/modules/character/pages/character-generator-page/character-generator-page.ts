@@ -95,6 +95,12 @@ export class CharacterGeneratorPage implements OnDestroy {
     this.store.selectCharacter((event.target as HTMLSelectElement).value);
   }
 
+  protected loadExample(): void {
+    this.store.loadDemoCharacter();
+    this.setCurrentView('card');
+    this.scrollToTop();
+  }
+
   protected createCharacter(): void {
     this.store.createCharacter();
     this.show('form');
