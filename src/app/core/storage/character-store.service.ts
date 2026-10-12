@@ -58,6 +58,14 @@ export class CharacterStore {
     return this._storageAvailable();
   }
 
+  /** Otwiera pełną przykładową postać; nie usuwa szkiców użytkownika. */
+  loadDemoCharacter(): void {
+    const demo = createDemoCharacters()[0];
+    this._characters.update(all => [...all.filter(item => item.id !== demo.id), demo]);
+    this._activeId.set(demo.id);
+    this.persist();
+  }
+
   createCharacter(): string {
     const character = createEmptyCharacter();
     this._characters.update((all) => [...all, character]);
