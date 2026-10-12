@@ -173,3 +173,60 @@ app-survey-renderer {
     .chosen-catalog-item { max-width:100%; }
   }
 }
+
+/* v26.5d — brakujące kontrolki edycji, katalogi i mobilne okna informacji.
+   Wyłącznie obszar formularza: shell, hero i dock pozostają ciemne. */
+.generator-content .wizard-stage {
+  .field-heading > :is(label,h3), .inline-editor .field-heading h3,
+  .inline-editor .field-heading .optional-note { color:var(--urs-ink); }
+  .section-toggle,.expand-all-button,.secondary-editor-action {
+    background:#fffaf0; color:#745324; border-color:#b9a47e;
+  }
+  .section-toggle:hover,.expand-all-button:hover,.secondary-editor-action:hover { background:#eee5d5; }
+  .info-button { background:#f2e5cc; color:#785421; border-color:#ab8c57; }
+  .info-button:hover { background:#e8d4ac; color:#3c2e1b; }
+  .panel .progress-count { color:#76511f; }
+  .panel .checklist li, .sidepanel .checklist li { background:#f8f6f1; border-color:#ddd6ca; }
+  .panel .facts div, .panel :is(.lore,.tag-card,.biography,.pillar-row,.private-fields) {
+    background:#f8f6f1; border-color:#d7d7d1;
+  }
+  .panel :is(.facts dd,.lore summary,.tag-card summary,.story-field h3,.pillar-row strong) {
+    color:var(--urs-ink);
+  }
+  .panel :is(.facts dt,.lore p,.tag-card p,.biography p,.story-field p,.relation-item p) {
+    color:var(--urs-ink-soft);
+  }
+  .panel .validation-warnings {
+    background:#fff5e5; color:#5d4527; border-color:#bd9256;
+  }
+  .panel .validation-warnings h3 { color:#674b28; }
+  .panel .progress-meter { background:#ebe7de; border-color:#d7d0c3; }
+  .panel .checklist-content small { color:var(--urs-ink-soft); }
+  .panel .tagline,.panel .lore .tagline { color:#7a571f; }
+}
+/* Dialog jest otwierany na top layer i nie może dziedziczyć ciemnych kolorów
+   ani przez globalny body, ani przez komponentowy host. */
+.catalog-info-dialog {
+  color-scheme:light;
+  background:#fffefa;
+  color:#263341;
+  border-color:#b29a75;
+}
+.catalog-info-dialog .catalog-modal-header,.catalog-info-dialog .catalog-modal-footer { border-color:#ded7ca; }
+.catalog-info-dialog .catalog-modal-header h2,
+.catalog-info-dialog .catalog-modal-item h3 { color:#263341; }
+.catalog-info-dialog .catalog-modal-intro,.catalog-info-dialog .catalog-modal-item p { color:#536170; }
+.catalog-info-dialog .catalog-modal-item { background:#f8f6f1; border-color:#d7d7d1; }
+.catalog-info-dialog .catalog-modal-subtitle { color:#785421 !important; }
+.catalog-info-dialog .catalog-modal-close { background:#fff8eb; color:#674a23; border-color:#b29a75; }
+.catalog-info-dialog .catalog-modal-close:hover { background:#f2e1c4; }
+.catalog-info-popover:popover-open { color-scheme:light; background:#fffefa; color:#263341; border-color:#b29a75; }
+.catalog-info-popover .popover-header { border-color:#ded7ca; }
+.catalog-info-popover .popover-header h2 { color:#263341; }
+.catalog-info-popover .popover-list { scrollbar-color:#ae9975 #f7f5f0; }
+.catalog-info-popover .catalog-modal-item { background:#f8f6f1; color:#263341; border-color:#d7d7d1; }
+.catalog-info-popover .catalog-modal-item :is(h3,p) { color:#263341; }
+@media (max-width:580px) {
+  .generator-content .wizard-stage .panel { padding:16px; }
+  .builder-page .builder-workspace,.builder-page .builder-canvas { min-width:0; }
+}
