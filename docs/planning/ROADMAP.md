@@ -13,8 +13,8 @@ MVP nie wymaga kreatora kolejnych wydarzeń, **płatności wbudowanych w aplikac
 | Milestone | Zakres | Warunek zakończenia | Zależności |
 |---|---|---|---|
 | **v27.3 — stabilizacja procesu** | U01/U02/U03/U04/U06/U07/U08/U12/U16/U21; U20 porządek dokumentacji | Świadome, audytowane decyzje organizatora również wobec roboczego szkicu, bez fałszywej informacji o wysłanych odpowiedziach i bez cichej utraty danych; kompletna karta mobile; działający pełny E2E na istniejącym modelu; uzgodniona struktura generatora. | Decyzje D07/D08/D11; testy wykonywane wraz z poprawkami. |
-| **v28.0 — minimalny rdzeń i prywatność** | U09/U10/U05 | Jedno wydarzenie w relacyjnym modelu, formularz ma `kind`, `event_id` i cechę `grants_admission`; istniejące dane zachowane, ograniczony odczyt poufnych pól. | D03/D04/D15/D16, kopia i rehearsal migracji; U17 wcześniej. |
-| **v28.1 — obsługa zgłoszeń i kont** | U11/U14/U19/U23/**U30/U31/U32**; U13 warunkowo; U22 opcjonalnie | Snapshot wysłania, historia decyzji, siedem statusów (C09/D18), dowolne zmiany organizatora oraz wznowienie `withdrawn` (C10/D08); przyjęci z akceptacji postaci; **globalny profil kontaktowy konta, role i uprawnienia (C11/C12), ręczna ewidencja składki**, ograniczone eksporty i retencja. | U09/U05/U11, D06/D09/D16/D17/D18; U14 dla kontroli danych i składek, D03 pozostaje częściowo otwarte. |
+| **v28.0 — minimalny rdzeń, typy kont i prywatność** | U09/U10/U05/U33 | Jedno wydarzenie, typy kont `participant/organizer/administrator`, globalne uprawnienia Administratora i kontrola dostępu do grup danych; zachowana baza, ograniczony odczyt poufnych pól. | C15/C17, D03/D04/D15/D16, kopia i rehearsal migracji; U17 wcześniej. |
+| **v28.1 — zgłoszenia i konfigurowalne role** | U11/U14/U19/U23/**U30/U31/U32**; U13 warunkowo; U22 opcjonalnie | Snapshoty, siedem statusów i wznowienie `withdrawn`; lista przyjętych; profil konta, **tworzone przez organizatora role z prawami read/write dla grup danych** (C12/C16), ręczna składka i kontrolowane eksporty. | U09/U05/U11/U33, D06/D09/D16/D17/D18 oraz zatwierdzenie zakresu ról D21 przed wdrożeniem U14. |
 | **v29.0 — uruchomienie** | U15/U17/U18/U29/U24 oraz regresja U16 | Staging HTTPS, backup/restore, odzyskanie dostępu, monitoring, pilot i zatwierdzony start zapisów. | Wszystkie P0 i wymagane P1; właściciele operacyjni i D01/D02/D14. |
 | **Po Ursunaliach** | U25/U26/U27/U28 i pozostałe P2 zależnie od wyników | Decyzja o kontynuacji platformy po ocenie wydarzenia. | Retrospektywa i realne potrzeby. |
 
@@ -62,14 +62,15 @@ Kolejność jest priorytetem pobierania pracy; zadania zależne od decyzji mogą
 10. **U17** — kopia i próba odtworzenia jako warunek migracji; automatyzacja będzie kontynuowana później.
 11. **U09** — minimalny Event/Form i migracja istniejących rewizji.
 12. **U10** — rodzaj formularza i ogólny renderer, usunięcie zależności od konkretnego ID.
-13. **U05** — filtrowanie poufnych odpowiedzi po stronie serwera; projekt polityki od początku, realne dane dopiero po odbiorze.
+13. **U05** — egzekwowanie na serwerze odczytu/edycji grup danych, globalny Administrator i filtrowanie; projekt polityki od początku, realne dane dopiero po odbiorze.
 14. **U11** — snapshoty wysłań i historia decyzji.
-15. **U14** — zarządzanie uprawnieniami zespołu i ograniczony eksport.
+15. **U14** — edytor niestandardowych ról i praw read/write dla grup danych, bez możliwości nadania Administratora.
 16. **U30** — siedem statusów, uczestnictwo wynikające z zaakceptowanej postaci, dowolne zmiany organizatora oraz wznawianie `withdrawn`.
 17. **U31** — ręczne potwierdzanie składki dla użytkownika i wydarzenia; historia zmian i uprawnienia organizatora.
-18. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz bezpieczny dostęp per wydarzenie/rola.
+18. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz kontrola odczytu/edycji grup danych.
+19. **U33** — trzy bazowe typy kont i globalny Administrator; rozpocząć przed U14/U05.
 
-Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31 i U32 są wymagane przed pierwszymi prawdziwymi zapisami, nie po wydarzeniu.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
+Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31, U32 oraz U33 i U14 (typy kont + role niestandardowe) są wymagane przed pierwszymi prawdziwymi zapisami, nie po wydarzeniu.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
 
 ## Praca równoległa i ryzyko
 
@@ -81,7 +82,7 @@ Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31 i U32 s�
 | Polityka i treść | D01/D03/D06/D07, U19 | Wymaga właściciela produktu; część prawna do właściwej weryfikacji. |
 | Testy | U16 oraz testy każdego zadania | E2E przyrasta z funkcjami; nie odkładać całej walidacji na koniec. |
 
-Najwyższe ryzyko: migracja rewizji/odpowiedzi (U09/U11), zmiana DTO prywatności (U05), konflikty zapisu i auth (U02/U07/U15/U29). Każdy etap migrujący bazę wymaga kopii i sprawdzenia powrotu. Same poprawki UI mają mniejsze ryzyko danych, ale mogą blokować wysłanie na telefonie.
+Najwyższe ryzyko: migracja rewizji/odpowiedzi (U09/U11), nowy RBAC i typ Administrator (U05/U14/U33), zmiana DTO prywatności (U05), konflikty zapisu i auth (U02/U07/U15/U29). Każdy etap migrujący bazę wymaga kopii i sprawdzenia powrotu. Same poprawki UI mają mniejsze ryzyko danych, ale mogą blokować wysłanie na telefonie.
 
 ## Harmonogram względny
 
