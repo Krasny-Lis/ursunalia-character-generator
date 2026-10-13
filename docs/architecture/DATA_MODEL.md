@@ -417,6 +417,42 @@ CREATE TABLE audit_log (
 );
 
 CREATE INDEX forms_event_status ON forms(event_id,status);
+-- C41/D04: jeden rekord character na konto i wydarzenie, nawet w roznych
+-- formularzach tego samego kind, niezaleznie od statusu oraz slotu.
+-- Przed instalacja zweryfikowac legacy duplikaty, a API ma obslugiwac konflikt.
+CREATE TRIGGER one_character_per_user_event_insert
+BEFORE INSERT ON applications
+WHEN (SELECT kind FROM forms WHERE id=NEW.form_id AND event_id=NEW.event_id)='character'
+BEGIN
+  SELECT RAISE(ABORT,'one character per user per event')
+  WHERE EXISTS (
+    SELECT 1 FROM applications a
+    JOIN forms f ON f.id=a.form_id AND f.event_id=a.event_id
+    WHERE a.user_id=NEW.user_id AND a.event_id=NEW.event_id AND f.kind='character'
+  );
+END;
+
+CREATE TRIGGER one_character_per_user_event_update
+BEFORE UPDATE OF form_id,event_id,user_id ON applications
+WHEN (SELECT kind FROM forms WHERE id=NEW.form_id AND event_id=NEW.event_id)='character'
+BEGIN
+  SELECT RAISE(ABORT,'one character per user per event')
+  WHERE EXISTS (
+    SELECT 1 FROM applications a
+    JOIN forms f ON f.id=a.form_id AND f.event_id=a.event_id
+    WHERE a.id<>OLD.id AND a.user_id=NEW.user_id
+      AND a.event_id=NEW.event_id AND f.kind='character'
+  );
+END;
+
+CREATE TRIGGER prevent_form_kind_change_after_applications
+BEFORE UPDATE OF kind ON forms
+WHEN NEW.kind<>OLD.kind
+  AND EXISTS (SELECT 1 FROM applications a WHERE a.form_id=OLD.id)
+BEGIN
+  SELECT RAISE(ABORT,'cannot change kind of form with applications');
+END;
+
 CREATE INDEX applications_owner_event ON applications(user_id,event_id,updated_at DESC);
 CREATE INDEX applications_review_queue ON applications(event_id,status,updated_at DESC);
 CREATE INDEX applications_revision ON applications(form_id,form_revision);
@@ -429,12 +465,12 @@ Wzajemne FK forms/revisions oraz applications/submissions są świadome i odrocz
 ### Inwarianty aplikacyjne poza DDL
 
 1. W jednej transakcji sprawdzić role, stan, okno zapisów, rewizję, limity i lock_version; zaktualizować rekord warunkowym UPDATE. Zero zmienionych wierszy → 409. Nigdy sam SELECT, a potem bezwarunkowy zapis.
-2. `slot <= max_per_user`, gdy limit nie-null. MVP: slot=1 i max_per_user=1. Limit dotyczy wszystkich zachowanych zgłoszeń, także draft; obniżenie limitu nie usuwa istniejących danych. Większe limity i limity wspólne dla kilku formularzy to osobne rozszerzenie po wydarzeniu. Jeśli wymagany będzie limit wydarzenia, dodać politykę w Event z jawną jednostką (np. liczba postaci na osobę albo liczba przyjętych uczestników), a sprawdzenie wykonać w tej samej transakcji co utworzenie/akceptacja. Nie utożsamiać pojemności imprezy z liczbą wszystkich ankiet — jedna osoba wypełnia kilka formularzy.
+2. **C41/D04:** maksymalnie **jedna aplikacja `kind=character` na parę `(event_id,user_id)`**, niezależnie od identyfikatora formularza, rewizji, `slot` i statusu (w tym `draft`, `rejected`, `withdrawn`). Po wycofaniu i przy poprawkach wraca się do **tej samej** aplikacji. Formularz logistyczny/generic jest niezależny; drugie wydarzenie pozwala na osobną postać. `slot <= forms.max_per_user` (MVP: `slot=1`, `max_per_user=1`) to dodatkowa polityka **formularza**, niewystarczająca dla limitu na wydarzenie. Trigger SQLite chroni zapis również przed obejściem przez inne `form_id`; API sprawdza atomowo i obsługuje konflikt. Przed migracją znaleźć i rozstrzygnąć potencjalne istniejące duplikaty bez ich automatycznego kasowania. Pojemność wydarzenia to odrębne ograniczenie.
 3. Nowy szkic wskazuje bieżącą opublikowaną rewizję i dostępne wydarzenie. Istniejący szkic pozostaje przypięty do swojej rewizji. Niedozwolona zmiana form_id/form_revision/user/event przez update.
 4. `definition_json` musi być zgodne z relacyjnym ID/revision/event. Prywatne i zwykłe answers są rozłączne; suma kluczy zgodna z definicją. Brak cichego usuwania danych przy migracji.
 5. `FormRevision` i `Submission` nie są edytowalne przez zwykłe API. Retencja/usunięcie to osobny, audytowany proces. Zmiana polityki poufności może zaostrzyć dostęp do starego pola bez przepisywania jego treści.
 6. **Decyzja C10/D08:** uprawniony organizator może z każdego statusu ustawić dowolny inny (również `draft → accepted`, `changes → accepted`, `rejected → submitted` i `withdrawn → accepted`). Zmiana statusu rejestruje poprzedni/nowy status, aktora, czas i opcjonalny powód, z odnośnikiem do ostatniego prawdziwego wysłania, jeżeli istnieje. Jeśli nie ma wysłania, zdarzenie `organizer_override` ma `submission_id=NULL` i nie udaje wysłanych odpowiedzi. UI ostrzega przed nietypową zmianą, nie blokując decyzji. Uczestnik może wznowić `withdrawn` i ponownie wysłać tę samą Application, bez utraty ID, danych i historii. Zachowujemy kontrolę dostępu oraz ochronę przed nadpisaniem zmian z innej karty.
-7. **Panel postaci U36** powstaje po pierwszym rzeczywistym wysłaniu formularza `kind=character`, również bez statusu `accepted`; aktualne dane panelu projektować ze snapshotu i bezpiecznej wizytówki. `accepted` nadane ręcznie bez wcześniejszego wysłania nadaje uczestnictwo, lecz **nie tworzy fikcyjnego wysłania ani panelu postaci**. Pełna osobna encja `Character` U26 jest późniejszym refaktorem, nie blokadą panelu. Nie kopiować potrzeb, zgód ani wrażliwych odpowiedzi do publicznego DTO.
+7. **Panel postaci U36** powstaje po pierwszym rzeczywistym wysłaniu formularza `kind=character`, również bez statusu `accepted`; aktualne dane panelu projektować ze snapshotu i bezpiecznej wizytówki. `accepted` nadane ręcznie bez wcześniejszego wysłania nadaje uczestnictwo, lecz **nie tworzy fikcyjnego wysłania ani panelu postaci**. Pełna osobna encja `Character` U26 jest późniejszym refaktorem, nie blokadą panelu. Nie kopiować potrzeb, zgód ani wrażliwych odpowiedzi do publicznego DTO. **C41:** jeden panel na parę konto–wydarzenie; przy istniejącym szkicu lub wysłaniu innego formularza `character` nie tworzyć duplikatu.
 8. AuditLog zawiera nazwy operacji, ID i wyniki, nie hasła, tokeny, answers, portrety ani pełne treści feedback. Może zawierać hash/wersję operacji i request_id.
 
 ## 5. Odpowiedzi, kategorie, obrazy i zgody
@@ -520,7 +556,7 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 
 ## 6b. Panel postaci po wysłaniu i brak powiadomienia o zmianie nazwy (C34/C35, U36)
 
-**C35/D28a – tworzenie panelu po pierwszym submit:** po zatwierdzeniu rzeczywistego `submission` formularza typu `kind=character` dla `eventId + applicationId` od razu dostępny jest **panel postaci właściciela**, niezależnie od oceny i późniejszego statusu `accepted/changes/rejected/withdrawn`. Nie tworzyć panelu dla formularza `kind=logistics`, szkicu bez wysłania ani samego `organizer_override` statusu. To **projekcja danych**, nie obowiązek wdrożenia docelowej osobnej encji `characters` U26 przed Ursunaliami 2027. Jeden `applicationId` identyfikuje jedną postać/panel, kolejne wysłania tej aplikacji nie tworzą duplikatu.
+**C35/D28a – tworzenie panelu po pierwszym submit:** po zatwierdzeniu rzeczywistego `submission` formularza typu `kind=character` dla `eventId + applicationId` od razu dostępny jest **panel postaci właściciela**, niezależnie od oceny i późniejszego statusu `accepted/changes/rejected/withdrawn`. Nie tworzyć panelu dla formularza `kind=logistics`, szkicu bez wysłania ani samego `organizer_override` statusu. To **projekcja danych**, nie obowiązek wdrożenia docelowej osobnej encji `characters` U26 przed Ursunaliami 2027. Jeden `applicationId` identyfikuje jedną postać/panel, kolejne wysłania tej aplikacji nie tworzą duplikatu. **C41/D04:** najwyżej jedna postać/panel na `(eventId,userId)`, niezależnie od liczby formularzy postaci; `logistics` nie zużywa limitu.
 
 **Źródła danych:** `submissions` (ostatnie prawdziwe wysłanie) dostarcza treści przesłanych odpowiedzi zgodnych z uprawnieniami właściciela, `applications` dostarcza bieżący status i feedback, a `application_public_profiles` — ewentualne najnowsze nadpisanie pełnej nazwy, publicznego opisu i aktywnego zdjęcia. Po submit panel początkowo wypełnia wszystkie zmapowane sekcje formularza postaci, nie tylko pola widoczne publicznie. **Nie kopiować wrażliwych danych do publicznego katalogu** `GET /events/:eventId/characters/directory`, który pozostaje odrębną, bezpieczną projekcją U34. Własny panel może zawierać prywatne informacje swojego właściciela; odczyt cudzych kategorii wymaga odrębnych, serwerowych uprawnień `read`, także przy dostępie organizacyjnym. Nie ujawniać cudzych informacji przez wspólny endpoint.
 
@@ -536,7 +572,7 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 
 **API Organizatora:** `PATCH /events/:eventId/applications/:applicationId/character-edit-lock` (pojedynczo) oraz `POST /events/:eventId/characters/edit-lock/bulk` (`applicationIds` lub `scope=all_existing_event_characters`). Bulk musi być niezależny od paginacji, odrzucać obce wydarzenia i logistyki, wymagać uprawnienia `characters.edit_lock.manage`, potwierdzenia w UI i raportu zliczającego wynik; operacje blokady podlegają wyłącznie audytowi administracyjnemu. **Nie wprowadzać automatycznej blokady przyszłych postaci** (C39/D28e): każda dopiero utworzona karta zaczyna z domyślnym `character_edit_locked=0`, wcześniejsza akcja bulk nie zmienia konfiguracji wydarzenia.
 
-**Testy:** wolna edycja wszystkich pól postaci bez tworzenia historii poprzednich wartości; zamrożona cała karta odrzuca PATCH fabuły, publicznych pól i upload portretu nawet bez UI; uczestnik widzi wyłącznie odczyt **z widocznym tekstem „Karta zablokowana”**, także po odświeżeniu, bez dodatkowego uzasadnienia i toasta; odblokowanie usuwa tekst i przywraca edycję; konflikt 409 oraz wyścig blokady z zapisem. Bulk działa dla pojedynczych, zaznaczonych i wszystkich istniejących postaci wydarzenia także przy 200+ i wielu stronach; **nowo wysłana postać po takiej operacji nie jest zablokowana**, dopóki Organizator nie uruchomi osobnej/kolejnej blokady; cudze wydarzenia nieobjęte, brak uprawnienia odrzucony. Historia faktycznie wysłanych formularzy, statusów i audytu lock/unlock pozostaje niezależna. Katalog nadal ma tylko publiczne informacje i globalnie udostępnione kontakty; `rejected/withdrawn` ukrywa wpis niezależnie od blokady.
+**Testy:** wolna edycja wszystkich pól postaci bez tworzenia historii poprzednich wartości; zamrożona cała karta odrzuca PATCH fabuły, publicznych pól i upload portretu nawet bez UI; uczestnik widzi wyłącznie odczyt **z widocznym tekstem „Karta zablokowana”**, także po odświeżeniu, bez dodatkowego uzasadnienia i toasta; odblokowanie usuwa tekst i przywraca edycję; konflikt 409 oraz wyścig blokady z zapisem. Bulk działa dla pojedynczych, zaznaczonych i wszystkich istniejących postaci wydarzenia także przy 200+ i wielu stronach; **nowo wysłana postać po takiej operacji nie jest zablokowana**, dopóki Organizator nie uruchomi osobnej/kolejnej blokady; cudze wydarzenia nieobjęte, brak uprawnienia odrzucony. Historia faktycznie wysłanych formularzy, statusów i audytu lock/unlock pozostaje niezależna. Katalog nadal ma tylko publiczne informacje i globalnie udostępnione kontakty; `rejected/withdrawn` ukrywa wpis niezależnie od blokady. **C41:** odrzucenie drugiej postaci przy istniejącym szkicu, odrzuconym i wycofanym zgłoszeniu; dwa formularze `character` na ten sam event; próba użycia `slot=2`, równoległe inserty, drugi event, osobna logistyka i audyt migracyjny legacy duplikatów.
 
 ```mermaid
 stateDiagram-v2
