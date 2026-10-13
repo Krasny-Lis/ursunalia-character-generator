@@ -13,7 +13,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | E1 Stabilny proces uczestnika | Brak utraty pracy, prawidłowe statusy i kompletne widoki | U01/U02/U03/U07/U08/U22 |
 | E2 Bezpieczne formularze | Walidacja, publikacja, struktura generatora | U04/U06/U12/U13/U21 |
 | E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie i wydajne przeglądanie | U09/U10/U11/U23/U30 |
-| E4 Prywatność i konta | Globalny profil kontaktowy, role wydarzenia, hasła, odzyskanie dostępu, retencja i składki | U05/U14/U15/U19/U29/U31/U32 |
+| E4 Prywatność i konta | Trzy typy kont, dynamiczne role z uprawnieniami read/write, globalny profil i składki | U05/U14/U15/U19/U29/U31/U32/U33 |
 | E5 Uruchomienie | Testy, kopie, hosting, pilot | U16/U17/U18/U20/U24 |
 | E6 Późniejszy rozwój | Kolejne wydarzenia i funkcje fabularne | U25/U26/U27/U28 |
 
@@ -32,7 +32,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U11 | Snapshoty wysłań i historia decyzji | P1 | L | v28.1 | API / tak |
 | U12 | Kopiowanie i bezpieczna publikacja | P1 | M | v27.3 | API / nie |
 | U13 | Serwerowy szkic kreatora | P2* | M | v28.1 | API / tak |
-| U14 | Zespół i kontrolowany eksport | P1 | M | v28.1 | API / tak |
+| U14 | Dynamiczne role i prawa odczytu/edycji grup danych | P1 | L | v28.1 | API / tak |
 | U15 | Parametry haseł i cykl sesji | P1 | M | v29.0 | API / tak |
 | U16 | E2E i macierz urządzeń | P1 | L | v27.3→v29.0 | nie / nie |
 | U17 | Backup, restore i procedura migracji | P1 | M | v29.0** | nie / nie |
@@ -51,6 +51,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U30 | Statusy i przyjęcie uczestnika przez akceptację postaci | P1 | M | v28.1 | API / tak |
 | U31 | Ręczne potwierdzenie składki per wydarzenie i użytkownik | P1 | S/M | v28.1 | API / tak |
 | U32 | Profil kontaktowy konta i edycja danych przy rejestracji | P1 | M | v28.1 | API / tak |
+| U33 | Bazowe konta i globalne uprawnienia Administratora | P1 | M | v28.0 | API / tak |
 
 \* U13 staje się P1, jeśli kilku organizatorów lub kilka urządzeń ma edytować te same formularze przed wydarzeniem. ** U17: kopia i rehearsal są wymagane już przed U09; finalna automatyzacja odebrana w v29.0.
 
@@ -171,7 +172,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Typ / priorytet / rozmiar:** architecture / P1 / L.
 - **Problem i obecne zachowanie:** S1 schema: wydarzenie w seed, Form utożsamiony z rewizją; brak rejestru migracji.
 - **Rezultat:** relacyjny rdzeń dla jednej grupy i wielu możliwych wydarzeń, z jednym aktywnym wydarzeniem w UI.
-- **Zakres / moduły:** schema_migrations, events, forms/revisions, FK applications, mapowanie starych ról do event_members; API bootstrap; rehearsal/rollback.
+- **Zakres / moduły:** schema_migrations, events, forms/revisions, FK applications, mapowanie legacy `organizer` do typu bazowego oraz projektowanych ról wydarzenia (zakres D21 otwarty); API bootstrap; rehearsal/rollback.
 - **Kryteria akceptacji:** zachowane ID użytkowników, hashe, wszystkie szkice/answers/revisions; poprawne FK; seed Ursunalia tylko raz; niewłaściwy event/form odrzucony; brak kreatora wielu imprez w zakresie. Daty bez wymyślonych godzin.
 - **Testy:** fixture z każdą rewizją/statusem, restart, ponowienie migracji, przerwanie w połowie, login historycznym hasłem, rollback i porównanie danych.
 - **Zależności:** D04/D15, pierwsza część U17, U02; projekt uprawnień z D03.
@@ -195,9 +196,9 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Typ / priorytet / rozmiar:** security / P0 / L.
 - **Problem i obecne zachowanie:** F02, pełne boundaries/exclusions/needs i portrety trafiają do każdego organizer przez masową listę; CSS to jedyna część oznaczenia poufności.
 - **Rezultat:** dostęp zależy od wydarzenia i capability; nieuprawniony klient nigdy nie otrzymuje chronionej treści.
-- **Zakres / moduły:** klasyfikacja pól, event_members, rozdzielenie answers, DTO list/detail/export, wydruk, audyt odczytu; brak logowania wartości.
-- **Kryteria akceptacji:** fabularzysta domyślnie widzi **całość informacji fabularnych wszystkich postaci wydarzenia, również tajemnice i haki**, a z kontaktów wyłącznie podane FB i Discord; nie otrzymuje imienia/nazwiska uczestnika, e-maila, telefonu, granic ani danych zdrowotnych (C14). Główny organizator widzi dane uczestników swojego wydarzenia, w tym granice i zdrowie, ale nie hasła i sesje; pozostałe role według praw. Lista nie zawiera nieuprawnionych danych; filtracja na serwerze dla list/detail/export/print; brak globalnego katalogu kontaktów organizatorów. Nowe pola muszą mieć jawną politykę. Do wdrożenia zabezpieczeń nie zbierać realnych poufnych odpowiedzi.
-- **Testy:** macierz uczestnik/inna osoba/reviewer/safety/manager, cross-event, bezpośrednie API, list/detail/export/print i kontrola logów.
+- **Zakres / moduły:** serwerowa klasyfikacja grup pól, kontrola uprawnień `read/write` ról niestandardowych, globalny bypass Administratora, rozdzielenie answers, filtrowane DTO list/detail/export, wydruk i audyt operacji; brak logowania treści.
+- **Kryteria akceptacji:** bez roli dodatkowej uczestnik widzi i edytuje tylko własne dane zgodnie z regułami procesu; uprawnienia konfigurowalnych ról udostępniają osobny `read` i `write` każdej grupy (identity/private_contact/social_contact/character_lore/game_preferences/triggers/interpersonal_exclusions/health/applications/contributions). Przykładowa rola Fabularzysta (C14) czyta fabułę i FB/Discord, ale nie prywatny kontakt ani zdrowie. Administrator (C17) może czytać i poprawiać wszystkie dane platformy, także innych organizatorów i uczestników, z historią zmian. Zwykły Organizator/rola nie może przekraczać swojego zatwierdzonego zakresu. API egzekwuje prawa w odczycie, zapisie, eksportach i wydruku; brak prawa = brak wartości w odpowiedzi. Nie należy dopuszczać do zbierania realnych informacji szczególnych przed odbiorem ochrony.
+- **Testy:** administrator globalnie (również zasoby innego organizatora), organizer zwykły, participant, rola konfigurowana bez przyznanych praw, role z read tylko i read+write; próba edycji cudzych danych, cross-event, list/detail/export/print i brak wycieku w logach.
 - **Zależności:** D03, U09; U10 dostarcza semantykę, ale uprawnienia nie mogą zależeć wyłącznie od UI.
 - **Ryzyko regresji:** wysokie — migracja i możliwe ujawnienie danych.
 - **Milestone / etykiety:** v28.0 / `security`, `P0`, `privacy`, `migration`, `epic:E4`.
@@ -226,18 +227,17 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Ryzyko regresji:** średnie — przenoszenie lokalnych szkiców.
 - **Milestone / etykiety:** v28.1 / `feature`, `P2`, `builder`, `migration`, `epic:E2`.
 
-### U14 — Zarządzać uprawnieniami zespołu i zakresem eksportu
+### U14 — Dynamiczne role organizatorów i uprawnienia read/write
 
-- **Typ / priorytet / rozmiar:** feature / P1 / M.
-- **Problem i obecne zachowanie:** jeden globalny organizer publikuje, ocenia i eksportuje całość; brak procedury odebrania dostępu.
-- **Rezultat:** jawna, mała macierz ról wydarzenia i kontrola eksportu.
-- **Zakres / moduły:** EventMember, role `head_organizer` i `storyteller`, narzędzie nadawania/odbierania uprawnień, osobne prawa do FB/Discord, imienia/nazwiska, e-mail/telefonu, danych fabularnych, granic i danych zdrowotnych; kontrolowany eksport i audyt.
-- **Kryteria akceptacji:** główny organizator czyta dane uczestników przypisanych do jego wydarzenia i zarządza uprawnieniami; fabularzysta bez dodatkowej konfiguracji widzi fabułę wszystkich postaci (łącznie z tajemnicami i hakami) oraz z kontaktów wyłącznie podane FB/Discord, ale nie e-mail/telefon/nazwisko, granice ani zdrowie; domyślne role nie rozszerzają dostępu między wydarzeniami; uprawniony zarządca może nadawać/odbierać capabilities, odebranie działa od następnego żądania mimo aktywnej sesji; eksport zawiera wyłącznie dozwolone pola i nie ujawnia danych z innych wydarzeń.
-- **Testy:** ustawienie roli storyteller nadaje `can_read_story=1` i `can_read_social_contacts=1`, pełna historia/sekrety/haki wszystkich postaci w danym wydarzeniu, brak prywatnego kontaktu/granic/zdrowia, zmiana roli podczas sesji, cross-event, próba eskalacji, eksport bez prawa, log audytowy bez danych odpowiedzi.
-- **Zależności:** D03, U09/U05.
-- **Ryzyko regresji:** wysokie — nadanie zbyt szerokiego dostępu lub utrata dostępu zespołu.
-- **Milestone / etykiety:** v28.1 / `feature`, `P1`, `authorization`, `epic:E4`.
-
+- **Typ / priorytet / rozmiar:** feature/security / P1 / L.
+- **Decyzje C12/C14/C15/C16/C17:** system zawiera tylko trzy bazowe typy kont: Administrator, Organizator, Uczestnik. Nazwy „Fabularzysta”, „Główny organizator”, „Logistyk” itd. nie są twardo zakodowane – to możliwe role tworzone i ustawiane przez Organizatora.
+- **Rezultat:** Organizator tworzy role o dowolnej nazwie i przydziela użytkownikom prawa do grup danych; osobne flagi odczytu i edycji oraz operacje administracyjne.
+- **Zakres / moduły:** tabele `event_roles`, `event_role_permissions`, `event_role_assignments` (zakres per-event jest propozycją D21), UI tworzenia/edycji/kopiowania/usuwania ról i przypisań, serwerowa autoryzacja; rejestrowanie kto i kiedy zmienił konfigurację; akcje `read/write/manage/assign/export` na pogrupowanych zasobach, bez ujawniania pól ponad zakres.
+- **Kryteria akceptacji:** Organizator może utworzyć rolę „Fabularzysta” i nadać np. tylko odczyt informacji fabularnych oraz FB/Discord; może nadać, odebrać i edytować rolę, w tym nadać innej osobie typ Organizator; nie może nadać Administratora. Administrator ma wszystkie uprawnienia globalnie. Uczestnik pozostaje uczestnikiem po uzyskaniu roli dodatkowej. Brak uprawnień w roli domyślnie oznacza odmowę; cofnięcie roli obowiązuje od następnego żądania; serwer odrzuca eskalację przez API lub import. Nie dopuścić do odczytu/edycji cudzych danych na podstawie samej znajomości ich ID.
+- **Testy:** 3 typy kont, tworzenie i modyfikacja niestandardowych ról, kilka ról u użytkownika, prawa read/write osobno dla każdej grupy, rola przykładowa Fabularzysta, nadanie typu Organizator, próba nadania Administratora przez Organizatora, Administrator zarządza zasobami innych organizatorów, eksport i odwołanie uprawnień.
+- **Zależności:** U33 bazowe typy i superadmin, U09/U05 model/filtracja, U32 profil; **D21 trzeba zatwierdzić przed finalizacją scope ról**.
+- **Ryzyko regresji:** bardzo wysokie – niejawna eskalacja roli lub danych, zmiany tożsamości i zakresu wydarzeń.
+- **Milestone / etykiety:** v28.1 / `feature`, `P1`, `authorization`, `roles`, `epic:E4`.
 ### U15 — Wersjonować parametry haseł i dopracować sesje
 
 - **Typ / priorytet / rozmiar:** security / P1 / M.
@@ -428,7 +428,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 - **Typ / priorytet / rozmiar:** feature / P1 / S/M.
 - **Potwierdzona reguła:** pieniądze są wpłacane przelewem; informacje organizator przekazuje mailowo poza systemem; brak operatora płatniczego i integracji bankowej. D17 / C08.
-- **Zakres / moduły:** `event_contributions` (klucz wydarzenie/użytkownik), flaga `is_paid` domyślnie niepotwierdzona, uprawnienie `can_manage_contributions`, widok statusu przy uczestniku oraz w listach, API zmiany i odczytu, audit_log (kto/kiedy/poprzednia i nowa wartość) oraz bezpieczna migracja.
+- **Zakres / moduły:** `event_contributions` (klucz wydarzenie/użytkownik), flaga `is_paid` domyślnie niepotwierdzona, grupa uprawnień `contributions.read/write`, widok statusu przy uczestniku oraz w listach, API zmiany i odczytu, audit_log (kto/kiedy/poprzednia i nowa wartość) oraz bezpieczna migracja.
 - **Kryteria akceptacji:** organizator z uprawnieniem zaznacza/odznacza wpływ składki i stan przetrwa restart; dwa zgłoszenia tej samej osoby nie tworzą dwóch składek; brak potwierdzenia nie oznacza automatycznej odmowy przyjęcia; ręczna zmiana składki nigdy automatycznie nie akceptuje, nie wycofuje i nie anuluje zgłoszenia; brak wymagania konta bankowego lub screenshotu przelewu; cofnięcie zaznaczenia pozostawia ślad w audycie; brak możliwości zmiany przez uczestnika.
 - **Testy:** role/uprawnienia, dwa formularze tego samego uczestnika, zmiana/odwołanie po restarcie, rezygnacja gracza ze składką, dwa wydarzenia, próby przekroczenia dostępu, wyszukiwanie i filtry w UI.
 - **Otwarte decyzje:** D19 – kwoty, zwolnienia, częściowe wpłaty i zwroty; D20 – czy uczestnik widzi potwierdzenie. Nie poszerzać MVP bez decyzji.
@@ -448,6 +448,15 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Ryzyko regresji:** migracja kont i przypadkowe ujawnienie danych kontaktowych.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `accounts`, `authorization`, `epic:E4`.
 
+### U33 — Trzy bazowe typy kont i globalny Administrator
+
+- **Typ / priorytet / rozmiar:** feature/security / P1 / M.
+- **Potwierdzone C15/C17:** każde konto ma bazowy typ `participant`, `organizer` lub `administrator`. Nowy użytkownik jest `participant`. Administrator ma globalny odczyt/edycję wszystkich zasobów, również należących do innych organizatorów i uczestników. Tylko Administrator może tworzyć kolejnych Administratorów.
+- **Zakres / moduły:** `users.account_type` i migracja istniejących loginów/roli organizer, serwerowa autoryzacja globalnego Administratora, bezpieczne nadawanie i odbieranie typów kont, audyt i ochrona przed zmianą własnego typu przez endpoint profilu; oddzielenie dynamicznych ról U14 od bazowych typów.
+- **Kryteria akceptacji:** signup zawsze `participant`; Organizer może nadać typ `organizer` oraz dowolną rolę niestandardową w swoim zakresie, ale próba nadania typu `administrator` zwraca 403. Administrator może odczytać i edytować profil, zgłoszenia, dane fabularne/zdrowotne, konfiguracje wydarzeń i role dowolnego konta, także innego Organizatora, z zachowaniem historii zmian. Żadnego odczytu jawnych haseł (system ich nie przechowuje); resetowanie hasła i odebranie sesji zamiast ujawniania poświadczeń. Nie wolno przypadkowo nadać admina migrowanemu organizerowi.
+- **Testy:** participant po signup, legacy role migration, promowanie participant→organizer, zabronione organizer→administrator, administrator→administrator nadanie, odwołanie dostępu, globalny read/write i audyt, brak obejścia przez bezpośrednie API.
+- **Zależności:** U09/U17 dla migracji i backupu, U05 dla filtrowania, U14 dla dynamicznych ról; D21 dotyczy tylko zakresu ról dodatkowych, nie globalnego Administratora.
+- **Milestone / etykiety:** v28.0 / `security`, `P1`, `accounts`, `authorization`, `epic:E4`.
 ## Zależności i zasady publikowania
 
 ```mermaid
@@ -459,7 +468,9 @@ flowchart TD
     U09 --> U05["U05 Poufność"]
     U09 --> U10["U10 Rodzaj ankiety"]
     U05 --> U11
-    U05 --> U14["U14 Zespół"]
+    U05 --> U14["U14 Role dynamiczne"]
+    U09 --> U33["U33 Typy kont"]
+    U33 --> U14
     U11 --> U19["U19 Retencja"]
     U14 --> U13["U13 Szkice edytora"]
     U09 --> U30["U30 Statusy i przyjecie"]
