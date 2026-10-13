@@ -172,7 +172,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Typ / priorytet / rozmiar:** architecture / P1 / L.
 - **Problem i obecne zachowanie:** S1 schema: wydarzenie w seed, Form utożsamiony z rewizją; brak rejestru migracji.
 - **Rezultat:** relacyjny rdzeń dla jednej grupy i wielu możliwych wydarzeń, z jednym aktywnym wydarzeniem w UI.
-- **Zakres / moduły:** schema_migrations, events, forms/revisions, FK applications, mapowanie legacy `organizer` do typu bazowego oraz projektowanych ról wydarzenia (zakres D21 otwarty); API bootstrap; rehearsal/rollback.
+- **Zakres / moduły:** schema_migrations, events, forms/revisions, FK applications, mapowanie legacy `organizer` do typu bazowego oraz ról powiązanych z jednym wydarzeniem (C18/D21 zatwierdzone); API bootstrap; rehearsal/rollback.
 - **Kryteria akceptacji:** zachowane ID użytkowników, hashe, wszystkie szkice/answers/revisions; poprawne FK; seed Ursunalia tylko raz; niewłaściwy event/form odrzucony; brak kreatora wielu imprez w zakresie. Daty bez wymyślonych godzin.
 - **Testy:** fixture z każdą rewizją/statusem, restart, ponowienie migracji, przerwanie w połowie, login historycznym hasłem, rollback i porównanie danych.
 - **Zależności:** D04/D15, pierwsza część U17, U02; projekt uprawnień z D03.
@@ -232,10 +232,10 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Typ / priorytet / rozmiar:** feature/security / P1 / L.
 - **Decyzje C12/C14/C15/C16/C17:** system zawiera tylko trzy bazowe typy kont: Administrator, Organizator, Uczestnik. Nazwy „Fabularzysta”, „Główny organizator”, „Logistyk” itd. nie są twardo zakodowane – to możliwe role tworzone i ustawiane przez Organizatora.
 - **Rezultat:** Organizator tworzy role o dowolnej nazwie i przydziela użytkownikom prawa do grup danych; osobne flagi odczytu i edycji oraz operacje administracyjne.
-- **Zakres / moduły:** tabele `event_roles`, `event_role_permissions`, `event_role_assignments` (zakres per-event jest propozycją D21), UI tworzenia/edycji/kopiowania/usuwania ról i przypisań, serwerowa autoryzacja; rejestrowanie kto i kiedy zmienił konfigurację; akcje `read/write/manage/assign/export` na pogrupowanych zasobach, bez ujawniania pól ponad zakres.
+- **Zakres / moduły:** tabele `event_roles`, `event_role_permissions`, `event_role_assignments` (każda definicja i nadanie roli ograniczone do jednego `event_id`, C18/D21), UI tworzenia/edycji/kopiowania/usuwania ról i przypisań, serwerowa autoryzacja; rejestrowanie kto i kiedy zmienił konfigurację; akcje `read/write/manage/assign/export` na pogrupowanych zasobach, bez ujawniania pól ponad zakres.
 - **Kryteria akceptacji:** Organizator może utworzyć rolę „Fabularzysta” i nadać np. tylko odczyt informacji fabularnych oraz FB/Discord; może nadać, odebrać i edytować rolę, w tym nadać innej osobie typ Organizator; nie może nadać Administratora. Administrator ma wszystkie uprawnienia globalnie. Uczestnik pozostaje uczestnikiem po uzyskaniu roli dodatkowej. Brak uprawnień w roli domyślnie oznacza odmowę; cofnięcie roli obowiązuje od następnego żądania; serwer odrzuca eskalację przez API lub import. Nie dopuścić do odczytu/edycji cudzych danych na podstawie samej znajomości ich ID.
-- **Testy:** 3 typy kont, tworzenie i modyfikacja niestandardowych ról, kilka ról u użytkownika, prawa read/write osobno dla każdej grupy, rola przykładowa Fabularzysta, nadanie typu Organizator, próba nadania Administratora przez Organizatora, Administrator zarządza zasobami innych organizatorów, eksport i odwołanie uprawnień.
-- **Zależności:** U33 bazowe typy i superadmin, U09/U05 model/filtracja, U32 profil; **D21 trzeba zatwierdzić przed finalizacją scope ról**.
+- **Testy:** 3 typy kont, tworzenie i modyfikacja niestandardowych ról, kilka ról u użytkownika, prawa read/write osobno dla każdej grupy, rola przykładowa Fabularzysta, nadanie typu Organizator, próba nadania Administratora przez Organizatora, Administrator zarządza zasobami innych organizatorów, eksport i odwołanie uprawnień. Ten sam użytkownik na A ma rolę Fabularzysta, na B jej nie ma lub ma inne prawa; żadna rola ani przypisanie nie przenika z A do B.
+- **Zależności:** U33 bazowe typy i superadmin, U09/U05 model/filtracja, U32 profil; D21/C18 zatwierdzone: role są per wydarzenie.
 - **Ryzyko regresji:** bardzo wysokie – niejawna eskalacja roli lub danych, zmiany tożsamości i zakresu wydarzeń.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `authorization`, `roles`, `epic:E4`.
 ### U15 — Wersjonować parametry haseł i dopracować sesje
@@ -455,7 +455,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Zakres / moduły:** `users.account_type` i migracja istniejących loginów/roli organizer, serwerowa autoryzacja globalnego Administratora, bezpieczne nadawanie i odbieranie typów kont, audyt i ochrona przed zmianą własnego typu przez endpoint profilu; oddzielenie dynamicznych ról U14 od bazowych typów.
 - **Kryteria akceptacji:** signup zawsze `participant`; Organizer może nadać typ `organizer` oraz dowolną rolę niestandardową w swoim zakresie, ale próba nadania typu `administrator` zwraca 403. Administrator może odczytać i edytować profil, zgłoszenia, dane fabularne/zdrowotne, konfiguracje wydarzeń i role dowolnego konta, także innego Organizatora, z zachowaniem historii zmian. Żadnego odczytu jawnych haseł (system ich nie przechowuje); resetowanie hasła i odebranie sesji zamiast ujawniania poświadczeń. Nie wolno przypadkowo nadać admina migrowanemu organizerowi.
 - **Testy:** participant po signup, legacy role migration, promowanie participant→organizer, zabronione organizer→administrator, administrator→administrator nadanie, odwołanie dostępu, globalny read/write i audyt, brak obejścia przez bezpośrednie API.
-- **Zależności:** U09/U17 dla migracji i backupu, U05 dla filtrowania, U14 dla dynamicznych ról; D21 dotyczy tylko zakresu ról dodatkowych, nie globalnego Administratora.
+- **Zależności:** U09/U17 dla migracji i backupu, U05 dla filtrowania, U14 dla dynamicznych ról; zatwierdzone C18/D21 ogranicza role niestandardowe do wydarzenia, nie dotyczy globalnego Administratora.
 - **Milestone / etykiety:** v28.0 / `security`, `P1`, `accounts`, `authorization`, `epic:E4`.
 ## Zależności i zasady publikowania
 
