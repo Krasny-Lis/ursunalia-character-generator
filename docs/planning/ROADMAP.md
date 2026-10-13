@@ -14,7 +14,7 @@ MVP nie wymaga kreatora kolejnych wydarzeń, **płatności wbudowanych w aplikac
 |---|---|---|---|
 | **v27.3 — stabilizacja procesu** | U01/U02/U03/U04/U06/U07/U08/U12/U16/U21; U20 porządek dokumentacji | Świadome, audytowane decyzje organizatora również wobec roboczego szkicu, bez fałszywej informacji o wysłanych odpowiedziach i bez cichej utraty danych; kompletna karta mobile; działający pełny E2E na istniejącym modelu; uzgodniona struktura generatora. | Decyzje D07/D08/D11; testy wykonywane wraz z poprawkami. |
 | **v28.0 — minimalny rdzeń i prywatność** | U09/U10/U05 | Jedno wydarzenie w relacyjnym modelu, formularz ma `kind`, `event_id` i cechę `grants_admission`; istniejące dane zachowane, ograniczony odczyt poufnych pól. | D03/D04/D15/D16, kopia i rehearsal migracji; U17 wcześniej. |
-| **v28.1 — obsługa zgłoszeń** | U11/U14/U19/U23/**U30/U31**; U13 warunkowo; U22 opcjonalnie | Snapshot wysłania, historia decyzji, wdrożone siedem statusów (C09/D18), dowolne zmiany statusu przez organizatora oraz wznowienie `withdrawn` (C10/D08), lista przyjętych z akceptacji postaci, **ręczne potwierdzanie składki**, ograniczone eksporty i retencja. | U09/U05/U11, D06/D09/D16/D17/D18 (D08 zatwierdzone); U14 dla prawa edycji składki. |
+| **v28.1 — obsługa zgłoszeń i kont** | U11/U14/U19/U23/**U30/U31/U32**; U13 warunkowo; U22 opcjonalnie | Snapshot wysłania, historia decyzji, siedem statusów (C09/D18), dowolne zmiany organizatora oraz wznowienie `withdrawn` (C10/D08); przyjęci z akceptacji postaci; **globalny profil kontaktowy konta, role i uprawnienia (C11/C12), ręczna ewidencja składki**, ograniczone eksporty i retencja. | U09/U05/U11, D06/D09/D16/D17/D18; U14 dla kontroli danych i składek, D03 pozostaje częściowo otwarte. |
 | **v29.0 — uruchomienie** | U15/U17/U18/U29/U24 oraz regresja U16 | Staging HTTPS, backup/restore, odzyskanie dostępu, monitoring, pilot i zatwierdzony start zapisów. | Wszystkie P0 i wymagane P1; właściciele operacyjni i D01/D02/D14. |
 | **Po Ursunaliach** | U25/U26/U27/U28 i pozostałe P2 zależnie od wyników | Decyzja o kontynuacji platformy po ocenie wydarzenia. | Retrospektywa i realne potrzeby. |
 
@@ -67,8 +67,9 @@ Kolejność jest priorytetem pobierania pracy; zadania zależne od decyzji mogą
 15. **U14** — zarządzanie uprawnieniami zespołu i ograniczony eksport.
 16. **U30** — siedem statusów, uczestnictwo wynikające z zaakceptowanej postaci, dowolne zmiany organizatora oraz wznawianie `withdrawn`.
 17. **U31** — ręczne potwierdzanie składki dla użytkownika i wydarzenia; historia zmian i uprawnienia organizatora.
+18. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz bezpieczny dostęp per wydarzenie/rola.
 
-Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30 i U31 są wymagane przed pierwszymi prawdziwymi zapisami, nie po wydarzeniu.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
+Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31 i U32 są wymagane przed pierwszymi prawdziwymi zapisami, nie po wydarzeniu.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
 
 ## Praca równoległa i ryzyko
 
