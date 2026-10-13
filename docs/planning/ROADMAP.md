@@ -97,7 +97,7 @@ Jeżeli pilot ujawni P0, przesunąć T lub ograniczyć zbierane dane/funkcje. Ni
 
 ## Warunki otwarcia i ograniczenia pilota
 
-- Wszystkie P0 zamknięte; P1 zweryfikowane dla publicznego zakresu, w tym U30 (przyjęcie/statusy) i U31 (ręczne potwierdzanie składki). Zakres ewentualnie wyłączonej funkcji i właściciel decyzji zapisani w DECISIONS.
+- Wszystkie P0 zamknięte; P1 zweryfikowane dla publicznego zakresu, w tym U30 (przyjęcie/statusy), U31 (ręczne potwierdzenie składki) i U32 (globalny profil kontaktowy konta). Zakres ewentualnie wyłączonej funkcji i właściciel decyzji zapisani w DECISIONS.
 - Pełny E2E na staging oraz testy Firefox/WebKit/Chromium, telefon fizyczny i klawiatura. Nie wymagamy pełnej automatyzacji wszystkich urządzeń, ale wynik kontroli musi być zapisany.
 - Backup odtworzony na pustym środowisku, zweryfikowana kompletność odpowiedzi; procedura ma właściciela.
 - Brak poufnych danych w listach bez uprawnienia, publicznych zasobach i logach. Pilot początkowo używa fikcyjnych danych.
