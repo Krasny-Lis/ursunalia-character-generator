@@ -261,6 +261,12 @@ CREATE TABLE applications (
   character_archived_at TEXT,
   character_archived_by_user_id TEXT REFERENCES users(id),
   CHECK ((character_archived_at IS NULL) = (character_archived_by_user_id IS NULL)),
+  -- C46: stan deleting nadal rezerwuje miejsce, deleted zwalnia je
+  -- dopiero po potwierdzonym wymazaniu aktywnych danych postaci.
+  character_deletion_state TEXT NOT NULL DEFAULT 'active'
+    CHECK(character_deletion_state IN ('active','deleting','deleted')),
+  character_deleted_at TEXT,
+  CHECK ((character_deletion_state='deleted') = (character_deleted_at IS NOT NULL)),
   answers_json TEXT NOT NULL CHECK(json_valid(answers_json) AND json_type(answers_json)='object'),
   lock_version INTEGER NOT NULL DEFAULT 1 CHECK(lock_version > 0),
   created_at TEXT,
@@ -268,7 +274,7 @@ CREATE TABLE applications (
   imported_at TEXT,
   current_submission_id TEXT,
   legacy_feedback TEXT,
-  UNIQUE(user_id,form_id,slot),
+  -- Aktywny limit slotu zapewnia czesciowy indeks ponizej.
   UNIQUE(id,event_id,user_id),
   FOREIGN KEY(form_id,event_id) REFERENCES forms(id,event_id),
   FOREIGN KEY(form_id,form_revision) REFERENCES form_revisions(form_id,revision),
@@ -421,29 +427,31 @@ CREATE TABLE audit_log (
 );
 
 CREATE INDEX forms_event_status ON forms(event_id,status);
--- C41/D04: jeden rekord character na konto i wydarzenie, nawet w roznych
--- formularzach tego samego kind, niezaleznie od statusu oraz slotu.
--- C45/D29c1: skuteczne USUNIECIE zwalnia miejsce na nowa postac.
--- Ponizsze triggery to projekt ochrony dla rekordow istniejacych; przed
--- wdrozeniem usuwania U38 zweryfikowac D29c2 i skorygowac warunek istnienia
--- tak, aby poprawnie usuniete rekordy historyczne (jesli pozostana w DB)
--- NIE blokowaly miejsca. Nie przyjmowac teraz na sztywno soft-delete/DELETE.
--- Przed instalacja zweryfikowac legacy duplikaty, a API ma obslugiwac konflikt.
+-- C41/C45/C46: tylko nieusuniete postacie zajmuja miejsce.
+-- deLeting tez zajmuje, deleted ignorowane dopiero po poprawnym cleanup.
+-- Kandydacki tombstone ograniczyc czasowo wg D06/U19.
+CREATE UNIQUE INDEX applications_non_deleted_slot
+  ON applications(user_id,form_id,slot)
+  WHERE character_deletion_state<>'deleted';
+
 CREATE TRIGGER one_character_per_user_event_insert
 BEFORE INSERT ON applications
 WHEN (SELECT kind FROM forms WHERE id=NEW.form_id AND event_id=NEW.event_id)='character'
+  AND NEW.character_deletion_state<>'deleted'
 BEGIN
   SELECT RAISE(ABORT,'one character per user per event')
   WHERE EXISTS (
     SELECT 1 FROM applications a
     JOIN forms f ON f.id=a.form_id AND f.event_id=a.event_id
-    WHERE a.user_id=NEW.user_id AND a.event_id=NEW.event_id AND f.kind='character'
+    WHERE a.user_id=NEW.user_id AND a.event_id=NEW.event_id
+      AND f.kind='character' AND a.character_deletion_state<>'deleted'
   );
 END;
 
 CREATE TRIGGER one_character_per_user_event_update
-BEFORE UPDATE OF form_id,event_id,user_id ON applications
+BEFORE UPDATE OF form_id,event_id,user_id,character_deletion_state ON applications
 WHEN (SELECT kind FROM forms WHERE id=NEW.form_id AND event_id=NEW.event_id)='character'
+  AND NEW.character_deletion_state<>'deleted'
 BEGIN
   SELECT RAISE(ABORT,'one character per user per event')
   WHERE EXISTS (
@@ -451,6 +459,7 @@ BEGIN
     JOIN forms f ON f.id=a.form_id AND f.event_id=a.event_id
     WHERE a.id<>OLD.id AND a.user_id=NEW.user_id
       AND a.event_id=NEW.event_id AND f.kind='character'
+      AND a.character_deletion_state<>'deleted'
   );
 END;
 
@@ -474,7 +483,7 @@ Wzajemne FK forms/revisions oraz applications/submissions są świadome i odrocz
 ### Inwarianty aplikacyjne poza DDL
 
 1. W jednej transakcji sprawdzić role, stan, okno zapisów, rewizję, limity i lock_version; zaktualizować rekord warunkowym UPDATE. Zero zmienionych wierszy → 409. Nigdy sam SELECT, a potem bezwarunkowy zapis.
-2. **C41/D04:** maksymalnie **jedna nieusunięta aplikacja `kind=character` na parę `(event_id,user_id)`**, niezależnie od identyfikatora formularza, rewizji, `slot`, statusu **i archiwizacji C43** (w tym `draft`, `rejected`, `withdrawn`). Po wycofaniu i przy poprawkach wraca się do **tej samej** aplikacji. Formularz logistyczny/generic jest niezależny; drugie wydarzenie pozwala na osobną postać. `slot <= forms.max_per_user` (MVP: `slot=1`, `max_per_user=1`) to dodatkowa polityka **formularza**, niewystarczająca dla limitu na wydarzenie. Trigger SQLite chroni zapis również przed obejściem przez inne `form_id`; API sprawdza atomowo i obsługuje konflikt. **C45/D29c1:** po skutecznym usunięciu U38 limit zostaje zwolniony dla nowej aplikacji z nowym ID; `rejected`, `withdrawn` i `character_archived_at` same w sobie miejsca nie zwalniają. Projekt triggerów powyżej musi zostać dostosowany do ostatecznej reprezentacji usunięcia (D29c2), jeśli historyczny rekord pozostaje w DB; obecna wersja zakłada brak usuniętego rekordu w `applications` i nie jest gotową migracją U38. Zwolnienie miejsca i utworzenie nowej postaci muszą być chronione transakcyjnie. Przed migracją znaleźć i rozstrzygnąć potencjalne istniejące duplikaty bez ich automatycznego kasowania. Pojemność wydarzenia to odrębne ograniczenie. **C44/C45:** usunięcie zwalnia miejsce — potwierdzone; do D29c2 pozostała wyłącznie polityka kasowania i zachowania danych.
+2. **C41/D04 + C45/C46:** najwyżej jedna **nieusunięta** postać w parze `(event_id,user_id)`, niezależnie od formularza, slotu i statusu, w tym `draft/rejected/withdrawn/archived`. Rozpoczęte kasowanie (`character_deletion_state='deleting'`) nadal zajmuje miejsce; dopiero **zweryfikowane usunięcie treści aktywnych** i przejście do `deleted` zwalnia miejsce na nową kartę z nowym `applicationId`. `applications_non_deleted_slot` (częściowy unikatowy indeks zamiast tabelowego UNIQUE) i dwa triggery wykluczają wyłącznie stan `deleted`; zabezpieczają transakcje i równoległe żądania. Minimalny tombstone może być później zniszczony/zanonimizowany zgodnie z D06/U19; nie trzymać bezterminowo pełnego wpisu z `user_id`. Formularze logistyczne nadal niezależne. Wymagane testy SQLite, migracji duplikatów i backupów.
 3. Nowy szkic wskazuje bieżącą opublikowaną rewizję i dostępne wydarzenie. Istniejący szkic pozostaje przypięty do swojej rewizji. Niedozwolona zmiana form_id/form_revision/user/event przez update.
 4. `definition_json` musi być zgodne z relacyjnym ID/revision/event. Prywatne i zwykłe answers są rozłączne; suma kluczy zgodna z definicją. Brak cichego usuwania danych przy migracji.
 5. `FormRevision` i `Submission` nie są edytowalne przez zwykłe API. Retencja/usunięcie to osobny, audytowany proces. Zmiana polityki poufności może zaostrzyć dostęp do starego pola bez przepisywania jego treści.
@@ -583,15 +592,19 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 
 **Testy:** wolna edycja wszystkich pól postaci bez tworzenia historii poprzednich wartości; zamrożona cała karta odrzuca PATCH fabuły, publicznych pól i upload portretu nawet bez UI; uczestnik widzi wyłącznie odczyt **z widocznym tekstem „Karta zablokowana”**, także po odświeżeniu, bez dodatkowego uzasadnienia i toasta; odblokowanie usuwa tekst i przywraca edycję; konflikt 409 oraz wyścig blokady z zapisem. Bulk działa dla pojedynczych, zaznaczonych i wszystkich istniejących postaci wydarzenia także przy 200+ i wielu stronach; **nowo wysłana postać po takiej operacji nie jest zablokowana**, dopóki Organizator nie uruchomi osobnej/kolejnej blokady; cudze wydarzenia nieobjęte, brak uprawnienia odrzucony. Historia faktycznie wysłanych formularzy, statusów i audytu lock/unlock pozostaje niezależna. Katalog nadal ma tylko publiczne informacje i globalnie udostępnione kontakty; `rejected/withdrawn` ukrywa wpis niezależnie od blokady. **C41:** odrzucenie drugiej postaci przy istniejącym szkicu, odrzuconym i wycofanym zgłoszeniu; dwa formularze `character` na ten sam event; próba użycia `slot=2`, równoległe inserty, drugi event, osobna logistyka i audyt migracyjny legacy duplikatów.
 
-## 6c. Archiwum postaci, usuwanie i kontynuacja zasady jednego miejsca (C41–C44)
+## 6c. Archiwum postaci, usuwanie i kontynuacja zasady jednego miejsca (C41–C46)
 
 **C43/D29a – osobny cykl życia archiwum:** po pierwszym faktycznym wysłaniu postaci właściciel ma operację **„Archiwizuj postać”**. Organizator posiada po **zakończeniu LARPa** akcję archiwizacji wszystkich postaci swojego wydarzenia. `applications.character_archived_at` + `character_archived_by_user_id` wskazują archiwizację bez zmiany jednej z siedmiu wartości `applications.status`. Właściciel widzi zarchiwizowane karty przez **„Moje konto → Archiwum postaci”**, z nazwą wydarzenia i aktualnymi bezpiecznie przechowywanymi danymi. Operacja jest ograniczona do właściciela lub personelu z jawnym eventowym `characters.archive.manage`; Organizator wykonuje ją wyłącznie dla przypisanego wydarzenia po jego zakończeniu, również hurtowo. System przechowuje minimalny audyt akcji archiwizacji Organizatora, ale nie przywraca wycofanej przez C38 historii edycji pól. `archived_at` nie zwalnia limitu C41, nie kasuje `submissions` i nie jest synonimem `withdrawn`. Rozróżnić aktywne i archiwalne postacie w panelu; widoki katalogu aktywnych nie powinny automatycznie ujawniać prywatnych archiwów.
 
 **Przywrócenie i tryb edycji po archiwizacji – otwarte D29d:** użytkownik może przeglądać własną archiwalną postać; nie przesądzać jeszcze, czy możliwe jest samodzielne cofnięcie archiwizacji i edycja oraz jak blokada edycji Organizatora C37 oddziałuje na archiwalne karty. To **oddzielna polityka** od siedmiu statusów zgłoszenia i od `character_edit_locked`.
 
-**C44/D29b + C45/D29c1 – usuwanie przez właściciela:** udostępnić możliwość „Usuń postać” z potwierdzeniem. **Po skutecznym usunięciu użytkownik może założyć nową postać na tym samym wydarzeniu i otrzymuje nowe `applicationId`.** Zwolnienie miejsca musi nastąpić dopiero po potwierdzonym wykonaniu operacji usunięcia; błędne/anulowane usunięcie nie może pozwalać na drugą kartę. `rejected`, `withdrawn`, `archived` nadal zajmują miejsce. **D29c2 otwarte:** ustalić co jest fizycznie kasowane, co anonimizowane, a co zachowane zgodnie z D06/U19/U17 (historyczne wysłania, składki, załączniki, backupy). **Nie implementować przed decyzją D29c2 destrukcyjnego `DELETE FROM applications` lub soft-delete powodującego niekontrolowane zachowanie danych.** Jeżeli nieusunięta techniczna historia pozostanie w bazie, trigger C41 musi filtrować ją tak, by nie rezerwowała zajętego wcześniej miejsca; szczegółowy model zależy od D29c2. Archiwizacja i samo wycofanie nie zwalniają miejsca.
+**C44/C45/C46 – trwałe usunięcie postaci z aktywnego serwera:** potwierdzona operacja „Usuń postać” usuwa jej **dane fabularne, pełną nazwę postaci, opis publiczny i zdjęcie** oraz inne powiązane z tą postacią treści w aktywnym serwerze. Obejmuje `application_character_current`, `application_public_profiles`, treść `applications.answers_json`, **treść wszystkich historycznych `submissions.answers_json`** (w tym inline base64), szkice, własne załączniki, miniatury, cache, indeks wyszukiwania oraz kontrolowane przez platformę kopie eksportów. **C46 jest kontrolowanym wyjątkiem od niezmienności wysłanych treści U11**: jeżeli trzeba zachować metadane wysłania, decyzji i wpłaty, snapshot pozostaje wyłącznie w **zredagowanej postaci, bez usuniętej fabuły i obrazów**. Należy oddzielić metadane potrzebne do zgodnego przechowywania od usuwanych treści; zakres organizacyjny/rozliczeniowy i okresy retencji określi D06/U19. Usunięta postać nie jest już dostępna w panelu konta, archiwum ani katalogu.
 
-**API i testy:** `GET /account/characters/archived` tylko dla właściciela, `POST /events/:eventId/applications/:applicationId/archive` dla właściciela oraz `POST /events/:eventId/characters/archive/bulk` dla Organizatora z uprawnieniem `characters.archive.manage` i odpowiednim warunkiem końca LARPa. Potwierdzony rezultat archiwizacji zapisuje datę/aktora i nie zmienia statusu/zgłoszenia ani limitu C41; archiwizacja wszystkich działa na każdym uprawnionym rekordzie niezależnie od paginacji. Testować izolację kont/wydarzeń, brak dostępu do cudzej archiwalnej karty, wiele wydarzeń, różne statusy, ponowną idempotentną archiwizację, obecne zarchiwizowane jako blokujące nową postać w tym samym evencie, niezmienną historię statusów/rozliczeń i oddzielny zakres danych prywatnych. Zwolnienie limitu po skutecznym usunięciu: C45/D29c1. Zakres usuwanych danych i sposób przechowywania ewentualnej historii: D29c2; przywracanie archiwum: D29d. **C45:** usunięcie → nowa karta tego samego użytkownika/wydarzenia (nowy ID) po skutecznym kasowaniu; podczas błędu usunięcia blokada pozostaje; równoległe żądania nie mogą stworzyć dwóch. Nie implementować finalnego endpointu przed D29c2.
+**Bezpieczna finalizacja:** (1) właściciel potwierdza, serwer weryfikuje prawa; (2) oznaczyć `character_deletion_state='deleting'` i wycofać kartę z widoków/edycji, **bez zwalniania miejsca**; (3) usunąć/redagować aktywne treści postaci także z dawnych snapshotów, aktywnego storage, miniatur, cache, indeksu i eksportów kontrolowanych przez platformę; nie usuwać współdzielonych plików innej postaci; (4) jeżeli cleanup się nie zakończył, retry/alert i zachowanie blokady miejsca; (5) dopiero po weryfikacji ustawić `deleted`, czas usunięcia i **zwolnić limit C41**. Dziennik wykonania usunięcia ma zawierać minimum operacyjne bez kopii usuwanych treści. Żadnego bezwarunkowego `DELETE FROM applications` bez rozliczenia zależności, retencji i FK.
+
+**Kopie zapasowe i prawo:** odseparowane backupy podlegają własnej retencji D06/U19/U17 — nie twierdzić, że wymazanie aktywne natychmiast usunęło wszystkie stare backupy. Po odtworzeniu kopii system musi ponownie zastosować rejestr usunięć, nie udostępniać skasowanej postaci/portretu. Dane organizacyjne i finansowe zachowywać **tylko o ile są naprawdę niezbędne** i zgodnie z zatwierdzoną retencją D06/U19. Te szczegóły są nadal warunkiem wdrożenia w produkcji.
+
+**API i testy:** `GET /account/characters/archived` tylko dla właściciela, `POST /events/:eventId/applications/:applicationId/archive` dla właściciela oraz `POST /events/:eventId/characters/archive/bulk` dla Organizatora z uprawnieniem `characters.archive.manage` i odpowiednim warunkiem końca LARPa. Potwierdzony rezultat archiwizacji zapisuje datę/aktora i nie zmienia statusu/zgłoszenia ani limitu C41; archiwizacja wszystkich działa na każdym uprawnionym rekordzie niezależnie od paginacji. Testować izolację kont/wydarzeń, brak dostępu do cudzej archiwalnej karty, wiele wydarzeń, różne statusy, ponowną idempotentną archiwizację, obecne zarchiwizowane jako blokujące nową postać w tym samym evencie, niezmienną historię statusów/rozliczeń i oddzielny zakres danych prywatnych. Zwolnienie limitu po skutecznym usunięciu: C45/D29c1. Kasowanie treści postaci zatwierdza **C46/D29c2**; okresy retencji metadanych/backupów nadal **D06/U19**; przywracanie archiwum: D29d. **C45:** usunięcie → nowa karta tego samego użytkownika/wydarzenia (nowy ID) po skutecznym kasowaniu; podczas błędu usunięcia blokada pozostaje; równoległe żądania nie mogą stworzyć dwóch. Nie wdrażać finalnego endpointu przed zatwierdzeniem D06/U19 i testami pełnego kasowania aktywnych treści oraz backup-restore.
 
 ```mermaid
 stateDiagram-v2
