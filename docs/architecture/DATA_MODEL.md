@@ -122,8 +122,8 @@ CREATE TABLE users (
 );
 
 -- Globalny profil kontaktowy jest wspólny dla wszystkich wydarzeń.
--- Pola contact phone/fb/discord pozostają nullable w projekcie DDL;
--- o obowiązkowości telefonu decydujemy oddzielnie. Istniejące users.name
+-- Telefon (C13), FB i Discord są opcjonalne i pozostają nullable;
+-- brak telefonu nie blokuje rejestracji konta. Istniejące users.name
 -- zachować bez automatycznego rozbijania go na first_name/last_name.
 CREATE TABLE user_profiles (
   user_id TEXT PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -391,7 +391,7 @@ Wewnętrzny podział profilu: `first_name/last_name` (tożsamość rzeczywista),
 
 Proponowane capabilities: `can_read_story`, `can_read_social_contacts`, `can_read_private_contacts`, `can_read_identity`, `can_read_sensitive` (granice i relacje interpersonalne), `can_read_health` (szczególna ochrona), `can_review_applications`, `can_manage_members`, `can_manage_contributions`, `can_export`. Uprawnienia sprawdzać przed serializacją pól w API, w listach, widokach szczegółów i eksportach. Domyślnie brak dostępu. Posiadacz prawa `can_export` nie może wyeksportować pól, do których brak mu prawa odczytu.
 
-**Do uzgodnienia:** kto oprócz głównego organizatora widzi dane dotyczące zdrowia, granic i wykluczeń; czy uczestnicy wzajemnie widzą podane FB/Discord; czy telefon jest polem obowiązkowym przy rejestracji. Rejestracja i edycja profilu: U32, zarządzanie rolami: U14, filtracja API: U05. Zdrowotne informacje o alergiach i urazach nie są tym samym, co zwykłe dane kontaktowe; wymagają adekwatnej podstawy prawnej, minimalizacji i szczególnej ochrony. Konkretna podstawa i retencja podlegają przeglądowi przed zbieraniem realnych danych (D06/U19).
+**Do uzgodnienia:** kto oprócz głównego organizatora widzi dane dotyczące zdrowia, granic i wykluczeń; czy uczestnicy wzajemnie widzą podane FB/Discord; telefon jest opcjonalny przy rejestracji (C13). Rejestracja i edycja profilu: U32, zarządzanie rolami: U14, filtracja API: U05. Zdrowotne informacje o alergiach i urazach nie są tym samym, co zwykłe dane kontaktowe; wymagają adekwatnej podstawy prawnej, minimalizacji i szczególnej ochrony. Konkretna podstawa i retencja podlegają przeglądowi przed zbieraniem realnych danych (D06/U19).
 
 Historia nadawania i odbierania uprawnień oraz dostępu/eksportu danych wrażliwych ma nie ujawniać treści odpowiedzi. Brak automatycznego przeniesienia globalnego uprawnienia głównego organizatora do wszystkich przyszłych wydarzeń. Operacyjny administrator serwera z dostępem do bazy pozostaje odrębnym poziomem infrastrukturalnym.
 
