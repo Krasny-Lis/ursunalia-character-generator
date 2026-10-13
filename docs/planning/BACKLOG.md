@@ -13,7 +13,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | E1 Stabilny proces uczestnika | Brak utraty pracy, prawidłowe statusy i kompletne widoki | U01/U02/U03/U07/U08/U22 |
 | E2 Bezpieczne formularze | Walidacja, publikacja, struktura generatora | U04/U06/U12/U13/U21 |
 | E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie i wydajne przeglądanie | U09/U10/U11/U23/U30 |
-| E4 Prywatność i konta | Uprawnienia, hasła, odzyskanie dostępu, retencja, ręczna ewidencja składki | U05/U14/U15/U19/U29/U31 |
+| E4 Prywatność i konta | Globalny profil kontaktowy, role wydarzenia, hasła, odzyskanie dostępu, retencja i składki | U05/U14/U15/U19/U29/U31/U32 |
 | E5 Uruchomienie | Testy, kopie, hosting, pilot | U16/U17/U18/U20/U24 |
 | E6 Późniejszy rozwój | Kolejne wydarzenia i funkcje fabularne | U25/U26/U27/U28 |
 
@@ -50,6 +50,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U29 | Odzyskanie dostępu do konta | P1 | M | v29.0 | API / tak |
 | U30 | Statusy i przyjęcie uczestnika przez akceptację postaci | P1 | M | v28.1 | API / tak |
 | U31 | Ręczne potwierdzenie składki per wydarzenie i użytkownik | P1 | S/M | v28.1 | API / tak |
+| U32 | Profil kontaktowy konta i edycja danych przy rejestracji | P1 | M | v28.1 | API / tak |
 
 \* U13 staje się P1, jeśli kilku organizatorów lub kilka urządzeń ma edytować te same formularze przed wydarzeniem. ** U17: kopia i rehearsal są wymagane już przed U09; finalna automatyzacja odebrana w v29.0.
 
@@ -195,7 +196,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Problem i obecne zachowanie:** F02, pełne boundaries/exclusions/needs i portrety trafiają do każdego organizer przez masową listę; CSS to jedyna część oznaczenia poufności.
 - **Rezultat:** dostęp zależy od wydarzenia i capability; nieuprawniony klient nigdy nie otrzymuje chronionej treści.
 - **Zakres / moduły:** klasyfikacja pól, event_members, rozdzielenie answers, DTO list/detail/export, wydruk, audyt odczytu; brak logowania wartości.
-- **Kryteria akceptacji:** reviewer bez sensitive nie dostaje tych pól w żadnym endpointcie/eksporcie; właściciel widzi własne dane; szkice niewidoczne organizatorowi; nowe pola mają jawną politykę; lista bez pełnych answers; zaostrzenie polityki obejmuje stare rewizje bez zmiany ich treści. Do wdrożenia bramki nie zbierać realnych poufnych odpowiedzi.
+- **Kryteria akceptacji:** fabularzysta bez dodatkowych capabilities widzi z kontaktów wyłącznie podane FB i Discord (nie imię/nazwisko, e-mail, telefon); główny organizator widzi dane uczestników swojego wydarzenia, w tym granice i zdrowie, ale nie hasła i sesje; pozostałe role według praw. Lista nie zawiera nieuprawnionych danych; filtracja na serwerze dla list/detail/export/print; brak globalnego katalogu kontaktów organizatorów. Nowe pola muszą mieć jawną politykę. Do wdrożenia zabezpieczeń nie zbierać realnych poufnych odpowiedzi.
 - **Testy:** macierz uczestnik/inna osoba/reviewer/safety/manager, cross-event, bezpośrednie API, list/detail/export/print i kontrola logów.
 - **Zależności:** D03, U09; U10 dostarcza semantykę, ale uprawnienia nie mogą zależeć wyłącznie od UI.
 - **Ryzyko regresji:** wysokie — migracja i możliwe ujawnienie danych.
@@ -230,8 +231,8 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Typ / priorytet / rozmiar:** feature / P1 / M.
 - **Problem i obecne zachowanie:** jeden globalny organizer publikuje, ocenia i eksportuje całość; brak procedury odebrania dostępu.
 - **Rezultat:** jawna, mała macierz ról wydarzenia i kontrola eksportu.
-- **Zakres / moduły:** EventMember, narzędzie admina (minimalny panel lub bezpieczna komenda), can_export/contact/sensitive, audyt nadania i eksportu.
-- **Kryteria akceptacji:** odebrane prawo działa od kolejnego żądania mimo aktywnej sesji; manager nie przyznaje sobie sensitive bez uprawnienia zarządcy; eksport zawiera tylko dozwolony zakres; CSV jeśli dodane neutralizuje formuły, ale JSON wystarczy MVP.
+- **Zakres / moduły:** EventMember, role `head_organizer` i `storyteller`, narzędzie nadawania/odbierania uprawnień, osobne prawa do FB/Discord, imienia/nazwiska, e-mail/telefonu, danych fabularnych, granic i danych zdrowotnych; kontrolowany eksport i audyt.
+- **Kryteria akceptacji:** główny organizator czyta dane uczestników przypisanych do jego wydarzenia i zarządza uprawnieniami; fabularzysta z kontaktów widzi tylko podane FB/Discord, nie e-mail/telefon/nazwisko; domyślne role nie rozszerzają dostępu między wydarzeniami; uprawniony zarządca może nadawać/odbierać capabilities, odebranie działa od następnego żądania mimo aktywnej sesji; eksport zawiera wyłącznie dozwolone pola i nie ujawnia danych z innych wydarzeń.
 - **Testy:** zmiana roli podczas sesji, cross-event, próba eskalacji, eksport bez prawa, log audytowy bez danych odpowiedzi.
 - **Zależności:** D03, U09/U05.
 - **Ryzyko regresji:** wysokie — nadanie zbyt szerokiego dostępu lub utrata dostępu zespołu.
@@ -435,6 +436,18 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Ryzyko regresji:** średnie – nieprawidłowe przypisanie przelewu do konta. Brak integracji finansowej.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `contributions`, `organizer`, `epic:E4`.
 
+### U32 — Profil kontaktowy konta współdzielony między wydarzeniami
+
+- **Typ / priorytet / rozmiar:** feature / P1 / M.
+- **Potwierdzona reguła C11:** imię, nazwisko, e-mail i telefon oraz opcjonalne Facebook i Discord podaje się podczas rejestracji konta, nie osobno przy zgłoszeniu na każdy LARP. Profil użytkownika jest globalny; dostęp organizatorów do jego danych zależy od wydarzenia i uprawnień (C12/D03).
+- **Zakres / moduły:** globalny `user_profiles` dla imienia/nazwiska, telefonu, FB i Discord, istniejące `users.email` jako login, formularz rejestracji i edycja własnego profilu, migracja danych historycznych bez niepewnego parsowania `users.name`, serwerowe DTO ograniczone do uprawnionych pól.
+- **Kryteria akceptacji:** użytkownik wprowadza dane podczas tworzenia konta, może je później aktualizować; FB/Discord są opcjonalne; profil nie jest duplikowany w applications; odczyt organizatora ogranicza się do uczestników powiązanych z jego wydarzeniem; brak wycieku e-mail, telefonu i nazwiska do roli fabularzysty bez dodatkowego przyznania prawa; stary login i wszystkie istniejące zgłoszenia zachowane.
+- **Otwarte:** czy telefon jest obowiązkowy; czy inni uczestnicy mogą widzieć podane FB/Discord; dokładny zakres odczytu danych zdrowotnych dla ról innych niż główny organizator. Nie uznawać opcjonalnego identyfikatora społecznościowego za publiczny dla internetu.
+- **Testy:** rejestracja, aktualizacja danych konta, migracja starych `users.name`, widok fabularzysty i głównego organizatora, obsługa brakujących opcjonalnych pól, odczyt bez uprawnień i cross-event.
+- **Zależności:** U09/U05/U14 oraz doprecyzowanie D03; kopia danych U17 przed migracją.
+- **Ryzyko regresji:** migracja kont i przypadkowe ujawnienie danych kontaktowych.
+- **Milestone / etykiety:** v28.1 / `feature`, `P1`, `accounts`, `authorization`, `epic:E4`.
+
 ## Zależności i zasady publikowania
 
 ```mermaid
@@ -452,6 +465,9 @@ flowchart TD
     U09 --> U30["U30 Statusy i przyjecie"]
     U11 --> U30
     U14 --> U31["U31 Skladka reczna"]
+    U09 --> U32["U32 Profil konta"]
+    U14 --> U32
+    U05 --> U32
     U09 --> U31
 ```
 
