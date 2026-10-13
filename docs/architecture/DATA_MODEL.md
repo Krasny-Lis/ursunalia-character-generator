@@ -355,6 +355,39 @@ CREATE TABLE application_public_profiles (
   CHECK(NOT (portrait_ever_replaced=1 AND portrait_override_mode='inherit'))
 );
 
+-- C36/D28b: biezaca warstwa zmian fabularnych z panelu, niezalezna od snapshots.
+-- Nie przechowywac tu zdrowia, granic, wykluczen, kontaktow ani ustawien konta.
+-- Klucze danych/typy walidowac wzgledem semantyki formularza character.
+CREATE TABLE application_character_current (
+  application_id TEXT PRIMARY KEY NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  overrides_json TEXT NOT NULL DEFAULT '{}' CHECK(
+    json_valid(overrides_json) AND json_type(overrides_json)='object'
+  ),
+  lock_version INTEGER NOT NULL DEFAULT 1 CHECK(lock_version > 0),
+  updated_by_user_id TEXT NOT NULL REFERENCES users(id),
+  updated_at TEXT NOT NULL
+);
+
+-- Append-only historia: kazda poprawka jest nowa wersja, nie UPDATE wpisu.
+-- old/new sa chronionymi danymi fabularnymi, NIE zwyklymi wpisami audit_log.
+CREATE TABLE application_character_change_history (
+  id TEXT PRIMARY KEY NOT NULL,
+  application_id TEXT NOT NULL REFERENCES applications(id),
+  revision INTEGER NOT NULL CHECK(revision > 0),
+  field_path TEXT NOT NULL,
+  before_value_json TEXT NOT NULL CHECK(json_valid(before_value_json)),
+  after_value_json TEXT NOT NULL CHECK(json_valid(after_value_json)),
+  actor_user_id TEXT NOT NULL REFERENCES users(id),
+  changed_at TEXT NOT NULL,
+  UNIQUE(application_id,revision,field_path)
+);
+CREATE INDEX character_change_history_by_revision
+  ON application_character_change_history(application_id,revision DESC);
+
+-- D28c jeszcze otwarte: model zakresu blokad edycji i tego, czy obejmuja
+-- wizytowke U35, dodac PO decyzji (cala postac vs sekcje vs pola).
+-- API musi sprawdzac aktualna blokade organizatora przed kazdym PATCH.
+
 CREATE TABLE consent_records (
   id TEXT PRIMARY KEY NOT NULL,
   submission_id TEXT NOT NULL REFERENCES submissions(id),
@@ -506,13 +539,13 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 
 **Źródła danych:** `submissions` (ostatnie prawdziwe wysłanie) dostarcza treści przesłanych odpowiedzi zgodnych z uprawnieniami właściciela, `applications` dostarcza bieżący status i feedback, a `application_public_profiles` — ewentualne najnowsze nadpisanie pełnej nazwy, publicznego opisu i aktywnego zdjęcia. Po submit panel początkowo wypełnia wszystkie zmapowane sekcje formularza postaci, nie tylko pola widoczne publicznie. **Nie kopiować wrażliwych danych do publicznego katalogu** `GET /events/:eventId/characters/directory`, który pozostaje odrębną, bezpieczną projekcją U34. Własny panel może zawierać prywatne informacje swojego właściciela; odczyt cudzych kategorii wymaga odrębnych, serwerowych uprawnień `read`, także przy dostępie organizacyjnym. Nie ujawniać cudzych informacji przez wspólny endpoint.
 
-**Praca po wysłaniu:** po utworzeniu panelu właściciel nie musi wracać do formularza zgłoszeniowego. **C30/C31/C33/U35:** edytuje bezpośrednio z panelu trzy już zatwierdzone pola (nazwa, publiczny opis, zdjęcie) z publikacją natychmiastową, bez resubmit i zmiany statusu. **D28b otwarte:** które pozostałe pola fabuły/postaci, w tym ewentualne poufne sekcje, mogą być edytowane w panelu i według jakich zasad weryfikacji. Docelowo także te edytory umieścić w panelu, ale **nie nadawać im automatycznie praw edycji ani nie przepisywać historycznych snapshotów**. Ponowne wysłanie/nadanie statusu to oddzielne zdarzenia procesu; panel musi umieć je bezpiecznie przedstawić.
+**Praca po wysłaniu – C36/D28b:** po utworzeniu panelu właściciel nie musi wracać do formularza. **C30/C31/C33/U35** umożliwiają tam natychmiastową edycję trzech pól jawnych (pełna nazwa, publiczny opis i zdjęcie). **C36/D28b zatwierdza również swobodną edycję fabularnych pól postaci** (pochodzenie, profesja, cechy, historia, fabularne tajemnice itp.) **bez nowego wysłania i ponownego zatwierdzenia**, chyba że uprawniony Organizator zablokował możliwość edycji. Zmiana zasila bieżącą warstwę `application_character_current` oraz **niezmienną historię poszczególnych edycji** `application_character_change_history` (kto/kiedy/jakie pole/stara/nowa wartość). Nie nadpisywać `submissions`. Inne informacje, jak zdrowie, triggery, wykluczenia, kontakty, zgody, status i składki, pozostają w osobnych grupach uprawnień i nie stają się automatycznie edytowalne przez C36. **D28c otwarte:** czy blokada obejmuje całą postać, konkretne sekcje lub pola i czy również publiczną wizytówkę U35. Ponowne wysłanie/nadanie statusu to oddzielne zdarzenia procesu.
 
 **C34/D27e – brak notyfikacji Organizatora po zmianie nazwy:** aktualizacja `public_name_override` jest audytowana (aktor, czas, stara i nowa nazwa), a bieżąca nazwa pokazuje się w panelu organizacyjnym, ale **sama zmiana nie emituje wiadomości e-mail, push ani rekordu automatycznego powiadomienia dla Organizatora**. Administracyjny odczyt historii jest dostępny tylko uprawnionym rolom; to nie znosi innych zasad powiadamiania o zmianach statusu.
 
-**Kontrakt API:** bezpieczna, uwierzytelniona projekcja `GET /events/:eventId/applications/:applicationId/character-panel` dla właściciela i uprawnionych pracowników; w odpowiedzi dane pogrupowane według semantycznych sekcji formularza, status/feedback i aktualna wizytówka. Autoryzacja przed serializacją i wrażliwe kategorie poza payloadem odbiorcy bez praw. Zmiana trzech pól publicznych używa istniejącego `PATCH .../public-profile` (U35), nie `POST .../submissions`. Wersjonowanie, audyt i reguły kasowania zdjęcia C32 bez zmian.
+**Kontrakt API:** bezpieczna, uwierzytelniona projekcja `GET /events/:eventId/applications/:applicationId/character-panel` dla właściciela i uprawnionych pracowników; w odpowiedzi sekcje formularza z **aktualnymi wartościami złożonymi z ostatniego prawdziwego wysłania i wersjonowanych nadpisań fabularnych**, status/feedback i bieżąca wizytówka. Autoryzacja przed serializacją, wrażliwe kategorie poza payloadem osób bez praw. Jawna nazwa/opis/zdjęcie przez `PATCH .../public-profile` U35; inne fabularne pola przez `PATCH /events/:eventId/applications/:applicationId/character-fields` z `expectedVersion`, walidacją schematu, serwerową kontrolą aktualnej blokady i transakcją zapisującą nowy stan oraz **append-only** historię. Konflikt wersji → 409; aktywna blokada → 403 (lub jawny biznesowy kod `CHARACTER_EDIT_LOCKED`), w UI czytelne wyjaśnienie. Publiczny katalog U34 NIE pobiera prywatnego `overrides_json` ani historii. Nie publikować całej fabuły przez przypadek. Role Organizatora i Administratora niezależne od własności postaci. Ponowne wysłanie/nadanie statusu pozostaje osobną operacją, nie efektem PATCH.
 
-**Testy:** wysłanie formularza postaci → panel z tym samym `applicationId` i danymi wszystkich dozwolonych sekcji; brak panelu przed submit oraz dla logistyki; brak panelu z ręcznego `draft→accepted`; owner vs cudzy user; rola organizacyjna z ograniczonymi prawami; `submitted/changes/waitlisted/rejected/withdrawn` z istniejącym wysłaniem; resubmit odświeża dane bazowe w tym samym panelu; zmiana publicznej nazwy/opisu/zdjęcia działa wyłącznie z panelu bez resubmit; brak powiadomienia po zmianie nazwy przy zachowanym audycie i bieżącej nazwie w widokach Organizatora; brak ujawnienia prywatnych odpowiedzi w katalogu U34. Edycje niepubliczne testować dopiero po D28b.
+**Testy:** wysłanie formularza postaci → panel z tym samym `applicationId` i danymi wszystkich dozwolonych sekcji; brak panelu przed submit i dla logistyki; brak panelu po ręcznym `draft→accepted`; uprawnienia właściciel/cudzy użytkownik/ograniczona rola; `submitted/changes/waitlisted/rejected/withdrawn` z rzeczywistym wysłaniem; resubmit nie duplikuje panelu; zmianę publicznej nazwy/opisu/zdjęcia wykonuje się z panelu bez resubmit i bez powiadomienia o nazwie; **zmiany historii fabularnej, profesji, pochodzenia i cech po submit zachowują historię przed/po, autora, czas i wersję**, bez modyfikacji historycznego `submissions` i statusu. Blokada Organizatora musi odrzucać PATCH również przy bezpośrednim wywołaniu API, a odblokowanie umożliwiać edycję; zakres wg D28c. Testować konflikt 409, historię z tajemnicami niewidoczną bez odpowiedniego prawa i brak prywatnych zmian w publicznym U34.
 
 ```mermaid
 stateDiagram-v2
@@ -546,7 +579,7 @@ Proponowane zmiany API (niezaimplementowane):
 
 Nie utrzymywać na stałe dwóch API. Podczas krótkiego wdrożenia można zastosować adapter starych DTO; dla serwera i klienta w jednej wersji wdrożenie atomowe jest prostsze. Stare buildy/cache muszą dostawać czytelny błąd wersji i prośbę odświeżenia, nie cicho nadpisywać danych.
 
-**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), U34 (katalog i kontakty), U35 (edycja nazwy/opisu/portretu bez resubmit), U36 (panel postaci po wysłaniu jako miejsce późniejszych edycji), przy zależnościach U09/U11/U23. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
+**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), U34 (katalog i kontakty), U35 (edycja nazwy/opisu/portretu bez resubmit), U36 (panel i wersjonowana edycja fabuły z blokadą Organizatora), przy zależnościach U09/U11/U23. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
 
 ## 8. Plan migracji bez utraty informacji
 
@@ -602,7 +635,7 @@ Nie wykonywać automatycznej aktualizacji formularza istniejącego zgłoszenia. 
 
 ## 9. Testy modelu i migracji
 
-W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Po decyzjach C20/C21/C26/C27 dodano opcjonalną ksywę i **globalne przełączniki widoczności w `user_profiles`, usuwając proponowaną wcześniej (niewdrożoną) tabelę `event_profile_publicity`**. C30/C33 dodają projekt `application_public_profiles` do niezależnej edycji nazwy/opisu/zdjęcia postaci bez nadpisywania snapshotów; D27b/C31 potwierdza natychmiastową publikację bez moderacji, a D27c/C32 wymaga fizycznego usuwania starszych zdjęć z aktywnego magazynu i wydzielenia ich bajtów ze snapshotów. Jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
+W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Po decyzjach C20/C21/C26/C27 dodano opcjonalną ksywę i **globalne przełączniki widoczności w `user_profiles`, usuwając proponowaną wcześniej (niewdrożoną) tabelę `event_profile_publicity`**. C30/C33 dodają projekt `application_public_profiles` do niezależnej edycji nazwy/opisu/zdjęcia postaci bez nadpisywania snapshotów; C36 dodaje `application_character_current` oraz `application_character_change_history` do wersjonowanej historii edycji fabuły; blokady wymagają rozstrzygnięcia D28c; D27b/C31 potwierdza natychmiastową publikację bez moderacji, a D27c/C32 wymaga fizycznego usuwania starszych zdjęć z aktywnego magazynu i wydzielenia ich bajtów ze snapshotów. Jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
 
 Fixture: dwa konta uczestników, dwóch organizatorów, sesje aktywne/wygasłe, oba formularze, kilka rewizji, wszystkie 4 statusy, feedback przy submitted, changes z już edytowanymi answers, polskie znaki, portret graniczny, nieznane stare klucze, brak dawnego autora/czasu decyzji.
 
