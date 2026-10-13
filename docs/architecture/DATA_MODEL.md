@@ -34,7 +34,7 @@ Tych danych nie wolno wymyślić podczas migracji.
 | Moduł | Odpowiedzialność | Granica |
 |---|---|---|
 | Identity | Konto, hasła, sesje, odzyskanie dostępu oraz wspólny profil kontaktowy użytkownika | Kontakt wprowadzany podczas rejestracji konta, a nie powielany w ankietach wydarzenia; uprawnienia do odczytu zależą od wydarzenia. |
-| Events/access | Metadane, terminy zapisów, EventMember i capabilities | Każde żądanie sprawdza wydarzenie i uprawnienia. Akceptacja wskazanego formularza daje udział. |
+| Events/access | Metadane wydarzeń, trzy bazowe typy kont, dynamiczne role i uprawnienia read/write | Organizator zarządza rolami w swoim zakresie, Administrator działa globalnie. Akceptacja wskazanego formularza daje udział. |
 | Forms | Szkic, walidacja, publikacja niezmiennej rewizji | Nie przepisuje historycznych zgłoszeń. |
 | Applications | Szkic, wersja zapisu, wysłanie i immutable snapshot | Nie pozwala organizatorowi zmieniać odpowiedzi uczestnika. |
 | Status history / reviews | Historia wszystkich zmian statusu i decyzji organizatora; odnośnik do wysłanych odpowiedzi, jeśli istnieją | Nie udaje, że administracyjna zmiana statusu oznacza ocenę wysłanego formularza. |
@@ -64,10 +64,12 @@ ERD podzielono na trzy czytelne fragmenty. Tabele techniczne prywatnych odpowied
 erDiagram
     USERS ||--o| USER_PROFILES : profil_kontaktowy
     USERS ||--o{ SESSIONS : posiada
-    USERS ||--o{ EVENT_MEMBERS : otrzymuje
+    USERS ||--o{ EVENT_ROLE_ASSIGNMENTS : otrzymuje
     USERS ||--o{ EVENT_CONTRIBUTIONS : skladki
     EVENTS ||--o{ EVENT_CONTRIBUTIONS : przyjmuje
-    EVENTS ||--o{ EVENT_MEMBERS : uprawnienia
+    EVENTS ||--o{ EVENT_ROLES : definiuje
+    EVENT_ROLES ||--o{ EVENT_ROLE_PERMISSIONS : uprawnienia
+    EVENT_ROLES ||--o{ EVENT_ROLE_ASSIGNMENTS : nadania
     EVENTS ||--o{ FORMS : zawiera
     FORMS ||--o{ FORM_REVISIONS : publikuje
     FORMS ||--o| FORM_DRAFTS : szkic
@@ -114,8 +116,8 @@ CREATE TABLE users (
   email TEXT NOT NULL COLLATE NOCASE UNIQUE,
   password_hash TEXT NOT NULL,
   password_scheme TEXT NOT NULL,
-  platform_role TEXT NOT NULL DEFAULT 'user'
-    CHECK(platform_role IN ('user','admin')),
+  account_type TEXT NOT NULL DEFAULT 'participant'
+    CHECK(account_type IN ('administrator','organizer','participant')),
   created_at TEXT,
   imported_at TEXT,
   disabled_at TEXT
@@ -157,28 +159,49 @@ CREATE TABLE events (
   closes_at TEXT,
   description TEXT NOT NULL DEFAULT '',
   location_text TEXT NOT NULL DEFAULT '',
+  owner_organizer_user_id TEXT REFERENCES users(id), -- propozycja scope wydarzenia, D21 do potwierdzenia
   archived_at TEXT,
   CHECK(ends_on >= starts_on),
   CHECK(opens_at IS NULL OR closes_at IS NULL OR closes_at >= opens_at)
 );
 
-CREATE TABLE event_members (
+-- Propozycja struktury ról niestandardowych per wydarzenie; zakres wymaga D21.
+-- Bazowe typy account_type nie są przechowywane jako role niestandardowe.
+CREATE TABLE event_roles (
+  id TEXT PRIMARY KEY NOT NULL,
   event_id TEXT NOT NULL REFERENCES events(id),
-  user_id TEXT NOT NULL REFERENCES users(id),
-  role TEXT NOT NULL CHECK(role IN ('head_organizer','manager','storyteller','reviewer','safety')),
-  can_read_story INTEGER NOT NULL DEFAULT 0 CHECK(can_read_story IN (0,1)),
-  can_read_social_contacts INTEGER NOT NULL DEFAULT 0 CHECK(can_read_social_contacts IN (0,1)),
-  can_read_private_contacts INTEGER NOT NULL DEFAULT 0 CHECK(can_read_private_contacts IN (0,1)),
-  can_read_identity INTEGER NOT NULL DEFAULT 0 CHECK(can_read_identity IN (0,1)),
-  can_read_sensitive INTEGER NOT NULL DEFAULT 0 CHECK(can_read_sensitive IN (0,1)),
-  can_read_health INTEGER NOT NULL DEFAULT 0 CHECK(can_read_health IN (0,1)),
-  can_review_applications INTEGER NOT NULL DEFAULT 0 CHECK(can_review_applications IN (0,1)),
-  can_manage_members INTEGER NOT NULL DEFAULT 0 CHECK(can_manage_members IN (0,1)),
-  can_export INTEGER NOT NULL DEFAULT 0 CHECK(can_export IN (0,1)),
-  can_manage_contributions INTEGER NOT NULL DEFAULT 0 CHECK(can_manage_contributions IN (0,1)),
-  PRIMARY KEY(event_id,user_id)
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_by_user_id TEXT NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(event_id,name),
+  UNIQUE(id,event_id)
 );
 
+-- Jedna pozycja oznacza jedno prawo. Brak wpisu = brak dostępu.
+-- read/write służą danym; manage/assign/export operacjom administracyjnym.
+CREATE TABLE event_role_permissions (
+  role_id TEXT NOT NULL REFERENCES event_roles(id) ON DELETE CASCADE,
+  resource_group TEXT NOT NULL CHECK(resource_group IN (
+    'identity','private_contact','social_contact','character_lore',
+    'game_preferences','triggers','interpersonal_exclusions','health',
+    'applications','contributions','forms','events','roles','exports'
+  )),
+  action TEXT NOT NULL CHECK(action IN ('read','write','manage','assign','export')),
+  PRIMARY KEY(role_id,resource_group,action)
+);
+
+-- Uczestnik może mieć wiele ról; bazowy account_type pozostaje osobny.
+CREATE TABLE event_role_assignments (
+  event_id TEXT NOT NULL REFERENCES events(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  role_id TEXT NOT NULL,
+  assigned_by_user_id TEXT NOT NULL REFERENCES users(id),
+  assigned_at TEXT NOT NULL,
+  PRIMARY KEY(event_id,user_id,role_id),
+  FOREIGN KEY(role_id,event_id) REFERENCES event_roles(id,event_id)
+);
 CREATE TABLE forms (
   id TEXT PRIMARY KEY NOT NULL,
   event_id TEXT NOT NULL REFERENCES events(id),
@@ -376,25 +399,44 @@ Portret w MVP może pozostać w JSON, jeśli ograniczono go do jednego pola, zwe
 
 ## 6. Uprawnienia i minimalizacja
 
-**Ustalenie C11/C12 (D03 częściowo):** dane kontaktowe zbierane podczas rejestracji konta są własnością profilu globalnego `users/user_profiles`, a nie powielanym fragmentem każdej aplikacji. Zgłoszenia i dane fabularne dotyczą wybranego wydarzenia. Organizator może odczytywać profil wyłącznie w kontekście osób powiązanych z jego wydarzeniem; dostęp do wydarzenia nie otwiera globalnej listy kont. Zmiana globalnego profilu przez właściciela aktualizuje dane używane w przyszłych wydarzeniach, lecz nie zmienia historycznych snapshotów formularzy.
+### Zatwierdzone zasady bazowe (C11–C17)
 
-Wewnętrzny podział profilu: `first_name/last_name` (tożsamość rzeczywista), `email/phone` (kontakty prywatne), `facebook/discord` (kontakty społecznościowe, opcjonalnie podane). Słowo „publiczne” w tym kontekście **nie oznacza automatycznej publikacji FB/Discord wszystkim graczom ani w internecie**. Wspólne `users.email` służy także do logowania, ale jego użycie nie daje uprawnienia do wyświetlania go organizatorowi.
+- **Typ konta** jest jednym z trzech: `participant` (domyślnie po rejestracji), `organizer`, `administrator`. Nie mylić z rolami konfigurowalnymi.
+- **Administrator:** pełny odczyt i edycja wszystkich zasobów biznesowych platformy, niezależnie od właściciela i wydarzenia, w tym kont innych organizatorów i uczestników. Administrator może nadawać/odbierać typ `administrator` i zarządzać wszystkimi rolami. Serwer musi egzekwować przywilej globalny; działania szczególne logować.
+- **Organizator:** może tworzyć, edytować i przydzielać niestandardowe role z prawami do grup danych oraz nadawać typ `organizer` i inne role z wyłączeniem `administrator`. Nie może uzyskać typu Administrator przez zmianę roli, API, eksport, import ani samodzielną edycję własnego konta. Organizator zarządza zasobami, do których ma uprawnienia; propozycja domyślnego zakresu per-event jest osobną decyzją D21.
+- **Uczestnik:** korzysta ze swoich danych; może otrzymać niestandardową rolę bez utraty bazowego typu `participant`. Nadane prawo do odczytu/edycji cudzych zasobów zawsze wymaga weryfikacji na serwerze.
+- **Szablon Fabularzysta (C14):** przykładowa niestandardowa rola z odczytem całej fabuły postaci (również tajemnic i haków) i kontaktów FB/Discord, bez dostępu do prywatnych kontaktów, granic czy zdrowia. Szablon nie jest szczególnym typem konta ani obowiązkową rolą systemową.
 
-| Rola / przypadek | Informacje fabularne | FB i Discord (jeśli podane) | E-mail i telefon | Imię i nazwisko | Triggery i wykluczenia | Alergie / zdrowie |
-|---|---|---|---|---|---|---|
-| Właściciel danych | Własne | Własne | Własne | Własne | Własne | Własne |
-| Główny organizator wydarzenia | Tak | Tak | Tak | Tak | Tak | Tak |
-| Fabularzysta (domyślnie) | **Tak – pełne informacje wszystkich postaci wydarzenia, również tajemnice i haki** | Tak | Nie | Nie | Nie | Nie |
-| Inni organizatorzy | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień |
+### Grupy uprawnień
 
-**Reguła roli głównego organizatora:** rola `head_organizer` ma pełny odczyt danych uczestników w obrębie powierzonego wydarzenia i zarządzanie uprawnieniami zespołu, bez odczytu haseł, hashy czy tokenów sesji. Inne role otrzymują jawne capabilities; samo `manager` lub `storyteller` nie oznacza pełnego dostępu. Przy przypisaniu roli fabularzysty nadać domyślny zestaw `can_read_story=1` oraz `can_read_social_contacts=1`, pozostałe prawa odczytu tożsamości, prywatnych kontaktów, granic i danych zdrowotnych pozostają wyłączone. Fabularzysta ma pełny dostęp do fabuły wszystkich postaci danego wydarzenia, również sekretów i haków; nie należy utożsamiać ich z triggerami, granicami i wykluczeniami interpersonalnymi. Możliwość późniejszego indywidualnego nadania dodatkowych praw do innych kategorii to osobna operacja. Można nadawać/odbierać prawa konkretnej osobie przy wydarzeniu. Wdrożenie powinno mieć bezpieczną ścieżkę przekazania/odtworzenia roli głównego organizatora z pełnym audytem.
+| Klucz grupy danych | Pola/zasoby | Podstawowe akcje |
+|---|---|---|
+| `identity` | imię, nazwisko, pełnoletniość | read / write |
+| `private_contact` | e-mail, telefon | read / write |
+| `social_contact` | Facebook, Discord | read / write |
+| `character_lore` | postać, jej historia, pochodzenie, cele, relacje i tajemnice fabularne | read / write |
+| `game_preferences` | preferencje rozgrywki, skale i oczekiwany styl gry | read / write |
+| `triggers` | granice oraz triggery | read / write |
+| `interpersonal_exclusions` | osoby, z którymi gracz nie chce grać | read / write |
+| `health` | alergie, urazy, informacje zdrowotne | read / write |
+| `applications` | zgłoszenia i statusy, bez automatycznego prawa do pełnej treści odpowiedzi z innych grup | read / write |
+| `contributions` | ręcznie potwierdzane składki | read / write |
+| `forms` | konfiguracja formularzy i ich publikacja | read / write / manage |
+| `events` | konfiguracja wydarzeń | read / write / manage |
+| `roles` | tworzenie, edycja i nadawanie ról | read / write / manage / assign |
+| `exports` | eksport danych ograniczony do innych przyznanych uprawnień read | export |
 
-Proponowane capabilities: `can_read_story` (dla `storyteller` domyślnie 1; wszystkie informacje fabularne wszystkich postaci danego wydarzenia, w tym tajemnice i haki), `can_read_social_contacts`, `can_read_private_contacts`, `can_read_identity`, `can_read_sensitive` (granice i relacje interpersonalne), `can_read_health` (szczególna ochrona), `can_review_applications`, `can_manage_members`, `can_manage_contributions`, `can_export`. Uprawnienia sprawdzać przed serializacją pól w API, w listach, widokach szczegółów i eksportach. Domyślnie brak dostępu. Posiadacz prawa `can_export` nie może wyeksportować pól, do których brak mu prawa odczytu.
+Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast osobnych kolumn `can_read_x`/`can_write_x` w tabeli użytkownika. Edycja w zwykłym UI powinna implikować możliwość odczytu danego pola, a próby obejścia tego przez API wymagają egzekwowania obu praw. Akcje operacyjne (`manage`, `assign`, `export`) podlegają dodatkowym regułom bezpieczeństwa – np. `roles.assign` nie uprawnia nikogo do nadania Administratora, jeżeli nie ma bazowego typu `administrator`.
 
-**Do uzgodnienia:** kto oprócz głównego organizatora widzi preferencje rozgrywki, granice i wykluczenia oraz dane zdrowotne; czy uczestnicy wzajemnie widzą podane FB/Discord. Pełny dostęp fabularzysty do fabuły jest już zatwierdzony jako C14 i nie rozszerza dostępu do tych osobnych kategorii. Telefon jest opcjonalny przy rejestracji (C13). Rejestracja i edycja profilu: U32, zarządzanie rolami: U14, filtracja API: U05. Zdrowotne informacje o alergiach i urazach nie są tym samym, co zwykłe dane kontaktowe; wymagają adekwatnej podstawy prawnej, minimalizacji i szczególnej ochrony. Konkretna podstawa i retencja podlegają przeglądowi przed zbieraniem realnych danych (D06/U19).
+**Globalny profil konta:** `first_name/last_name` i `email/phone` oraz opcjonalne `facebook/discord` są przypisane do konta niezależnie od wydarzenia. `users.email` jako login nie jest automatycznie publiczny dla organizatorów. Telefon jest opcjonalny (C13). Dane zdrowotne wymagają szczególnej ochrony. Kontakty FB/Discord widoczne w przykładowej roli Fabularzysta nie stają się automatycznie publiczne dla graczy.
 
-Historia nadawania i odbierania uprawnień oraz dostępu/eksportu danych wrażliwych ma nie ujawniać treści odpowiedzi. Brak automatycznego przeniesienia globalnego uprawnienia głównego organizatora do wszystkich przyszłych wydarzeń. Operacyjny administrator serwera z dostępem do bazy pozostaje odrębnym poziomem infrastrukturalnym.
+**Domyślne uprawnienia użytkownika do własnych danych** działają niezależnie od niestandardowych ról i nie zapewniają uprawnień do cudzych danych. Zgłoszenia i informacje organizacyjne są powiązane z wydarzeniem; propozycja ról przypisanych do jednego wydarzenia (D21) wymaga potwierdzenia. Organizator nie uzyskuje przez to dostępu do wszystkich kont ani danych innych wydarzeń. Administrator może zarządzać każdym zasobem platformy.
 
+**Historia i poprawki:** `write` uprawnia do modyfikowania *aktualnych danych*, ale wcześniejszych niezmiennych wysłań, zapisów płatności i audytu nie należy potajemnie nadpisywać. Nawet Administrator przeprowadza korektę z nową wersją lub wpisem audytowym; pełna administracyjna kontrola nie wymaga niszczenia historii. Pola uprawnień nie są kontrolowane przez dane przesłane przez użytkownika. Nie przechowujemy jawnych haseł – Administrator może resetować dostęp, a nie odczytać istniejące hasło.
+
+**Weryfikacja dostępu** następuje po stronie API przed odczytem, serializacją, edycją, eksportem i wydrukiem. Utrata uprawnienia obowiązuje od następnego żądania (bez konieczności ponownego logowania). Klasyfikacja danych wynika z serwerowej definicji pola, a nie z etykiety frontendowej. Export wymaga i `exports.export`, i read właściwych grup. Bez prawa odczytu danych zdrowotnych API nie ujawnia ich w listach, szczegółach, błędach, logach ani wydrukach. Historia przydzielania i odbierania ról jest audytowana.
+
+**D03 otwarte:** predefiniowane szablony ról i dostęp graczy do FB/Discord; **D21 otwarte:** zakres niestandardowych ról (per wydarzenie czy globalnie). Dopóki polityka i migracja nie przejdą testów, nie zbierać realnych danych o zdrowiu, triggerach ani wykluczeniach. Retencję i podstawy przetwarzania ocenić przed otwarciem zapisów (D06/U19).
 
 ## 7. Statusy, wersje i kontrakty
 
@@ -453,7 +495,7 @@ Najpierw U01/U02/U03/U04/U06/U07: rozróżnienie administracyjnej zmiany statusu
 2a. Dodać profile kont globalne: zachować istniejące `users.name` oraz email i hash hasła; nie rozcinać automatycznie starego `name` na imię i nazwisko bez potwierdzenia uczestnika. Brakujące dane kontaktowe uzupełnia użytkownik w swoim profilu; zachować niezależność profilu od zgłoszeń wydarzenia. Migracja danych profilu ma własne testy i kopię.
 3. Każde stare forms.id → nowy Form; każda para id/revision → FormRevision. Definition JSON zachować bez kosmetycznego przepisywania. Hash wyliczyć z zachowanych bajtów; bez utraty wersji. kind z zatwierdzonej mapy, nie „pierwsza ankieta”. Dla Ursunaliów mapowanie: `character-2027` → `kind=character,grants_admission=1`; `logistics-2027` → `kind=logistics,grants_admission=0`. Zmiana `grants_admission` po przyjęciu zgłoszeń wymaga jawnej migracji/polityki, nie zwykłej edycji ankiety.
 4. Ustawić current_revision na największą istniejącą; sprawdzić niezgodności statusów/eventId przed aktywacją. Wszystkie istniejące applications zachowują ID, user, form, revision, status i znaczniki czasu.
-5. Dotychczasowych organizer przypisać do Ursunaliów; rolę `head_organizer` i prawa dostępu do tożsamości, prywatnych/social kontaktów, granic, zdrowia i eksportu nadać imiennie w ramach wydarzenia. Nie nadawać ich automatycznie na przyszłe wydarzenia. Rolę administratora platformy wskazuje właściciel.
+5. Ustalić migrację dawnej roli `organizer` do bazowego typu `organizer`, pozostałych zwykłych użytkowników do `participant`; nadanie `administrator` wymaga jawnej autoryzacji i nie wynika z dawnej roli organizatora. Po decyzji D21 przypisać zakres wydarzenia oraz skonfigurowane role i prawa w tabelach `event_roles` / `event_role_permissions` / `event_role_assignments`. Nie rozszerzać dostępu automatycznie na inne wydarzenia; zachować mapę historycznych uprawnień i przetestować ją.
 
 ### M3 — odpowiedzi, wysłania i aktualne decyzje
 
@@ -486,7 +528,7 @@ Nie wykonywać automatycznej aktualizacji formularza istniejącego zgłoszenia. 
 
 ## 9. Testy modelu i migracji
 
-W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10/D08 i C11/C12 zmieniono DDL: zastąpiono `reviews` tabelą `application_status_history`, dodano globalne `user_profiles` oraz rozdzielone uprawnienia w `event_members`; nowy projekt ma 18 tabel i nie został ponownie przetestowany**. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
+W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite, a zakres ról decyzji D21. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
 
 Fixture: dwa konta uczestników, dwóch organizatorów, sesje aktywne/wygasłe, oba formularze, kilka rewizji, wszystkie 4 statusy, feedback przy submitted, changes z już edytowanymi answers, polskie znaki, portret graniczny, nieznane stare klucze, brak dawnego autora/czasu decyzji.
 
