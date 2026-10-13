@@ -14,7 +14,7 @@ MVP nie wymaga kreatora kolejnych wydarzeń, **płatności wbudowanych w aplikac
 |---|---|---|---|
 | **v27.3 — stabilizacja procesu** | U01/U02/U03/U04/U06/U07/U08/U12/U16/U21; U20 porządek dokumentacji | Świadome, audytowane decyzje organizatora również wobec roboczego szkicu, bez fałszywej informacji o wysłanych odpowiedziach i bez cichej utraty danych; kompletna karta mobile; działający pełny E2E na istniejącym modelu; uzgodniona struktura generatora. | Decyzje D07/D08/D11; testy wykonywane wraz z poprawkami. |
 | **v28.0 — minimalny rdzeń, typy kont i prywatność** | U09/U10/U05/U33 | Jedno wydarzenie, typy kont `participant/organizer/administrator`, globalne uprawnienia Administratora i kontrola dostępu do grup danych; zachowana baza, ograniczony odczyt poufnych pól. | C15/C17, D03/D04/D15/D16, kopia i rehearsal migracji; U17 wcześniej. |
-| **v28.1 — zgłoszenia i konfigurowalne role** | U11/U14/U19/U23/**U30/U31/U32**; U13 warunkowo; U22 opcjonalnie | Snapshoty, siedem statusów i wznowienie `withdrawn`; lista przyjętych; profil konta, **tworzone przez organizatora role z prawami read/write dla grup danych** (C12/C16), ręczna składka i kontrolowane eksporty. | U09/U05/U11/U33, D06/D09/D16/D17/D18 oraz zatwierdzenie zakresu ról D21 przed wdrożeniem U14. |
+| **v28.1 — zgłoszenia i konfigurowalne role** | U11/U14/U19/U23/**U30/U31/U32**; U13 warunkowo; U22 opcjonalnie | Snapshoty, siedem statusów i wznowienie `withdrawn`; lista przyjętych; profil konta, **tworzone przez organizatora role z prawami read/write dla grup danych** (C12/C16), ręczna składka i kontrolowane eksporty. | U09/U05/U11/U33, D06/D09/D16/D17/D18; zakres ról per wydarzenie zatwierdzony C18/D21. |
 | **v29.0 — uruchomienie** | U15/U17/U18/U29/U24 oraz regresja U16 | Staging HTTPS, backup/restore, odzyskanie dostępu, monitoring, pilot i zatwierdzony start zapisów. | Wszystkie P0 i wymagane P1; właściciele operacyjni i D01/D02/D14. |
 | **Po Ursunaliach** | U25/U26/U27/U28 i pozostałe P2 zależnie od wyników | Decyzja o kontynuacji platformy po ocenie wydarzenia. | Retrospektywa i realne potrzeby. |
 
@@ -65,7 +65,7 @@ Kolejność jest priorytetem pobierania pracy; zadania zależne od decyzji mogą
 13. **U33** — trzy bazowe typy kont i globalny Administrator; rozpocząć przed pełnym U14 i U05.
 14. **U05** — egzekwowanie na serwerze odczytu/edycji grup danych, globalny Administrator i filtrowanie; projekt polityki od początku, realne dane dopiero po odbiorze.
 15. **U11** — snapshoty wysłań i historia decyzji.
-16. **U14** — edytor niestandardowych ról i praw read/write dla grup danych, bez możliwości nadania Administratora.
+16. **U14** — edytor niestandardowych ról i praw read/write, przypisanych tylko do danego wydarzenia (C18/D21), bez możliwości nadania Administratora.
 17. **U30** — siedem statusów, uczestnictwo wynikające z zaakceptowanej postaci, dowolne zmiany organizatora oraz wznawianie `withdrawn`.
 18. **U31** — ręczne potwierdzanie składki dla użytkownika i wydarzenia; historia zmian i uprawnienia organizatora.
 19. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz kontrola odczytu/edycji grup danych.
