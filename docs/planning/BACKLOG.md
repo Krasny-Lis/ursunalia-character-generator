@@ -12,7 +12,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 |---|---|---|
 | E1 Stabilny proces uczestnika | Brak utraty pracy, prawidłowe statusy i kompletne widoki | U01/U02/U03/U07/U08/U22 |
 | E2 Bezpieczne formularze | Walidacja, publikacja, struktura generatora | U04/U06/U12/U13/U21 |
-| E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie, katalog postaci, edytowalna nazwa, opis i zdjęcie postaci oraz wydajne przeglądanie | U09/U10/U11/U23/U30/U34/U35 |
+| E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie, panel postaci po wysłaniu, katalog postaci i edycja wizytówki oraz wydajne przeglądanie | U09/U10/U11/U23/U30/U34/U35/U36 |
 | E4 Prywatność i konta | Trzy typy kont, dynamiczne role z uprawnieniami read/write, globalny profil i składki | U05/U14/U15/U19/U29/U31/U32/U33 |
 | E5 Uruchomienie | Testy, kopie, hosting, pilot | U16/U17/U18/U20/U24 |
 | E6 Późniejszy rozwój | Kolejne wydarzenia i funkcje fabularne | U25/U26/U27/U28 |
@@ -54,6 +54,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U33 | Bazowe konta i globalne uprawnienia Administratora | P1 | M | v28.0 | API / tak |
 | U34 | Katalog zgłoszonych postaci i dobrowolna publikacja kontaktów | P1 | M/L | v28.1 | API / tak |
 | U35 | Edycja nazwy, publicznego opisu i zdjęcia po wysłaniu | P1 | M | v28.1 | API / tak |
+| U36 | Panel postaci z automatycznym uzupełnieniem po submit i edycją bez powrotu do formularza | P1 | M/L | v28.1 | API / tak |
 
 \* U13 staje się P1, jeśli kilku organizatorów lub kilka urządzeń ma edytować te same formularze przed wydarzeniem. ** U17: kopia i rehearsal są wymagane już przed U09; finalna automatyzacja odebrana w v29.0.
 
@@ -376,17 +377,16 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Ryzyko regresji:** średnie — routing, zakres wydarzenia.
 - **Milestone / etykiety:** po-2027 / `feature`, `P3`, `events`, `epic:E6`.
 
-### U26 — Utworzyć odrębny profil postaci z zaakceptowanego zgłoszenia
+### U26 — Wydzielenie pełnej encji Character po wdrożeniu panelu postaci
 
-- **Typ / priorytet / rozmiar:** feature / P2 / M.
-- **Problem i obecne zachowanie:** odpowiedź formularza jest traktowana jako postać; nie ma niezależnego bytu do pracy fabularnej.
-- **Rezultat:** Character wskazuje właściciela, wydarzenie i źródłowe wysłanie, bez danych organizacyjnych/poufnych.
-- **Zakres / moduły:** tabela characters, jawne mapowanie pól fabularnych, idempotentna projekcja po akceptacji, oddzielny widok.
-- **Kryteria akceptacji:** logistyka nigdy nie tworzy Character; jeden source_application tworzy najwyżej jedną postać; historia zgłoszenia pozostaje; brak boundaries/needs/zgód w profilu; sposób ponownego otwarcia źródła uzgodniony.
-- **Testy:** ponowienie akceptacji/projekcji, błędne event/owner, stary snapshot, brak pola imienia, filtr danych.
-- **Zależności:** D12/D08, U10/U11/U05.
-- **Ryzyko regresji:** średnie — dwa modele tej samej informacji fabularnej.
-- **Milestone / etykiety:** po-2027, wcześniej tylko z uzasadnioną potrzebą / `feature`, `P2`, `characters`, `epic:E6`.
+- **Typ / priorytet / rozmiar:** refaktor/domain / P2 / M.
+- **Stan po C35/D28a:** **panel postaci działa już w MVP po pierwszym rzeczywistym wysłaniu formularza** (U36), bez czekania na zaakceptowanie. U26 **nie jest zadaniem zbudowania panelu**; oznacza przyszłe wydzielenie pełnoprawnej, trwałej encji `characters`, kiedy wynikać to będzie z rozwoju fabuły i relacji.
+- **Zakres / moduły:** bezpieczna migracja/projekcja z `applications/submissions/application_public_profiles` i ich identyfikatorów, odrębne `characters` tylko dla formularzy `kind=character`, zachowanie historii i polityki RBAC. Nie dublować charakterystyki fabularnej i nie traktować statusu `accepted` jako jedynego momentu istnienia panelu.
+- **Kryteria akceptacji:** dane postaci i wizytówki zachowane bez utraty aktualnej nazwy/portretu/opisu, stare snapshoty niezmienione poza polityką kasowania mediów C32; najwyżej jedna docelowa postać na `source_application`, brak Character z logistyki, zero nowych praw do zdrowia/wykluczeń i brak zerwania działającego U36.
+- **Testy:** import postaci `submitted/changes/accepted/waitlisted`, wydzielanie ponawialne, mapowanie aktualnej wizytówki i zachowanie audytu, błędny event i brak snapshotu, zdjęcie wcześniej usunięte C32.
+- **Zależności:** U36/U10/U11/U05/C35, retrospektywa i potwierdzona potrzeba — **po Ursunaliach 2027**, bez blokowania panelu MVP.
+- **Ryzyko regresji:** średnie/wysokie — dwa konkurencyjne źródła tej samej informacji.
+- **Milestone / etykiety:** po-2027 / `refactor`, `P2`, `characters`, `epic:E6`.
 
 ### U27 — Oddzielić magazyn obrazów, jeśli pomiary wykażą potrzebę
 
@@ -475,13 +475,25 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 - **Typ / priorytet / rozmiar:** feature/privacy/media lifecycle / P1 / M (zweryfikować nakład bezpieczeństwa i migracji portretów).
 - **Zatwierdzone C30–C33:** po faktycznym wysłaniu zgłoszenia właściciel może samodzielnie edytować **pełną nazwę postaci, publiczny opis i zdjęcie**. Po poprawnym zapisie zmiany są **widoczne natychmiast**, bez resubmit, moderacji i zmiany statusu. Historia zgłoszeń zachowuje nazwę pierwotną, inne odpowiedzi oraz decyzje; bieżąca nazwa w katalogu i operacyjnych widokach postaci pochodzi z edytowalnej wizytówki. Zmiana nie tworzy nowej postaci, `applicationId` ani nowego zgłoszenia i nie wpływa na składkę.
-- **Zakres / moduły:** przycisk „Edytuj wizytówkę” i trzy pola w edytorze: pełna nazwa, opis publiczny i portret z podglądem. `PATCH /events/:eventId/applications/:applicationId/public-profile` autoryzuje właściciela lub personel z jawnym `write`; `application_public_profiles.public_name_override` przechowuje ewentualną zmianę nazwy oddzielnie od oryginału w niezmiennym snapshotcie, analogicznie opis. `null` oznacza brak nadpisania nazwy. Walidacja: nazwa po przycięciu białych znaków musi być niepusta, sanitizacja dla HTML, ochrona przed edycją obcych postaci, `lock_version` dla konfliktów, audyt autora/czasu/zmiany (bez obrazu w logach), aktualizacja indeksu wyszukiwania i cache. Domyślna nazwa ze snapshotu jest używana tylko przed jej samodzielną zmianą lub świadomym wyczyszczeniem nadpisania.
+- **Zakres / moduły:** sekcja „Edytuj wizytówkę” **wewnątrz panelu postaci U36**, a nie powrót do wysłanego formularza; trzy pola w edytorze: pełna nazwa, opis publiczny i portret z podglądem. `PATCH /events/:eventId/applications/:applicationId/public-profile` autoryzuje właściciela lub personel z jawnym `write`; `application_public_profiles.public_name_override` przechowuje ewentualną zmianę nazwy oddzielnie od oryginału w niezmiennym snapshotcie, analogicznie opis. `null` oznacza brak nadpisania nazwy. Walidacja: nazwa po przycięciu białych znaków musi być niepusta, sanitizacja dla HTML, ochrona przed edycją obcych postaci, `lock_version` dla konfliktów, audyt autora/czasu/zmiany (bez obrazu w logach), aktualizacja indeksu wyszukiwania i cache. Domyślna nazwa ze snapshotu jest używana tylko przed jej samodzielną zmianą lub świadomym wyczyszczeniem nadpisania.
 - **Cykl życia zdjęcia C32:** po wgraniu nowego portretu fizycznie usunąć **poprzedni plik z aktywnego serwera**, miniatury i pochodne, unieważnić stare URL/cache, bez archiwum i przywracania poprzedniej grafiki. Kolejność: zweryfikować nowy upload, trwale zapisać wskazanie i audyt z kontrolą wersji, a następnie usunąć poprzedni asset; błędy cleanup mają mieć retry, alert i są odnotowane. Nie kasować współdzielonego pliku ani obecnego portretu, gdy nowy upload/DB się nie powiódł. Bajtów starego obrazu nie przechowywać w historycznych `submissions.answers_json` jako base64; stare inline media wymagają bezpiecznej migracji/redakcji. Osobna retencja backupów D06/U19/U17.
-- **Kryteria akceptacji:** właściciel po submit w stanie `submitted`, `changes`, `accepted` lub `waitlisted` zmienia nazwę, opis i portret **niezależnie od siebie**, bez nowego `submissions`, zmiany statusu, składki, formularza ani utraty ID. Publiczna lista, szczegóły i wyszukiwanie używają od razu nowej **pełnej nazwy**, opisu i zdjęcia; poprzednia nazwa pozostaje w snapshotcie i historii audytu. W stanie `changes` nie publikować roboczych zmian formularza; przy `rejected/withdrawn` wpis postaci pozostaje ukryty niezależnie od aktualizacji wizytówki. Nowy obraz zastępuje poprzedni, stary plik i pochodne przestają być dostępne. Zmiana opisu/nazwy **nie uruchamia** procedury usuwania zdjęcia. Personel używa aktualnej nazwy do identyfikacji w widokach bieżących i może w historii ustalić poprzednią nazwę.
-- **Testy:** osobno zmiana nazwy (w tym pusta/niedozwolona, znaki polskie, XSS), opisu, zdjęcia i kombinacji; widoczność natychmiast w katalogu publicznym i w panelu właściciela; wyszukiwanie po nowej nazwie, bez błędnego pobierania z oryginalnego `answers_json`; brak resubmit i niezmienność historii; `changes/rejected/withdrawn`; cudza postać 403; konflikt `lock_version` 409; błędy zapisu, uploadu, fizycznego kasowania pliku/miniatur, cache i retry/alarm; brak starego base64 w aktywnej bazie i bezpieczne odtwarzanie backupu.
+- **Kryteria akceptacji:** właściciel po submit w stanie `submitted`, `changes`, `accepted` lub `waitlisted` zmienia nazwę, opis i portret **niezależnie od siebie**, bez nowego `submissions`, zmiany statusu, składki, formularza ani utraty ID. Publiczna lista, szczegóły i wyszukiwanie używają od razu nowej **pełnej nazwy**, opisu i zdjęcia; poprzednia nazwa pozostaje w snapshotcie i historii audytu. W stanie `changes` nie publikować roboczych zmian formularza; przy `rejected/withdrawn` wpis postaci pozostaje ukryty niezależnie od aktualizacji wizytówki. Nowy obraz zastępuje poprzedni, stary plik i pochodne przestają być dostępne. Zmiana opisu/nazwy **nie uruchamia** procedury usuwania zdjęcia. Personel używa aktualnej nazwy do identyfikacji w widokach bieżących i może w historii ustalić poprzednią nazwę. **Zmiana nazwy nie wysyła powiadomienia do Organizatora** (C34): trafia tylko do historii/audytu i jest widoczna w panelu organizacyjnym na żądanie.
+- **Testy:** osobno zmiana nazwy (w tym pusta/niedozwolona, znaki polskie, XSS), opisu, zdjęcia i kombinacji; widoczność natychmiast w katalogu publicznym i w panelu właściciela; wyszukiwanie po nowej nazwie, bez błędnego pobierania z oryginalnego `answers_json`; brak resubmit i niezmienność historii; `changes/rejected/withdrawn`; cudza postać 403; konflikt `lock_version` 409; błędy zapisu, uploadu, fizycznego kasowania pliku/miniatur, cache i retry/alarm; brak starego base64 w aktywnej bazie i bezpieczne odtwarzanie backupu. Dodatkowo: brak push/e-mail/notification dla Organizatora po zmianie nazwy, widoczny wpis historii i aktualna nazwa w panelu organizacyjnym.
 - **Zależności:** U04/U05/U09/U11/U17/U19/U34, decyzje C22/C23/C30–C33; nie wymaga późniejszego U26 ani pełnej optymalizacji U27, wymaga minimalnego bezpiecznego zarządzania portretami teraz.
 - **Ryzyko regresji:** wysokie — rozjazd aktualnej nazwy z wyszukiwaniem i panelami, przypadkowe nadpisanie historii zgłoszenia, publikacja roboczych zmian oraz brak usuwania starego obrazu.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `directory`, `characters`, `privacy`, `assets`, `epic:E3`.
+
+### U36 — Panel postaci jako centralne miejsce podglądu i późniejszych edycji
+
+- **Typ / priorytet / rozmiar:** feature/UX/data projection / P1 / M/L.
+- **Zatwierdzone C35/D28a:** **pierwsze rzeczywiste wysłanie formularza typu `character` uzupełnia panel postaci** danymi z tego wysłania. Nie potrzeba akceptacji przez Organizatora; logistyka nie tworzy takiego panelu. Panel wiąże się z `eventId + applicationId` i właścicielem konta. Od tego momentu **uczestnik przegląda i edytuje swoją postać z poziomu panelu postaci, nie musi wracać do formularza zgłoszeniowego**. Formularz służy do pierwotnego stworzenia i wysłania; historia wysłań pozostaje dostępna.
+- **UI/UX:** „Moje postacie” → wybrana postać → **panel postaci** z bieżącą publiczną wizytówką (pełna nazwa, publiczny opis, zdjęcie), informacjami o zgłoszeniu (status/ewentualny feedback) i uporządkowanymi pozostałymi danymi postaci. **Sekcja „Edytuj wizytówkę”** w tym samym panelu wykorzystuje U35: zmiana nazwy, opisu i portretu jest od razu widoczna bez resubmit i bez moderacji. Dalsze edycje powinny odbywać się w tym panelu, ale **D28b pozostaje otwarte**: szczegółowy zakres i workflow edycji innych informacji (fabuła, profesja, tajemnice, cechy, dane wrażliwe). Nie kopiować bez kontroli wszystkich prywatnych odpowiedzi do publicznego katalogu U34.
+- **Model i API:** utworzyć bezpieczną projekcję panelu na bazie faktycznie wysłanego `submission`, aktualnego `application` i `application_public_profiles`, bez wymagania nowej pełnej encji `characters` U26 (przyszły refaktor). Odróżnić zawartość ostatniego historycznego wysłania od aktualnej wizytówki i ewentualnej edycji niepublicznej wg przyszłej decyzji D28b. Osobny endpoint `GET /events/:eventId/applications/:applicationId/character-panel` wymaga uwierzytelnienia właściciela lub jawnego RBAC na każdej kategorii danych; nie zwracać pól zdrowia, triggerów, wykluczeń osobom bez odpowiednich praw. Publiczne DTO katalogu U34 pozostaje oddzielne.
+- **Kryteria akceptacji:** po pierwszym submit użytkownik otrzymuje panel swojej postaci z danymi wysłanego formularza (bez fikcyjnego `Character` lub nowego submit), nawet jeśli status `submitted/changes/waitlisted/rejected/withdrawn`. W przypadku `rejected/withdrawn` właściciel nadal ma dostęp do własnego panelu i historii, choć postać znika z publicznego katalogu. Ponowne wysłanie tej samej postaci zachowuje `applicationId` i ten sam panel; render opiera się na odpowiednim ostatnim wysłaniu. Edycja publicznej wizytówki działa tylko w panelu U35 bez powrotu do formularza, a jej zapis nie zmienia statusu i historii wysłań. Zmiana nazwy aktualizuje panel Organizatora i historię/audyt, **bez automatycznego powiadomienia Organizatora** (C34). Sama administracyjna zmiana statusu szkicu bez faktycznego wysłania nie tworzy panelu fikcyjnej postaci.
+- **Testy:** pierwsze wysłanie → panel z poprawnym typem/formId/eventId, projekcja wszystkich uprawnionych sekcji, brak panelu z logistyki, brak panelu ze szkicu, uprawnienia właściciel vs inny użytkownik, bezpieczne DTO danych wrażliwych, `changes` bez ujawnienia roboczych odpowiedzi katalogowi, właściciel po odrzuceniu/wycofaniu nadal widzi własny panel, ponowne wysłanie nie dubluje panelu, edycja nazwy/opisu/zdjęcia w panelu bez resubmit, brak notyfikacji po zmianie nazwy i widoczna historia w panelu organizatora, responsive mobile/tablet/desktop.
+- **Zależności:** U05/U09/U10/U11/U23/U34/U35, C30–C35; **D28b** przed wdrożeniem edycji innych niż jawne trzy pola. **U26 nie blokuje** panelu w v28.1.
+- **Ryzyko regresji:** wysokie — mieszanie panelu właściciela z publicznym katalogiem, niejawna zmiana historii wysłania oraz bezpodstawne odblokowanie edycji danych wrażliwych.
+- **Milestone / etykiety:** v28.1 / `feature`, `P1`, `characters`, `profile`, `privacy`, `epic:E3`.
 
 ## Zależności i zasady publikowania
 
@@ -510,6 +522,10 @@ flowchart TD
     U32 --> U34
     U05 --> U34
     U34 --> U35["U35 Edycja wizytowki"]
+    U11 --> U36["U36 Panel postaci"]
+    U10 --> U36
+    U05 --> U36
+    U35 --> U36
     U11 --> U35
     U05 --> U35
     U09 --> U31
