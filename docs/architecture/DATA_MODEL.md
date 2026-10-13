@@ -159,13 +159,13 @@ CREATE TABLE events (
   closes_at TEXT,
   description TEXT NOT NULL DEFAULT '',
   location_text TEXT NOT NULL DEFAULT '',
-  owner_organizer_user_id TEXT REFERENCES users(id), -- propozycja scope wydarzenia, D21 do potwierdzenia
+  owner_organizer_user_id TEXT REFERENCES users(id), -- organizator prowadzący wydarzenie; uprawnienia i dostęp nadal sprawdza API
   archived_at TEXT,
   CHECK(ends_on >= starts_on),
   CHECK(opens_at IS NULL OR closes_at IS NULL OR closes_at >= opens_at)
 );
 
--- Propozycja struktury ról niestandardowych per wydarzenie; zakres wymaga D21.
+-- C18/D21: role i przypisania są wyłącznie per wydarzenie, bez dziedziczenia między eventami.
 -- Bazowe typy account_type nie są przechowywane jako role niestandardowe.
 CREATE TABLE event_roles (
   id TEXT PRIMARY KEY NOT NULL,
@@ -403,7 +403,7 @@ Portret w MVP może pozostać w JSON, jeśli ograniczono go do jednego pola, zwe
 
 - **Typ konta** jest jednym z trzech: `participant` (domyślnie po rejestracji), `organizer`, `administrator`. Nie mylić z rolami konfigurowalnymi.
 - **Administrator:** pełny odczyt i edycja wszystkich zasobów biznesowych platformy, niezależnie od właściciela i wydarzenia, w tym kont innych organizatorów i uczestników. Administrator może nadawać/odbierać typ `administrator` i zarządzać wszystkimi rolami. Serwer musi egzekwować przywilej globalny; działania szczególne logować.
-- **Organizator:** może tworzyć, edytować i przydzielać niestandardowe role z prawami do grup danych oraz nadawać typ `organizer` i inne role z wyłączeniem `administrator`. Nie może uzyskać typu Administrator przez zmianę roli, API, eksport, import ani samodzielną edycję własnego konta. Organizator zarządza zasobami, do których ma uprawnienia; propozycja domyślnego zakresu per-event jest osobną decyzją D21.
+- **Organizator:** może tworzyć, edytować i przydzielać niestandardowe role z prawami do grup danych oraz nadawać typ `organizer` i inne role z wyłączeniem `administrator`. Nie może uzyskać typu Administrator przez zmianę roli, API, eksport, import ani samodzielną edycję własnego konta. Organizator zarządza zasobami w swoim uprawnionym kontekście; role tworzone przez Organizatora i ich nadania są zawsze związane z jednym `event_id` (C18/D21).
 - **Uczestnik:** korzysta ze swoich danych; może otrzymać niestandardową rolę bez utraty bazowego typu `participant`. Nadane prawo do odczytu/edycji cudzych zasobów zawsze wymaga weryfikacji na serwerze.
 - **Szablon Fabularzysta (C14):** przykładowa niestandardowa rola z odczytem całej fabuły postaci (również tajemnic i haków) i kontaktów FB/Discord, bez dostępu do prywatnych kontaktów, granic czy zdrowia. Szablon nie jest szczególnym typem konta ani obowiązkową rolą systemową.
 
@@ -430,13 +430,15 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 
 **Globalny profil konta:** `first_name/last_name` i `email/phone` oraz opcjonalne `facebook/discord` są przypisane do konta niezależnie od wydarzenia. `users.email` jako login nie jest automatycznie publiczny dla organizatorów. Telefon jest opcjonalny (C13). Dane zdrowotne wymagają szczególnej ochrony. Kontakty FB/Discord widoczne w przykładowej roli Fabularzysta nie stają się automatycznie publiczne dla graczy.
 
-**Domyślne uprawnienia użytkownika do własnych danych** działają niezależnie od niestandardowych ról i nie zapewniają uprawnień do cudzych danych. Zgłoszenia i informacje organizacyjne są powiązane z wydarzeniem; propozycja ról przypisanych do jednego wydarzenia (D21) wymaga potwierdzenia. Organizator nie uzyskuje przez to dostępu do wszystkich kont ani danych innych wydarzeń. Administrator może zarządzać każdym zasobem platformy.
+**Domyślne uprawnienia użytkownika do własnych danych** działają niezależnie od niestandardowych ról i nie zapewniają uprawnień do cudzych danych. Zgłoszenia i informacje organizacyjne są powiązane z wydarzeniem; każda definicja roli i jej przypisanie ma konkretny `event_id` (C18/D21). Uprawnienia z wydarzenia A nie działają na B, nawet jeżeli nazwy ról są identyczne. Organizator nie uzyskuje przez rolę dostępu do wszystkich kont ani danych innych wydarzeń. Administrator może zarządzać każdym zasobem platformy.
 
 **Historia i poprawki:** `write` uprawnia do modyfikowania *aktualnych danych*, ale wcześniejszych niezmiennych wysłań, zapisów płatności i audytu nie należy potajemnie nadpisywać. Nawet Administrator przeprowadza korektę z nową wersją lub wpisem audytowym; pełna administracyjna kontrola nie wymaga niszczenia historii. Pola uprawnień nie są kontrolowane przez dane przesłane przez użytkownika. Nie przechowujemy jawnych haseł – Administrator może resetować dostęp, a nie odczytać istniejące hasło.
 
+**Weryfikacja event scope:** przed zastosowaniem roli serwer sprawdza, czy `event_role_assignments.event_id` odpowiada żądanemu wydarzeniu i czy przypisana `event_roles.event_id` jest taka sama. Próba odczytu danych z wydarzenia B z rolą nadaną tylko na A jest zabroniona; `account_type=administrator` pozostaje globalnym wyjątkiem. Test regresyjny: jeden użytkownik jest Fabularzystą na Ursunaliach 2027, ale zwykłym Uczestnikiem na drugim wydarzeniu. 
+
 **Weryfikacja dostępu** następuje po stronie API przed odczytem, serializacją, edycją, eksportem i wydrukiem. Utrata uprawnienia obowiązuje od następnego żądania (bez konieczności ponownego logowania). Klasyfikacja danych wynika z serwerowej definicji pola, a nie z etykiety frontendowej. Export wymaga i `exports.export`, i read właściwych grup. Bez prawa odczytu danych zdrowotnych API nie ujawnia ich w listach, szczegółach, błędach, logach ani wydrukach. Historia przydzielania i odbierania ról jest audytowana.
 
-**D03 otwarte:** predefiniowane szablony ról i dostęp graczy do FB/Discord; **D21 otwarte:** zakres niestandardowych ról (per wydarzenie czy globalnie). Dopóki polityka i migracja nie przejdą testów, nie zbierać realnych danych o zdrowiu, triggerach ani wykluczeniach. Retencję i podstawy przetwarzania ocenić przed otwarciem zapisów (D06/U19).
+**D03 otwarte:** predefiniowane szablony ról i dostęp graczy do FB/Discord. **D21/C18 zatwierdzone:** role konfigurowalne i nadania tylko dla jednego wydarzenia, typ konta pozostaje globalny. Dopóki polityka i migracja nie przejdą testów, nie zbierać realnych danych o zdrowiu, triggerach ani wykluczeniach. Retencję i podstawy przetwarzania ocenić przed otwarciem zapisów (D06/U19).
 
 ## 7. Statusy, wersje i kontrakty
 
@@ -495,7 +497,7 @@ Najpierw U01/U02/U03/U04/U06/U07: rozróżnienie administracyjnej zmiany statusu
 2a. Dodać profile kont globalne: zachować istniejące `users.name` oraz email i hash hasła; nie rozcinać automatycznie starego `name` na imię i nazwisko bez potwierdzenia uczestnika. Brakujące dane kontaktowe uzupełnia użytkownik w swoim profilu; zachować niezależność profilu od zgłoszeń wydarzenia. Migracja danych profilu ma własne testy i kopię.
 3. Każde stare forms.id → nowy Form; każda para id/revision → FormRevision. Definition JSON zachować bez kosmetycznego przepisywania. Hash wyliczyć z zachowanych bajtów; bez utraty wersji. kind z zatwierdzonej mapy, nie „pierwsza ankieta”. Dla Ursunaliów mapowanie: `character-2027` → `kind=character,grants_admission=1`; `logistics-2027` → `kind=logistics,grants_admission=0`. Zmiana `grants_admission` po przyjęciu zgłoszeń wymaga jawnej migracji/polityki, nie zwykłej edycji ankiety.
 4. Ustawić current_revision na największą istniejącą; sprawdzić niezgodności statusów/eventId przed aktywacją. Wszystkie istniejące applications zachowują ID, user, form, revision, status i znaczniki czasu.
-5. Ustalić migrację dawnej roli `organizer` do bazowego typu `organizer`, pozostałych zwykłych użytkowników do `participant`; nadanie `administrator` wymaga jawnej autoryzacji i nie wynika z dawnej roli organizatora. Po decyzji D21 przypisać zakres wydarzenia oraz skonfigurowane role i prawa w tabelach `event_roles` / `event_role_permissions` / `event_role_assignments`. Nie rozszerzać dostępu automatycznie na inne wydarzenia; zachować mapę historycznych uprawnień i przetestować ją.
+5. Ustalić migrację dawnej roli `organizer` do bazowego typu `organizer`, pozostałych zwykłych użytkowników do `participant`; nadanie `administrator` wymaga jawnej autoryzacji i nie wynika z dawnej roli organizatora. Zgodnie z C18/D21 przypisać role i prawa do konkretnego wydarzenia w `event_roles` / `event_role_permissions` / `event_role_assignments`. Nie rozszerzać dostępu automatycznie na inne wydarzenia; zachować mapę historycznych uprawnień i przetestować ją.
 
 ### M3 — odpowiedzi, wysłania i aktualne decyzje
 
