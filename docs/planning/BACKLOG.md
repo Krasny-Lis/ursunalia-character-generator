@@ -366,11 +366,11 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 - **Typ / priorytet / rozmiar:** feature / P3 / L.
 - **Problem i obecne zachowanie:** wydarzenie seed i stałe teksty; cel przyszły wymaga konfigurowania wydarzeń bez kopiowania aplikacji.
-- **Rezultat:** druga prosta impreza jednej grupy, bez generatora postaci.
-- **Zakres / moduły:** panel Event, daty/miejsce, ankiety i publikacja; bez mikroserwisów/wielu organizacji.
-- **Kryteria akceptacji:** manager tworzy warsztat, wybiera generic form, publikuje i zamyka zapisy; Ursunalia/historyczne dane nie zmieniają się; prywatność i role działają osobno per event.
-- **Testy:** dwa wydarzenia, inne formularze, cross-event permissions, archiwum.
-- **Zależności:** U09/U10/U14/U24, retrospektywa po wydarzeniu.
+- **Rezultat:** druga prosta impreza jednej grupy, bez generatora postaci; tylko uprawniony Organizator może ją sam utworzyć, a system automatycznie nadaje mu zarządzanie właśnie tym wydarzeniem.
+- **Zakres / moduły:** panel Event, daty/miejsce, ankiety i publikacja; **platformowe uprawnienie `events.create` nadawane i odbierane przez Administratora** (odrębne od ról eventowych), transakcyjny zapis wydarzenia i automatyczne przypisanie twórcy-Organizatora do niego; bez mikroserwisów/wielu organizacji.
+- **Kryteria akceptacji:** Administrator przyznaje Organizatorowi `events.create`; Organizator bez tego uprawnienia nie może tworzyć wydarzeń, a posiadający je tworzy wydarzenie i automatycznie uzyskuje uprawnienia Organizatora **wyłącznie do niego**. Inni Organizatorzy nie otrzymują dostępu do nowego wydarzenia automatycznie. Twórca wybiera generic form, publikuje i zamyka zapisy; Ursunalia/historyczne dane nie zmieniają się; prywatność i role działają osobno per event.
+- **Testy:** nadanie/odebranie `events.create` przez Administratora, odmowa tworzenia bez uprawnienia, atomowe utworzenie Event i przypisanie twórcy, rollback przy błędzie, dwa wydarzenia, inne formularze, cross-event permissions i brak automatycznego dostępu Organizatora do cudzych wydarzeń, archiwum.
+- **Zależności:** U09/U10/U14/U33/U24, C18/D21 i C19/D22, retrospektywa po wydarzeniu. Uprawnienie platformowe `events.create` to przyszłe rozszerzenie, nie element obecnego MVP.
 - **Ryzyko regresji:** średnie — routing, zakres wydarzenia.
 - **Milestone / etykiety:** po-2027 / `feature`, `P3`, `events`, `epic:E6`.
 
