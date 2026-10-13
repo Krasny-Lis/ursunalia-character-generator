@@ -33,7 +33,7 @@ Tych danych nie wolno wymyślić podczas migracji.
 
 | Moduł | Odpowiedzialność | Granica |
 |---|---|---|
-| Identity | Konto, hasła, sesje, odzyskanie dostępu | Nie decyduje o dostępie do konkretnego wydarzenia. |
+| Identity | Konto, hasła, sesje, odzyskanie dostępu oraz wspólny profil kontaktowy użytkownika | Kontakt wprowadzany podczas rejestracji konta, a nie powielany w ankietach wydarzenia; uprawnienia do odczytu zależą od wydarzenia. |
 | Events/access | Metadane, terminy zapisów, EventMember i capabilities | Każde żądanie sprawdza wydarzenie i uprawnienia. Akceptacja wskazanego formularza daje udział. |
 | Forms | Szkic, walidacja, publikacja niezmiennej rewizji | Nie przepisuje historycznych zgłoszeń. |
 | Applications | Szkic, wersja zapisu, wysłanie i immutable snapshot | Nie pozwala organizatorowi zmieniać odpowiedzi uczestnika. |
@@ -62,6 +62,7 @@ ERD podzielono na trzy czytelne fragmenty. Tabele techniczne prywatnych odpowied
 
 ```mermaid
 erDiagram
+    USERS ||--o| USER_PROFILES : profil_kontaktowy
     USERS ||--o{ SESSIONS : posiada
     USERS ||--o{ EVENT_MEMBERS : otrzymuje
     USERS ||--o{ EVENT_CONTRIBUTIONS : skladki
@@ -120,6 +121,20 @@ CREATE TABLE users (
   disabled_at TEXT
 );
 
+-- Globalny profil kontaktowy jest wspólny dla wszystkich wydarzeń.
+-- Pola contact phone/fb/discord pozostają nullable w projekcie DDL;
+-- o obowiązkowości telefonu decydujemy oddzielnie. Istniejące users.name
+-- zachować bez automatycznego rozbijania go na first_name/last_name.
+CREATE TABLE user_profiles (
+  user_id TEXT PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  phone TEXT,
+  facebook TEXT,
+  discord TEXT,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE sessions (
   token_hash TEXT PRIMARY KEY NOT NULL,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -150,10 +165,16 @@ CREATE TABLE events (
 CREATE TABLE event_members (
   event_id TEXT NOT NULL REFERENCES events(id),
   user_id TEXT NOT NULL REFERENCES users(id),
-  role TEXT NOT NULL CHECK(role IN ('manager','reviewer','safety')),
+  role TEXT NOT NULL CHECK(role IN ('head_organizer','manager','storyteller','reviewer','safety')),
+  can_read_story INTEGER NOT NULL DEFAULT 0 CHECK(can_read_story IN (0,1)),
+  can_read_social_contacts INTEGER NOT NULL DEFAULT 0 CHECK(can_read_social_contacts IN (0,1)),
+  can_read_private_contacts INTEGER NOT NULL DEFAULT 0 CHECK(can_read_private_contacts IN (0,1)),
+  can_read_identity INTEGER NOT NULL DEFAULT 0 CHECK(can_read_identity IN (0,1)),
   can_read_sensitive INTEGER NOT NULL DEFAULT 0 CHECK(can_read_sensitive IN (0,1)),
+  can_read_health INTEGER NOT NULL DEFAULT 0 CHECK(can_read_health IN (0,1)),
+  can_review_applications INTEGER NOT NULL DEFAULT 0 CHECK(can_review_applications IN (0,1)),
+  can_manage_members INTEGER NOT NULL DEFAULT 0 CHECK(can_manage_members IN (0,1)),
   can_export INTEGER NOT NULL DEFAULT 0 CHECK(can_export IN (0,1)),
-  can_read_contact INTEGER NOT NULL DEFAULT 0 CHECK(can_read_contact IN (0,1)),
   can_manage_contributions INTEGER NOT NULL DEFAULT 0 CHECK(can_manage_contributions IN (0,1)),
   PRIMARY KEY(event_id,user_id)
 );
@@ -355,20 +376,25 @@ Portret w MVP może pozostać w JSON, jeśli ograniczono go do jednego pola, zwe
 
 ## 6. Uprawnienia i minimalizacja
 
-Domyślnie odmowa. Platform admin zarządza konfiguracją i nadaniem uprawnień; globalna rola nie daje automatycznie czytania prywatnych odpowiedzi przez API. Dostęp awaryjny operatora bazy jest odrębnym uprawnieniem infrastrukturalnym, nie obietnicą ukrycia danych przed administratorem serwera.
+**Ustalenie C11/C12 (D03 częściowo):** dane kontaktowe zbierane podczas rejestracji konta są własnością profilu globalnego `users/user_profiles`, a nie powielanym fragmentem każdej aplikacji. Zgłoszenia i dane fabularne dotyczą wybranego wydarzenia. Organizator może odczytywać profil wyłącznie w kontekście osób powiązanych z jego wydarzeniem; dostęp do wydarzenia nie otwiera globalnej listy kont. Zmiana globalnego profilu przez właściciela aktualizuje dane używane w przyszłych wydarzeniach, lecz nie zmienia historycznych snapshotów formularzy.
 
-| Czynność | Właściciel | Reviewer wydarzenia | Manager wydarzenia | Safety + capability |
-|---|---|---|---|---|
-| Własny szkic | Tak | Nie | Nie | Nie |
-| Wysłane zwykłe odpowiedzi | Własne | Tak | Tak | Tylko zakres niezbędny do pracy |
-| Dane kontaktowe | Własne | Tylko can_read_contact | Tylko can_read_contact | Tylko can_read_contact |
-| Poufne odpowiedzi | Własne | Tylko can_read_sensitive | Tylko can_read_sensitive | can_read_sensitive wymagane |
-| Akceptacja / poprawki | Nie | Tak | Tak | Nie, chyba osobno nadana rola recenzenta |
-| Publikacja formularza | Nie | Nie | Tak | Nie |
-| Eksport | Własne | can_export, z filtrem zakresu | can_export, z filtrem zakresu | can_export + prawa do zakresu |
-| Potwierdzenie składki | Nie | Tylko z can_manage_contributions | Tylko z can_manage_contributions | Tylko z can_manage_contributions |
+Wewnętrzny podział profilu: `first_name/last_name` (tożsamość rzeczywista), `email/phone` (kontakty prywatne), `facebook/discord` (kontakty społecznościowe, opcjonalnie podane). Słowo „publiczne” w tym kontekście **nie oznacza automatycznej publikacji FB/Discord wszystkim graczom ani w internecie**. Wspólne `users.email` służy także do logowania, ale jego użycie nie daje uprawnienia do wyświetlania go organizatorowi.
 
-Jedna rola bazowa na osobę/wydarzenie + jawne capabilities, m.in. `can_manage_contributions` niezależne od `can_read_sensitive` i `can_read_contact`, zamiast ogólnego silnika RBAC. Manager może otrzymać dostęp safety przez capability. UI nie musi dostawać wszystkich odpowiedzi do filtrowania. Lista zgłoszeń zawiera tylko ID, nazwę/alias, rodzaj formularza, stan, datę i minimalne identyfikatory; detale osobnym endpointem. Rejestrować eksporty i odczyty poufnych danych bez ich treści. Usuwanie: najpierw ustalić retencję, potem skasować/przekształcić odpowiedzi, snapshoty, obrazy, zgody i identyfikatory w logach w jednej kontrolowanej procedurze; backupy wygaszają się według tej samej polityki. Brak automatycznego ON DELETE CASCADE całej domeny chroni przed przypadkowym usunięciem.
+| Rola / przypadek | Informacje fabularne | FB i Discord (jeśli podane) | E-mail i telefon | Imię i nazwisko | Triggery i wykluczenia | Alergie / zdrowie |
+|---|---|---|---|---|---|---|
+| Właściciel danych | Własne | Własne | Własne | Własne | Własne | Własne |
+| Główny organizator wydarzenia | Tak | Tak | Tak | Tak | Tak | Tak |
+| Fabularzysta (domyślnie) | Według nadanego zakresu fabularnego | Tak | Nie | Nie | Nie | Nie |
+| Inni organizatorzy | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień | Według jawnych uprawnień |
+
+**Reguła roli głównego organizatora:** rola `head_organizer` ma pełny odczyt danych uczestników w obrębie powierzonego wydarzenia i zarządzanie uprawnieniami zespołu, bez odczytu haseł, hashy czy tokenów sesji. Inne role otrzymują jawne capabilities; samo `manager` lub `storyteller` nie oznacza pełnego dostępu. Domyślnie fabularzysta z kontaktów widzi tylko FB i Discord; jego dostęp do fabuły przyznajemy osobno. Można nadawać/odbierać prawa konkretnej osobie przy wydarzeniu. Wdrożenie powinno mieć bezpieczną ścieżkę przekazania/odtworzenia roli głównego organizatora z pełnym audytem.
+
+Proponowane capabilities: `can_read_story`, `can_read_social_contacts`, `can_read_private_contacts`, `can_read_identity`, `can_read_sensitive` (granice i relacje interpersonalne), `can_read_health` (szczególna ochrona), `can_review_applications`, `can_manage_members`, `can_manage_contributions`, `can_export`. Uprawnienia sprawdzać przed serializacją pól w API, w listach, widokach szczegółów i eksportach. Domyślnie brak dostępu. Posiadacz prawa `can_export` nie może wyeksportować pól, do których brak mu prawa odczytu.
+
+**Do uzgodnienia:** kto oprócz głównego organizatora widzi dane dotyczące zdrowia, granic i wykluczeń; czy uczestnicy wzajemnie widzą podane FB/Discord; czy telefon jest polem obowiązkowym przy rejestracji. Zdrowotne informacje o alergiach i urazach nie są tym samym, co zwykłe dane kontaktowe; wymagają adekwatnej podstawy prawnej, minimalizacji i szczególnej ochrony. Konkretna podstawa i retencja podlegają przeglądowi przed zbieraniem realnych danych (D06/U19).
+
+Historia nadawania i odbierania uprawnień oraz dostępu/eksportu danych wrażliwych ma nie ujawniać treści odpowiedzi. Brak automatycznego przeniesienia globalnego uprawnienia głównego organizatora do wszystkich przyszłych wydarzeń. Operacyjny administrator serwera z dostępem do bazy pozostaje odrębnym poziomem infrastrukturalnym.
+
 
 ## 7. Statusy, wersje i kontrakty
 
@@ -424,9 +450,10 @@ Najpierw U01/U02/U03/U04/U06/U07: rozróżnienie administracyjnej zmiany statusu
 
 1. Na kopii utworzyć nowy schemat pod nazwami przejściowymi. Zachować wszystkie users.id i stare hashe dokładnie; oznaczyć `password_scheme='scrypt-legacy'`. Email już jest normalizowany przez rejestrację; konflikt przy zmianie collation zgłosić, nie scalać kont.
 2. Utworzyć jedno Event `ursunalia-2027`, starts_on=2027-04-22, ends_on=2027-04-24. Nie wymyślać godzin rozpoczęcia i zakończenia. Terminy zapisów wymagają D01; opens_at/closes_at pozostają null, publiczne zapisy domyślnie closed.
+2a. Dodać profile kont globalne: zachować istniejące `users.name` oraz email i hash hasła; nie rozcinać automatycznie starego `name` na imię i nazwisko bez potwierdzenia uczestnika. Brakujące dane kontaktowe uzupełnia użytkownik w swoim profilu; zachować niezależność profilu od zgłoszeń wydarzenia. Migracja danych profilu ma własne testy i kopię.
 3. Każde stare forms.id → nowy Form; każda para id/revision → FormRevision. Definition JSON zachować bez kosmetycznego przepisywania. Hash wyliczyć z zachowanych bajtów; bez utraty wersji. kind z zatwierdzonej mapy, nie „pierwsza ankieta”. Dla Ursunaliów mapowanie: `character-2027` → `kind=character,grants_admission=1`; `logistics-2027` → `kind=logistics,grants_admission=0`. Zmiana `grants_admission` po przyjęciu zgłoszeń wymaga jawnej migracji/polityki, nie zwykłej edycji ankiety.
 4. Ustawić current_revision na największą istniejącą; sprawdzić niezgodności statusów/eventId przed aktywacją. Wszystkie istniejące applications zachowują ID, user, form, revision, status i znaczniki czasu.
-5. Dotychczasowych organizer przypisać do Ursunaliów; uprawnienia sensitive/export/contact zatwierdzić imiennie, nie przyznać automatycznie na wszystkie przyszłe wydarzenia. Uprawnienie platform admin wskazuje właściciel.
+5. Dotychczasowych organizer przypisać do Ursunaliów; rolę `head_organizer` i prawa dostępu do tożsamości, prywatnych/social kontaktów, granic, zdrowia i eksportu nadać imiennie w ramach wydarzenia. Nie nadawać ich automatycznie na przyszłe wydarzenia. Rolę administratora platformy wskazuje właściciel.
 
 ### M3 — odpowiedzi, wysłania i aktualne decyzje
 
@@ -459,7 +486,7 @@ Nie wykonywać automatycznej aktualizacji formularza istniejącego zgłoszenia. 
 
 ## 9. Testy modelu i migracji
 
-W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzji C10/D08 zmieniono DDL i zastąpiono `reviews` tabelą `application_status_history`; zmienionego SQL nie przetestowano ponownie**. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
+W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10/D08 i C11/C12 zmieniono DDL: zastąpiono `reviews` tabelą `application_status_history`, dodano globalne `user_profiles` oraz rozdzielone uprawnienia w `event_members`; nowy projekt ma 18 tabel i nie został ponownie przetestowany**. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
 
 Fixture: dwa konta uczestników, dwóch organizatorów, sesje aktywne/wygasłe, oba formularze, kilka rewizji, wszystkie 4 statusy, feedback przy submitted, changes z już edytowanymi answers, polskie znaki, portret graniczny, nieznane stare klucze, brak dawnego autora/czasu decyzji.
 
