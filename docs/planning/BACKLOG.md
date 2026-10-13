@@ -12,7 +12,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 |---|---|---|
 | E1 Stabilny proces uczestnika | Brak utraty pracy, prawidłowe statusy i kompletne widoki | U01/U02/U03/U07/U08/U22 |
 | E2 Bezpieczne formularze | Walidacja, publikacja, struktura generatora | U04/U06/U12/U13/U21 |
-| E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie i wydajne przeglądanie | U09/U10/U11/U23/U30 |
+| E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie, katalog postaci i wydajne przeglądanie | U09/U10/U11/U23/U30/U34 |
 | E4 Prywatność i konta | Trzy typy kont, dynamiczne role z uprawnieniami read/write, globalny profil i składki | U05/U14/U15/U19/U29/U31/U32/U33 |
 | E5 Uruchomienie | Testy, kopie, hosting, pilot | U16/U17/U18/U20/U24 |
 | E6 Późniejszy rozwój | Kolejne wydarzenia i funkcje fabularne | U25/U26/U27/U28 |
@@ -52,6 +52,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U31 | Ręczne potwierdzenie składki per wydarzenie i użytkownik | P1 | S/M | v28.1 | API / tak |
 | U32 | Profil kontaktowy konta i edycja danych przy rejestracji | P1 | M | v28.1 | API / tak |
 | U33 | Bazowe konta i globalne uprawnienia Administratora | P1 | M | v28.0 | API / tak |
+| U34 | Katalog zgłoszonych postaci i dobrowolna publikacja kontaktów | P1 | M/L | v28.1 | API / tak |
 
 \* U13 staje się P1, jeśli kilku organizatorów lub kilka urządzeń ma edytować te same formularze przed wydarzeniem. ** U17: kopia i rehearsal są wymagane już przed U09; finalna automatyzacja odebrana w v29.0.
 
@@ -440,9 +441,9 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 - **Typ / priorytet / rozmiar:** feature / P1 / M.
 - **Potwierdzone C11/C13:** imię, nazwisko, e-mail oraz opcjonalne: telefon, Facebook i Discord podaje się podczas rejestracji konta, nie osobno przy zgłoszeniu na każdy LARP. Profil użytkownika jest globalny; dostęp organizatorów do jego danych zależy od wydarzenia i uprawnień (C12/D03).
-- **Zakres / moduły:** globalny `user_profiles` dla imienia/nazwiska, telefonu, FB i Discord, istniejące `users.email` jako login, formularz rejestracji i edycja własnego profilu, migracja danych historycznych bez niepewnego parsowania `users.name`, serwerowe DTO ograniczone do uprawnionych pól.
+- **Zakres / moduły:** globalny `user_profiles` dla imienia/nazwiska, opcjonalnej ksywy, telefonu, FB i Discord, istniejące `users.email` jako login, formularz rejestracji i edycja własnego profilu, migracja danych historycznych bez niepewnego parsowania `users.name`, serwerowe DTO ograniczone do uprawnionych pól. Osobne zgody na publikację w katalogu definiuje U34.
 - **Kryteria akceptacji:** użytkownik wprowadza dane podczas tworzenia konta, może je później aktualizować; telefon, FB i Discord są opcjonalne; brak telefonu nie blokuje rejestracji; profil nie jest duplikowany w applications; odczyt organizatora ogranicza się do uczestników powiązanych z jego wydarzeniem; brak wycieku e-mail, telefonu i nazwiska do roli fabularzysty bez dodatkowego przyznania prawa; stary login i wszystkie istniejące zgłoszenia zachowane.
-- **Otwarte:** czy inni uczestnicy mogą widzieć podane FB/Discord; dokładny zakres odczytu danych zdrowotnych dla ról innych niż główny organizator. Nie uznawać opcjonalnego identyfikatora społecznościowego za publiczny dla internetu.
+- **Otwarte:** publikacja danych uczestnika do katalogu postaci jest dobrowolna (C21), a rekomendowane ustawienia są per-event i wyłączone domyślnie (U34); dokładny zakres odczytu danych zdrowotnych dla ról innych niż Administratora pozostaje do ustalenia. Nie uznawać identyfikatora społecznościowego za publiczny dla internetu.
 - **Testy:** rejestracja, aktualizacja danych konta, migracja starych `users.name`, widok fabularzysty i głównego organizatora, obsługa brakujących opcjonalnych pól, odczyt bez uprawnień i cross-event.
 - **Zależności:** U09/U05/U14 oraz doprecyzowanie D03; kopia danych U17 przed migracją.
 - **Ryzyko regresji:** migracja kont i przypadkowe ujawnienie danych kontaktowych.
@@ -457,6 +458,17 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Testy:** participant po signup, legacy role migration, promowanie participant→organizer, zabronione organizer→administrator, administrator→administrator nadanie, odwołanie dostępu, globalny read/write i audyt, brak obejścia przez bezpośrednie API.
 - **Zależności:** U09/U17 dla migracji i backupu, U05 dla filtrowania, U14 dla dynamicznych ról; zatwierdzone C18/D21 ogranicza role niestandardowe do wydarzenia, nie dotyczy globalnego Administratora.
 - **Milestone / etykiety:** v28.0 / `security`, `P1`, `accounts`, `authorization`, `epic:E4`.
+### U34 — Katalog zgłoszonych postaci dla uczestników i publiczny profil gracza
+
+- **Typ / priorytet / rozmiar:** feature/privacy / P1 / M/L.
+- **Zatwierdzone C20/C21:** zalogowany Uczestnik widzi katalog postaci zgłoszonych na wydarzenie. Karta pokazuje pełną nazwę postaci, jawnie oznaczony **publiczny opis postaci** i przesłane zdjęcie, jeżeli istnieje. Z danych gracza pokazuje jedynie te dobrowolnie upublicznione: imię i nazwisko, ksywę, FB, Discord i ewentualnie inne obsługiwane social media. E-mail, telefon, zdrowie, wykluczenia, tajemnice, niejawna historia i odpowiedzi organizacyjne nigdy nie wchodzą do tego DTO.
+- **Nie jest to lista przyjętych:** katalog ma pokazywać zgłoszone postacie, a nie tylko `accepted`; bazowy warunek to przynajmniej jeden faktyczny submit z niezmiennym snapshotem. Nie publikować szkiców, które nigdy nie zostały wysłane, ani roboczych zmian. **D23 pozostaje otwarte** dla `rejected`/`withdrawn` i `changes`; **D24 otwarte**, czy dostęp ma każdy zalogowany użytkownik, czy tylko uczestnik danego wydarzenia.
+- **Zakres / moduły:** nowy widok katalogu dostępny dla zalogowanego użytkownika, lista/karty responsywne, profil po kliknięciu, bezpieczny endpoint `GET /events/:eventId/characters/directory` ze stronicowaniem, publiczny semantyczny element formularza postaci (`character.publicDescription`) oddzielny od prywatnej biografii; zdjęcie z rzeczywiście wysłanego snapshotu, bez masowego pobierania oryginalnych answers; ustawienia upubliczniania kontaktów właściciela – rekomendowane per-event i domyślnie false – oraz opcjonalna ksywa w globalnym profilu.
+- **Kryteria akceptacji:** lista zawiera wszystkie kwalifikujące się rzeczywiście zgłoszone postacie danego wydarzenia, także niezaakceptowane (ostateczny zakres po D23); publiczny opis nie jest automatycznie generowany z wewnętrznej historii; portret renderowany tylko po bezpiecznej walidacji zdjęcia; dane kontaktowe mają oddzielne świadome wybory właściciela i znikają z listy po cofnięciu publikacji; brak udostępnienia oznacza brak danych w odpowiedzi API, nie tylko ukrycie w DOM; brak prywatnych treści również w odpowiedziach sieciowych, cache, filtrach i eksporcie; wycofanie udostępnienia nie zmienia zgłoszenia. Lista i szczegóły dostępne tylko po uwierzytelnieniu; ostateczny zakres użytkowników – D24.
+- **Testy:** konto bez opcji publikacji, osobno każde pole publikowane/ukryte, edycja/wycofanie upublicznienia, dwie imprezy z różnymi ustawieniami, kilka wysłań tej samej postaci, szkic bez submit, rejected/withdrawn/changes po D23, brak danych zewnętrznego wydarzenia, rozmiary mobile/tablet/desktop, 200 postaci i paginacja; skan DTO pod kątem zdrowia/granic/telefonu/e-maila.
+- **Zależności:** U09/U05/U10/U11/U14/U23/U32, decyzje C20/C21 i D23/D24; niezależne od U26 (docelowe `Character` pozostaje funkcją późniejszą).
+- **Ryzyko regresji:** wysokie – katalog ujawnia dane innym graczom; pola publiczne nie mogą być zwykłym filtrem całego `answers_json`.
+- **Milestone / etykiety:** v28.1 / `feature`, `P1`, `directory`, `privacy`, `characters`, `epic:E3`.
 ## Zależności i zasady publikowania
 
 ```mermaid
@@ -479,6 +491,10 @@ flowchart TD
     U09 --> U32["U32 Profil konta"]
     U14 --> U32
     U05 --> U32
+    U11 --> U34["U34 Katalog postaci"]
+    U23 --> U34
+    U32 --> U34
+    U05 --> U34
     U09 --> U31
 ```
 
