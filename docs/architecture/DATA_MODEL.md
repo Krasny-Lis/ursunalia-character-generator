@@ -63,6 +63,8 @@ ERD podzielono na trzy czytelne fragmenty. Tabele techniczne prywatnych odpowied
 ```mermaid
 erDiagram
     USERS ||--o| USER_PROFILES : profil_kontaktowy
+    USERS ||--o{ EVENT_PROFILE_PUBLICITY : zgody_publikacji
+    EVENTS ||--o{ EVENT_PROFILE_PUBLICITY : katalog
     USERS ||--o{ SESSIONS : posiada
     USERS ||--o{ EVENT_ROLE_ASSIGNMENTS : otrzymuje
     USERS ||--o{ EVENT_CONTRIBUTIONS : skladki
@@ -131,6 +133,7 @@ CREATE TABLE user_profiles (
   user_id TEXT PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   first_name TEXT,
   last_name TEXT,
+  nickname TEXT, -- ksywa publiczna tylko po jawnym udostępnieniu na wydarzeniu
   phone TEXT,
   facebook TEXT,
   discord TEXT,
@@ -201,6 +204,18 @@ CREATE TABLE event_role_assignments (
   assigned_at TEXT NOT NULL,
   PRIMARY KEY(event_id,user_id,role_id),
   FOREIGN KEY(role_id,event_id) REFERENCES event_roles(id,event_id)
+);
+-- Publikacja kontaktów w katalogu dotyczy wyłącznie wskazanego wydarzenia.
+-- Brak rekordu oznacza wszystkie pola ukryte; dane źródłowe pozostają w user_profiles.
+CREATE TABLE event_profile_publicity (
+  event_id TEXT NOT NULL REFERENCES events(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  show_real_name INTEGER NOT NULL DEFAULT 0 CHECK(show_real_name IN (0,1)),
+  show_nickname INTEGER NOT NULL DEFAULT 0 CHECK(show_nickname IN (0,1)),
+  show_facebook INTEGER NOT NULL DEFAULT 0 CHECK(show_facebook IN (0,1)),
+  show_discord INTEGER NOT NULL DEFAULT 0 CHECK(show_discord IN (0,1)),
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(event_id,user_id)
 );
 CREATE TABLE forms (
   id TEXT PRIMARY KEY NOT NULL,
@@ -443,6 +458,17 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 
 **D03 otwarte:** predefiniowane szablony ról i dostęp graczy do FB/Discord. **D21/C18 zatwierdzone:** role konfigurowalne i nadania tylko dla jednego wydarzenia, typ konta pozostaje globalny. Dopóki polityka i migracja nie przejdą testów, nie zbierać realnych danych o zdrowiu, triggerach ani wykluczeniach. Retencję i podstawy przetwarzania ocenić przed otwarciem zapisów (D06/U19).
 
+## 6a. Katalog zgłoszonych postaci dla zalogowanych uczestników (C20/C21, U34)
+
+**Katalog zgłoszonych postaci nie jest listą uczestników przyjętych.** Zgłoszenie liczy się jako przesłane tylko wtedy, gdy istnieje rzeczywisty, niezmienny `submissions` ze źródłem `submitted` (lub wiarygodny migrowany `legacy_current`); samo ustawienie `applications.status='accepted'` przez Organizatora bez wysłania nie stanowi zgłoszonej postaci do katalogu. Nie ujawniać nigdy szkiców bez wysłania. **D23 otwarte:** czy nadal pokazywać postacie w stanach `rejected` i `withdrawn`, oraz gdy istnieje wysłany snapshot, ale bieżące poprawki mają status `changes`. **D24 otwarte:** czy wystarcza każde zalogowane konto, czy potrzeba powiązania z danym wydarzeniem; do decyzji udostępniać jedynie uwierzytelniony widok i nie rozszerzać zakresu publicznie.
+
+**Jeden rekord katalogu na zgłoszoną postać (applicationId) w jednym wydarzeniu**, bez wymagania osobnej tabeli `characters` (U26 pozostaje późniejsze). Publiczny profil katalogu jest bezpieczną projekcją ostatniego faktycznego wysłania postaci (nie edytowanego szkicu), a nie ogólną kopią `answers_json`. Wymagane jawne, odrębne pole semantyczne `character.publicDescription`; nie wyprowadzać go z historii postaci, tajemnic, celów lub potrzeb. Pełna nazwa i przesłany portret pochodzą z prawdziwego snapshotu i muszą przejść whitelistę oraz walidację zdjęcia przed udostępnieniem. Użytkownika informować przy zgłaszaniu postaci, że nazwa, publiczny opis i portret będą widoczne w katalogu dla określonego kręgu odbiorców. Brak zdjęcia → brak zdjęcia albo placeholder.
+
+**Opcjonalne kontakty gracza** pochodzą z konta globalnego `user_profiles` i `users`, lecz wymagają osobnej pozytywnej decyzji właściciela o publikacji. Dla MVP rekomendowane przełączniki w `event_profile_publicity`: `show_real_name`, `show_nickname`, `show_facebook`, `show_discord`, domyślnie 0, kontekst konkretnego wydarzenia. Imię i nazwisko publikować jako jedną parę tylko jeśli włączono `show_real_name`; ksywę i social media niezależnie. Puste wartości pomijać. E-mail i telefon **nie są polami katalogu** nawet jeśli użytkownik ma je w profilu. Cofnięcie udostępnienia usuwa dane z kolejnych odpowiedzi katalogu i wymaga polityki cache, aby nie przechowywać starego publicznego DTO. Możliwe dalsze platformy społecznościowe wymagają analogicznej świadomej konfiguracji, nie automatycznego upubliczniania każdego nowego pola.
+
+**Kontrakt:** osobny, paginowany endpoint `GET /events/:eventId/characters/directory` z serwerowym odczytem kwalifikowanych aplikacji, whitelistą `{applicationId, characterName, publicDescription, portrait?, disclosedContact?}` i ograniczonym widokiem szczegółów. Nie zwracać `answers_json`, `application_sensitive_answers`, `submission_sensitive_answers`, danych zdrowotnych, granic, wykluczeń, prywatnych kontaktów, statusu składki, uwag organizatorów ani wewnętrznych statusów jeśli nie są wyraźnie dopuszczone. Widoczność katalogowa nie daje odbiorcy automatycznie capability `character_lore.read`: obejmuje wyłącznie dedykowane pola jawne. Endpoint ochronić przez uwierzytelnienie, kontekst wydarzenia, paginację i wyłączenie publicznych cache. Na mobile lista w kartach, na desktopie może być tabela; zrzut referencyjny jest inspiracją funkcjonalną, nie gotową listą kolumn/filtrów.
+
+**Testy graniczne:** brak zgody na kontakty, każda kombinacja toggli, odmowa publikacji imienia i nazwiska przy zachowaniu ksywy, różne publikacje na dwóch wydarzeniach, cofnięcie udostępnienia, dwa submit i niewysłany szkic poprawek, statusy D23, użytkownik z innego wydarzenia D24, zdjęcie błędne/duże, porównanie DTO z niedozwolonymi polami; brak wycieku na poziomie HTTP i cache. Minimalna migracja profili z `nickname=NULL`, pustą tabelą event_profile_publicity i bez automatycznych publikacji danych kontaktowych.
 ## 7. Statusy, wersje i kontrakty
 
 ```mermaid
@@ -477,7 +503,7 @@ Proponowane zmiany API (niezaimplementowane):
 
 Nie utrzymywać na stałe dwóch API. Podczas krótkiego wdrożenia można zastosować adapter starych DTO; dla serwera i klienta w jednej wersji wdrożenie atomowe jest prostsze. Stare buildy/cache muszą dostawać czytelny błąd wersji i prośbę odświeżenia, nie cicho nadpisywać danych.
 
-**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), przy zależnościach U09/U11. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
+**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), U34 (katalog postaci z opt-in), przy zależnościach U09/U11/U23. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
 
 ## 8. Plan migracji bez utraty informacji
 
@@ -533,7 +559,7 @@ Nie wykonywać automatycznej aktualizacji formularza istniejącego zgłoszenia. 
 
 ## 9. Testy modelu i migracji
 
-W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite, a zakres ról decyzji D21. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
+W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Po decyzjach C20/C21 dodano także opcjonalną ksywę w profilu i projekt `event_profile_publicity`; jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
 
 Fixture: dwa konta uczestników, dwóch organizatorów, sesje aktywne/wygasłe, oba formularze, kilka rewizji, wszystkie 4 statusy, feedback przy submitted, changes z już edytowanymi answers, polskie znaki, portret graniczny, nieznane stare klucze, brak dawnego autora/czasu decyzji.
 
