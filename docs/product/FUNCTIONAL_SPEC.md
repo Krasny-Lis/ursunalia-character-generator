@@ -156,12 +156,12 @@ Silnik obsługuje prostą ankietę, co pokazuje logistyka. Powłoka podsumowania
 | Poufność i członkowie zespołu | Brak rozdziału uprawnień | Każdy organizer może przeglądać wszystkie nie-draft, publikować i oceniać. U05/U14. |
 | Zarządzanie uczestnikami | Brak osobnego modułu | Jest wyszukiwanie zgłoszeń, nie ma widoku przyjętych na podstawie zaakceptowanego zgłoszenia postaci, ewidencji składek, pojemności, przydziałów czy zaproszeń zespołu. |
 | Składki przelewem | Brak | Nie ma ręcznego potwierdzenia przez organizatora per użytkownik i wydarzenie ani audytu zmian. Brak planowanej integracji bankowej; instrukcje przelewu będą wysyłane poza systemem. U31. |
-| Rozszerzone statusy zgłoszeń | Brak w implementacji | Właściciel zatwierdził osiem statusów (C09/D18); obecne API obsługuje tylko `draft/submitted/changes/accepted`. Nowe cztery są zadaniem U30, a szczegóły przejść wymagają D08. |
+| Rozszerzone statusy zgłoszeń | Brak w implementacji | Właściciel zatwierdził siedem statusów (C09/D18), dowolne zmiany przez uprawnionego organizatora i wznawianie `withdrawn` (C10/D08); API obecnie obsługuje jedynie `draft/submitted/changes/accepted`. Nowe trzy statusy to część U30. |
 
 ## 7a. Zatwierdzone wymagania po audycie (13.10.2026) – jeszcze niezaimplementowane
 
 1. **Przyjęcie uczestnika:** dla Ursunaliów 2027 przyjęcie wynika z zaakceptowania zgłoszenia postaci. Akceptacja innych ankiet nie przyznaje udziału. Nie tworzyć dodatkowego procesu zatwierdzania uczestnictwa. Przed planowaną v28.0 dodać do formularza serwerową cechę `grants_admission` i wyliczać listę przyjętych per wydarzenie (U30).
-2. **Dodatkowe statusy – zatwierdzone (C09/D18):** lista rezerwowa (`waitlisted`), odrzucono (`rejected`), wycofano (`withdrawn`) i anulowano (`cancelled`) obok szkicu (`draft`), do rozpatrzenia (`submitted`), do poprawy (`changes`) i zaakceptowano (`accepted`). Zmiana dotyczy wymagań, **nie obecnej implementacji**. Szczegółowe przejścia i prawa do ich wykonania pozostają do określenia w D08. W szczególności zgłoszenia w toku poprawek nie wolno uznać bez ponownego wysłania (U01/U30).
+2. **Statusy – zatwierdzone (C09/D18, C10/D08):** siedem statusów: `draft`, `submitted`, `changes`, `accepted`, `waitlisted`, `rejected`, `withdrawn`. Status `cancelled` wykreślono; organizator używa `rejected`. Uprawniony organizator może zmienić status na **dowolny** z każdego stanu, także `withdrawn` czy `draft`; rekomendowane ścieżki to podpowiedzi, a nie blokady. Uczestnik może wznowić wycofane zgłoszenie i ponownie wysłać tę samą postać, bez utraty odpowiedzi i ID. Zmiany organizatora mają historię autora/czasu/statusów; bez wcześniejszego wysłania nie wolno udawać, że oceniono wysłany formularz. Funkcjonalność nie jest jeszcze wdrożona (U01/U11/U30).
 3. **Składki:** wpłata zwykłym przelewem, dane do przelewu przekazywane mailowo poza aplikacją. Uprawniony organizator zaznacza „składka wpłynęła / potwierdzona”; brak potwierdzenia nie zmienia statusu zaakceptowania. Flaga zapisywana przy parze użytkownik–wydarzenie, z autorem/czasem i audytem; nie zbierać danych bankowych ponad konieczne minimum (U31).
 4. **Brak automatycznych płatności:** nie implementować operatorów płatniczych, połączeń z bankami ani automatycznych maili transakcyjnych w MVP. Dodatkowe możliwości: kwoty, częściowe wpłaty, zwolnienia i zwroty – D19.
 
@@ -173,7 +173,7 @@ Priorytet oznacza znaczenie przed uruchomieniem zapisów. P0 nie jest deklaracj�
 
 | ID | Priorytet | Fakt i skutek | Zadanie |
 |---|---|---|---|
-| F01 | P0 | S1 386–395 wybiera każde status!='draft'. Lokalnie: submit → changes → zapis pustej biografii → PATCH accepted = **200**, accepted z pustą historią. Można zatwierdzić poprawki, których uczestnik jeszcze nie wysłał. | U01 |
+| F01 | P0 | S1 386–395 wybiera każde status!='draft'. Lokalnie: submit → changes → zapis pustej biografii → PATCH accepted = **200**, accepted z pustą historią. Organizator może nadać accepted bez ponownego wysłania poprawek, ale obecne API nie oznacza tego jako świadomej decyzji administracyjnej, nie ostrzega i nie ma historii. Docelowo taka zmiana jest dozwolona, tylko jej pochodzenie musi być jawne. | U01 |
 | F02 | P0 przy zbieraniu poufnych danych | S1 119–138/366–373 i S7: pełne answers w masowej liście i eksporcie; etykieta „poufne” niczego nie ogranicza. Lokalna lista zawiera `boundaries`. | U05 |
 | F03 | P1 | Brak blokady wersji zapisu; próba lokalna „first → newer → stary first” daje **200** i „first”. | U02 |
 | F04 | P1 | Globalne dirty i aktywne ID, brak dirty per draft; opisany scenariusz A/B może wyłączyć ostrzeżenie. To wniosek ze ścieżki kodu, nie test browser. | U02 |
