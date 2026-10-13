@@ -12,7 +12,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 |---|---|---|
 | E1 Stabilny proces uczestnika | Brak utraty pracy, prawidłowe statusy i kompletne widoki | U01/U02/U03/U07/U08/U22 |
 | E2 Bezpieczne formularze | Walidacja, publikacja, struktura generatora | U04/U06/U12/U13/U21 |
-| E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie, katalog postaci i wydajne przeglądanie | U09/U10/U11/U23/U30/U34 |
+| E3 Rdzeń i organizacja | Event, typy ankiet, historia, statusy, przyjęcie na wydarzenie, katalog postaci, edytowalna wizytówka publiczna i wydajne przeglądanie | U09/U10/U11/U23/U30/U34/U35 |
 | E4 Prywatność i konta | Trzy typy kont, dynamiczne role z uprawnieniami read/write, globalny profil i składki | U05/U14/U15/U19/U29/U31/U32/U33 |
 | E5 Uruchomienie | Testy, kopie, hosting, pilot | U16/U17/U18/U20/U24 |
 | E6 Późniejszy rozwój | Kolejne wydarzenia i funkcje fabularne | U25/U26/U27/U28 |
@@ -53,6 +53,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U32 | Profil kontaktowy konta i edycja danych przy rejestracji | P1 | M | v28.1 | API / tak |
 | U33 | Bazowe konta i globalne uprawnienia Administratora | P1 | M | v28.0 | API / tak |
 | U34 | Katalog zgłoszonych postaci i dobrowolna publikacja kontaktów | P1 | M/L | v28.1 | API / tak |
+| U35 | Samodzielna edycja publicznego opisu i zdjęcia po wysłaniu | P1 | M | v28.1 | API / tak |
 
 \* U13 staje się P1, jeśli kilku organizatorów lub kilka urządzeń ma edytować te same formularze przed wydarzeniem. ** U17: kopia i rehearsal są wymagane już przed U09; finalna automatyzacja odebrana w v29.0.
 
@@ -470,6 +471,17 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Ryzyko regresji:** wysokie — jawne dane postaci są dostępne anonimowo, kontakty właściciela tylko po logowaniu i jego świadomej decyzji; filtrować po stronie serwera, nie przez wycinanie pól po przesłaniu całego `answers_json`.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `directory`, `privacy`, `characters`, `epic:E3`.
 
+### U35 — Samodzielna edycja publicznego opisu i zdjęcia postaci po wysłaniu
+
+- **Typ / priorytet / rozmiar:** feature/privacy / P1 / M.
+- **Zatwierdzone C30/D27a:** właściciel **faktycznie wysłanej postaci** może samodzielnie zmienić jej publiczny opis i zdjęcie **bez ponownego wysyłania formularza** i bez prośby o zmianę statusu. Dotyczy również postaci już ocenionych. Edycja wizytówki nie zmienia decyzji organizatora, odpowiedzi fabularnych, statusu, składki, historycznych snapshotów ani zgód kontaktowych. Nie obejmuje automatycznie edycji nazwy postaci czy całej biografii.
+- **Zakres / moduły:** przycisk „Edytuj wizytówkę” przy własnej postaci, formularz dwóch pól i podgląd, kontrolowana operacja `PATCH /events/:eventId/applications/:applicationId/public-profile`; projekt `application_public_profiles` (opis i portret nadpisujące domyślne pola ostatniego faktycznego wysłania), serwerowa autoryzacja właściciela i niezależnych ról `write`, walidacja i bezpieczna obsługa zdjęcia, optimistic locking i minimalny audyt kto/kiedy. Typ przechowywania zdjęć uzgodnić z U04 i przyszłą optymalizacją U27, bez narzucania teraz osobnego magazynu.
+- **Kryteria akceptacji:** po submit, także przy `changes`, `accepted` i `waitlisted`, właściciel może edytować opis i portret bez tworzenia nowego `submissions`, bez zmiany `applications.status` i bez wpływu na wersję wcześniejszego wysłania; katalog korzysta z publicznego override zamiast roboczego `answers_json`. Cofnięcie zdjęcia przywraca jego wersję ze snapshotu lub pozwala je ukryć; edycja wizytówki w stanie `rejected`/`withdrawn` nigdy nie ujawnia samego wpisu w katalogu. Edycja obcej postaci wymaga jawnego uprawnienia. **D27b otwarte:** czy nowa edycja staje się od razu publiczna, czy po zatwierdzeniu uprawnionego Organizatora; przed finalną implementacją rozstrzygnąć tę politykę i ewentualną kolejkę moderacji.
+- **Testy:** opis i portret osobno/razem, zapis bez resubmit w stanie `submitted`, `accepted` i `changes`, historia snapshotu bez zmian, `rejected`/`withdrawn` nadal ukryte, edycja cudzego profilu 403, walidacja zdjęcia, konkurencyjne zapisy 409, `inherit/replace/hide` portretu, podgląd publiczny i zalogowany, bezpieczeństwo XSS, cache oraz brak przecieku danych niejawnych; publikacja zmian wg przyszłej D27b.
+- **Zależności:** U05/U09/U11/U34/U04, C22/C23/C30, decyzja D27b przed odbiorem; nie wymaga pełnej tabeli `characters` z późniejszego U26.
+- **Ryzyko regresji:** średnie/wysokie — utrata granicy między edytowalną wizytówką a niezmiennym wysłaniem, przypadkowe opublikowanie roboczych odpowiedzi albo obrazu niepowiązanego z postacią.
+- **Milestone / etykiety:** v28.1 / `feature`, `P1`, `directory`, `characters`, `epic:E3`.
+
 ## Zależności i zasady publikowania
 
 ```mermaid
@@ -496,6 +508,9 @@ flowchart TD
     U23 --> U34
     U32 --> U34
     U05 --> U34
+    U34 --> U35["U35 Edycja wizytowki"]
+    U11 --> U35
+    U05 --> U35
     U09 --> U31
 ```
 
