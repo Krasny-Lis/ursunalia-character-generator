@@ -55,6 +55,8 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 | U34 | Katalog zgłoszonych postaci i dobrowolna publikacja kontaktów | P1 | M/L | v28.1 | API / tak |
 | U35 | Edycja nazwy, publicznego opisu i zdjęcia po wysłaniu | P1 | M | v28.1 | API / tak |
 | U36 | Panel postaci, swobodna edycja danych i zbiorcza blokada całej karty | P1 | M/L | v28.1 | API / tak |
+| U37 | Archiwum postaci w koncie i zbiorcza archiwizacja po wydarzeniu | P1 | M | v29.0 / po evencie | API / tak |
+| U38 | Samodzielne usuwanie postaci po zatwierdzeniu zakresu usunięcia | P1 | M/L | do decyzji D29c | API / tak |
 
 \* U13 staje się P1, jeśli kilku organizatorów lub kilka urządzeń ma edytować te same formularze przed wydarzeniem. ** U17: kopia i rehearsal są wymagane już przed U09; finalna automatyzacja odebrana w v29.0.
 
@@ -156,17 +158,17 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Ryzyko regresji:** średnie — zachować kopie dawnych szkiców.
 - **Milestone / etykiety:** v27.3 / `bug`, `P1`, `builder`, `versioning`, `epic:E2`.
 
-### U21 — Zatwierdzić strukturę generatora i sprawdzać spójność katalogów
+### U21 — Zatwierdzić strukturę generatora i skonfigurować opcjonalne limity cech
 
 - **Typ / priorytet / rozmiar:** product/quality / P1 / M.
-- **Problem i obecne zachowanie:** S10/S15: 2–5 cech, 0–4 haki; odrębne katalogi i zagnieżdżone opcje mogą się rozjechać. Brak reguły polaryzacji cech.
-- **Rezultat:** zatwierdzona struktura i jedna kontrolowana ścieżka tworzenia definicji.
-- **Zakres / moduły:** lista decyzji o sekcjach/limitach, walidacja katalogów i generator publikowanej definicji lub test porównania; dopiero później opisy tagów.
-- **Kryteria akceptacji:** D07 zapisuje wybraną regułę; cechy/haki pozostają osobne; test wychwytuje rozbieżne ID/etykiety/opisy; żadna historyczna rewizja nie jest automatycznie przepisywana; brak zmian lore poza zatwierdzonym zakresem.
-- **Testy:** rozbieżna opcja, usunięty tag, limit cech, seed/example, zachowanie starych odpowiedzi po nowej publikacji.
-- **Zależności:** D07; ewentualna reguła kategorii wymaga U04/U10.
-- **Ryzyko regresji:** średnie — zgodność katalogu ze starymi zgłoszeniami.
-- **Milestone / etykiety:** v27.3 / `product`, `P1`, `catalog`, `epic:E2`.
+- **Problem i obecne zachowanie:** S10/S15: dziś 2–5 cech i 0–4 haki; katalogi i zagnieżdżone opcje mogą się rozjechać. Ten limit cech **nie jest już domyślną regułą produktu** (C42/D07a).
+- **Zatwierdzone C42/D07a:** gracz może domyślnie wskazać **dowolną liczbę cech charakteru, w tym zero**, bez podziału wymuszającego dokładnie jedną cechę pozytywną i jedną negatywną. Organizator tworzący formularz może **opcjonalnie** włączyć minimum i/lub maksimum zaznaczeń dla pola cech; jeśli brak konfiguracji, `minSelections` i `maxSelections` są `null` i walidator nie ogranicza liczby wybranych opcji. Brak limitu biznesowego nie znosi technicznej ochrony API przed nadmiernymi payloadami.
+- **Zakres / moduły:** konfiguracja min/max w kreatorze i walidatorze front/backend, migracja/adapter historycznych definicji **bez nadpisywania opublikowanych rewizji**, wyświetlanie świadomie skonfigurowanych limitów przy polu, wspólne sprawdzenie ID/etykiet/opisów katalogów. **D07b pozostaje otwarte** dla dalszej struktury generatora i limitów haków — nie rozciągać automatycznie C42 na haki.
+- **Kryteria akceptacji:** pole cech z niezdefiniowanymi limitami przyjmuje 0, 1, 2 i więcej wyborów do granic istniejącej listy; po ustawieniu min/max przez Organizatora oba klient i API egzekwują wartości, a walidacja konfiguracji odrzuca `min>max`. Historie już opublikowanych formularzy nie zmieniają znaczenia samoczynnie; domyślna reguła dotyczy **nowych definicji**, istniejące `min/max=2/5` pozostają jawnie skonfigurowane do czasu nowej rewizji. Polaryzacja dodatnia/ujemna nie jest obligatoryjna; katalog cech i haków pozostaje oddzielny.
+- **Testy:** brak min/max, samodzielny min, samodzielny max, min+max, zero wyborów, wszystkie możliwe wybory, niepoprawne kombinacje, przeniesienie starej rewizji `2..5`, nowa wersja bez limitu, zmiana definicji w kreatorze, zgodność opisu/ID i limit techniczny payloadu.
+- **Zależności:** C42/D07a zatwierdzone; D07b (struktura i haki) przed pełnym odbiorem generatora; U04/U10/U12 przy zmianie definicji.
+- **Ryzyko regresji:** średnie — przypadkowe odziedziczenie starych limitów `2–5` przez nową definicję albo zniesienie ograniczeń historycznego formularza.
+- **Milestone / etykiety:** v27.3 / `product`, `P1`, `catalog`, `validation`, `epic:E2`.
 
 ## E3/E4 — dane i dostęp
 
@@ -486,7 +488,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 ### U36 — Panel postaci, swobodna edycja i blokada całej karty (również masowo)
 
 - **Typ / priorytet / rozmiar:** feature/UX/authorization / P1 / M/L.
-- **Zatwierdzone C35/C36/C37/C38:** po pierwszym realnym submit formularza `kind=character` gracz otrzymuje automatycznie uzupełniony panel. W odblokowanej karcie **swobodnie edytuje wszystkie jej fabularne dane** (pochodzenie, profesję, cechy, historię, tajemnice itd.) i pola wizytówki U35, bez resubmit i ponownej akceptacji. **Organizator może jednym przełącznikiem zablokować edycję całej karty**, w tym nazwy/opisu/portretu i fabuły. Uczestnik nadal może ją przeglądać. **Brak historii poszczególnych edycji uczestnika**; nowe wartości zastępują bieżące, przy zachowaniu niezmiennych wysłanych snapshotów i historii statusów/administracyjnej blokady.
+- **Zatwierdzone C35/C36/C37/C38:** po pierwszym realnym submit formularza `kind=character` gracz otrzymuje automatycznie uzupełniony panel. W odblokowanej karcie **swobodnie edytuje wszystkie jej fabularne dane** (pochodzenie, profesję, cechy, historię, tajemnice itd.) i pola wizytówki U35, bez resubmit i ponownej akceptacji. **Organizator może jednym przełącznikiem zablokować edycję całej karty**, w tym nazwy/opisu/portretu i fabuły. Uczestnik nadal może ją przeglądać. **Brak historii poszczególnych edycji uczestnika**; nowe wartości zastępują bieżące, przy zachowaniu niezmiennych wysłanych snapshotów i historii statusów/administracyjnej blokady. **C43/C44:** po wysłaniu panel ma także operacje właściciela „Archiwizuj” oraz „Usuń postać” (druga po D29c); archiwalne karty trafiają do konta U37, a nie zostają usunięte.
 - **Organizator / akcje zbiorcze:** panel listy graczy/postaci ma zaznaczanie pojedynczych rekordów i **„Zaznacz wszystkie postacie wydarzenia”**, niezależne od paginacji (nie tylko aktualnej strony). Uprawniony Organizator może uruchomić „Zablokuj edycję zaznaczonych” i „Odblokuj edycję zaznaczonych”; akcja dla wszystkich istniejących postaci wymaga potwierdzenia, aktualizuje **wszystkie obecnie wybrane** zgłoszone postacie wydarzenia i zwraca liczby sukcesów/odmów/konfliktów. **C39/D28e zatwierdzone:** zbiorcza blokada obejmuje wyłącznie istniejące postacie w chwili operacji. Nowo zgłoszone później postacie pozostają odblokowane, dopóki Organizator nie zablokuje ich osobno lub kolejną akcją zbiorczą.
 - **Zakres / moduły:** „Moje postacie” → panel postaci z bieżącymi sekcjami, statusem i feedbackiem. `applications.character_edit_locked` (domyślnie 0) blokuje zapis **całej postaci przez jej właściciela**. `PATCH /events/:eventId/applications/:applicationId/character-fields` aktualizuje bieżące dozwolone pola fabularne w `application_character_current.overrides_json`, bez dodatkowej historii kolejnych rewizji. `PATCH .../public-profile` U35 korzysta z tego samego warunku blokady. `POST /events/:eventId/characters/edit-lock/bulk` z określonymi ID lub `scope=all_existing_event_characters` działa tylko dla aktora z jawną zdolnością `characters.edit_lock.manage`; API waliduje przynależność do wydarzenia, rzeczywiste wysłanie postaci, limit i sposób działania na większym zbiorze. Blokady/unlocki (operacje administracyjne) trafiają do podstawowego audytu kto/kiedy/jakie zgłoszenia, bez historii **treści edycji** postaci. **C40:** uczestnik widzi w panelu czytelną informację **„Karta zablokowana”** oraz dane tylko do odczytu. Nie wymagamy uzasadnienia, modalu ani osobnego powiadomienia; Organizator nadal może zarządzać flagą. Optymistyczna kontrola wersji zapobiega cichej utracie równoległego zapisu.
 - **Granice bezpieczeństwa:** C37 obejmuje **całość edytowalnej karty postaci właściciela**, ale **nie blokuje osobno zarządzanego globalnego profilu konta**, statusów, przelewów lub decyzji Organizatora. Uprawniony Organizator i globalny Administrator mogą wykonywać operacje zgodnie ze swoimi prawami, w tym zarządzać blokadą; blokada nie pozbawia ich już przyznanych praw do edycji cudzych danych. Dane zdrowotne, triggery, wykluczenia, kontakty i zgody pozostają w odrębnych kategoriach i nie są automatycznie edytowalne przez C36. Historia zgłoszeń/statusów i operacji blokady nie jest usuwana przez C38; nie utrwalać jednak każdej kolejnej wersji danych fabularnych, starej nazwy czy portretu z panelu.
@@ -495,6 +497,29 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Zależności:** U05/U09/U10/U11/U14/U23/U34/U35/U19, C30–C40; C39/D28e zamknięte: późniejsze postacie domyślnie odblokowane. C40/D28f (skorygowane): w panelu uczestnika informacja „Karta zablokowana”, edytory niedostępne. U26 nie blokuje.
 - **Ryzyko regresji:** wysokie — pozorna blokada tylko w UI, przypadkowe objęcie kart z innego wydarzenia, brak pełnego zaznaczenia przez stronicowanie, niespójność przy równoległych zapisach i usuwaniu zdjęć.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `characters`, `bulk-actions`, `permissions`, `epic:E3`.
+
+### U37 — Archiwum postaci uczestnika i archiwizacja po LARP-ie
+
+- **Typ / priorytet / rozmiar:** feature/lifecycle / P1 / M.
+- **Zatwierdzone C43/D29a:** właściciel może **zarchiwizować swoją postać**, a Organizator po zakończeniu LARPa może zarchiwizować **postacie wydarzenia zbiorczo**. Postać po archiwizacji nie znika z konta: uczestnik ma osobny widok **„Archiwum postaci”** zawierający archiwalne karty i informacje o wydarzeniu, z dostępem tylko do własnych postaci lub dla uprawnionych ról. Archiwizacja **nie oznacza skasowania**, nie zmienia siedmiu istniejących statusów zgłoszenia, nie usuwa `submissions`, nie zwalnia limitu C41 i nie tworzy ponownego zgłoszenia.
+- **Zakres / moduły:** osobna flaga/czas cyklu życia `applications.character_archived_at` i metadane aktora `character_archived_by_user_id` (bez dodawania ósmego statusu `applications.status`), projekcja „Moje postacie” + „Archiwum postaci”, akcja właściciela „Archiwizuj”, bulk akcji Organizatora na konkretne wydarzenie po jego zakończeniu, eventowe uprawnienie `characters.archive.manage`, podstawowy audyt archiwizacji. UI nie może traktować archiwum jak galerii usuniętych starych portretów (C32); właściciel widzi ostatni aktywny obraz tej postaci, jeśli nadal istnieje zgodnie z retencją.
+- **Otwarte D29d:** czy archiwalną kartę można przywrócić do aktywnych i edytować. Nie implementować domyślnie przywracania ani nie utożsamiać archiwizacji z `character_edit_locked`. Szczegółowa polityka dostępu archiwalnych postaci z katalogu aktywnych powinna wynikać z osobnego filtra cyklu życia; archiwizacja nie ma publikować nowych danych prywatnych.
+- **Kryteria akceptacji:** uczestnik archiwizuje własną kartę i odnajduje ją na koncie wraz z wydarzeniem; nie można archiwizować cudzej bez RBAC. Organizator po zakończeniu wydarzenia archiwizuje wszystkie jego istniejące postacie, również przy paginacji, bez dotykania innych wydarzeń/logistyki. Archiwizacja nie zmienia oryginalnego statusu przyjęcia, historycznych wysłań ani składki i **nie pozwala tworzyć drugiej postaci na tym samym evencie**.
+- **Testy:** jedna i wszystkie postacie, wielostronicowa lista, właściciel/cudza karta, archiwum konta i filtr wydarzenia, różne statusy zgłoszeń, powtórna archiwizacja idempotentna, role Organizatora, niezmienność `submissions`, dwie imprezy, usunięcie portretu zgodnie z C32.
+- **Zależności:** U09/U10/U11/U19/U32/U36/U05/U14, C41/C43, D29d do pełnej logiki przywracania/edycji.
+- **Ryzyko regresji:** średnie/wysokie — pomylenie archiwizacji z usunięciem lub `withdrawn`, dostęp do cudzych archiwów, przypadkowe nadanie drugiego miejsca postaci.
+- **Milestone / etykiety:** v29.0 / po wydarzeniu / `feature`, `P1`, `archive`, `characters`.
+
+### U38 — Usunięcie własnej postaci po doprecyzowaniu retencji i limitu
+
+- **Typ / priorytet / rozmiar:** feature/privacy / P1 / M/L.
+- **Zatwierdzone C44/D29b:** uczestnik ma dostępną operację **„Usuń postać”** niezależną od „Archiwizuj” i od statusu `withdrawn`. Wymaga potwierdzenia właściciela i autoryzacji po stronie API, niezależnie od widoczności formularza w UI.
+- **Otwarte D29c – blocker:** czy usunięcie zwalnia zajęte miejsce C41 i pozwala na nową postać w **tym samym wydarzeniu**; czy oznacza fizyczne skasowanie karty, pseudonimizację, czy odłączenie od konta z zachowaniem minimalnych danych rozliczeniowych i audytu. Nie wdrażać destrukcyjnej procedury, dopóki nie określono wpływu na `submissions`, płatności, dane wrażliwe, pliki, publiczny katalog, kontrole backup/retencji D06/U19/U17 i prawa innych uczestników.
+- **Kryteria akceptacji:** uczestnik widzi akcję usunięcia własnej postaci, nie może usunąć cudzej; przed wykonaniem dostaje jasne potwierdzenie skutków zatwierdzonych w D29c; brak możliwości odtworzenia starego portretu bez nowego uploadu C32, brak cichego naruszenia zarchiwizowanych kart, historii decyzji i danych innych graczy. Nie zakładać automatycznie zwolnienia limitu na wydarzenie.
+- **Testy:** owner vs inny użytkownik, brak potwierdzenia, draft/wysłane/archiwalne, historia składki, zdarzenia `submissions`, zasoby portretu, limit jednego gracza/wydarzenie, próby współbieżne, przywracanie backupu i retencja.
+- **Zależności:** C44, D29c/D06, U09/U17/U19/U31/U36/U37; wymaga decyzji **przed implementacją destrukcyjnego endpointu**.
+- **Ryzyko regresji:** wysokie — utrata audytu/rozliczeń lub pozostawienie danych po żądaniu usunięcia, niejawne obejście limitu postaci.
+- **Milestone / etykiety:** do zamknięcia D29c / `feature`, `P1`, `delete`, `privacy`, `characters`.
 
 ## Zależności i zasady publikowania
 
