@@ -19,7 +19,7 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 | ID | Tytuł skrócony | Priorytet | Rozmiar | Milestone | API / migracja |
 |---|---|---|---|---|---|
-| U01 | Decyzja tylko dla wysłanych odpowiedzi | P0 | S | v27.3 | API / nie |
+| U01 | Jawna administracyjna zmiana statusu, bez fałszywej oceny wysłania | P0 | S/M | v27.3 | API / etapowo |
 | U02 | Stan szkicu i konflikty zapisu | P1 | L | v27.3 | API / tak |
 | U03 | Kompletne podsumowanie i dostępność | P1 | M | v27.3 | nie / nie |
 | U04 | Definicje JSON i portrety | P1 | M | v27.3 | walidacja / nie |
@@ -55,18 +55,18 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 ## E1/E2 — stabilizacja
 
-### U01 — Zablokować akceptację niewysłanych poprawek
+### U01 — Rozróżnić zmianę statusu organizatora od oceny wysłanych odpowiedzi
 
-- **Typ / priorytet / rozmiar:** bug / P0 / S.
-- **Problem i obecne zachowanie:** F01, S1 375–398. Każde nie-draft można zaakceptować; odtworzono accepted z pustą wymaganą historią w changes.
-- **Rezultat:** ocena tylko stanu submitted; użytkownik musi ponownie wysłać poprawki.
-- **Zakres / moduły:** API review, stan przycisków organizatora, walidacja przejścia; bez przebudowy formularza.
-- **Kryteria akceptacji:** PATCH changes→accepted odrzucony 409; submitted→accepted/changes działa; changes wymaga feedback; ponowny submit wymaga kompletności; niedozwolona ponowna decyzja ma czytelny błąd. Ewentualne cofnięcie accepted wymaga osobnej jawnej operacji.
-- **Testy:** regresja dokładnego scenariusza F01, tablica przejść, dotychczasowy cykl HTTP.
-- **Zależności:** brak dla blokady błędu; D08 dla przyszłego ponownego otwierania; U11 później wiąże decyzję ze snapshotem.
-- **Ryzyko regresji:** średnie — dotychczasowe swobodne zmiany decyzji.
+- **Typ / priorytet / rozmiar:** bug/product / P0 / S/M.
+- **Problem i obecne zachowanie:** F01: obecne API może zmienić `changes → accepted` mimo edycji niewysłanych odpowiedzi, bez wskazania, że jest to świadoma decyzja organizatora, bez autora i historii. Nie oznacza to, że samo przejście ma być zakazane.
+- **Zatwierdzona reguła C10/D08:** organizator z uprawnieniem do oceny może zmienić status **z dowolnego na dowolny**. Rekomendowane ścieżki nie stanowią serwerowej listy dozwolonych zmian.
+- **Rezultat:** jawna zmiana administracyjna nie udaje weryfikacji wysłanych odpowiedzi; brak sztucznych blokad.
+- **Zakres / moduły:** status API, panel organizatora, ostrzeżenie/potwierdzenie nietypowej decyzji; zapis aktora, czasu, poprzedniego/nowego statusu i pochodzenia zmiany. Docelowa historia w U11.
+- **Kryteria akceptacji:** `draft → accepted`, `changes → accepted`, `rejected → accepted` i `withdrawn → submitted` są dostępne uprawnionemu organizatorowi; jeżeli nie było faktycznego submit, źródło ma status `organizer_override` bez fikcyjnego `submissionId`; komunikat uprzedza przy niekompletnych/niewysłanych odpowiedziach, ale nie blokuje potwierdzenia; 401/403 oraz 409 przy konflikcie wersji nadal obowiązują.
+- **Testy:** scenariusz F01, administracyjna akceptacja bez submission, wszystkie 7×7 przejść dla organizatora (po U30), historia, uprawnienia i regresja submit.
+- **Zależności:** C10/D08 potwierdzone; U11 pełna historia, U30 nowe statusy.
+- **Ryzyko regresji:** wysokie – odróżnić nadanie statusu od zatwierdzenia treści formularza.
 - **Milestone / etykiety:** v27.3 / `bug`, `P0`, `api`, `workflow`, `epic:E1`.
-
 ### U02 — Chronić każdy szkic przed utratą i starym zapisem
 
 - **Typ / priorytet / rozmiar:** bug / P1 / L.
@@ -206,8 +206,8 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 - **Typ / priorytet / rozmiar:** feature / P1 / L.
 - **Problem i obecne zachowanie:** S1 applications.answers/feedback nadpisywane; brak autora/czasu oceny i historii, poprawki mieszają się z wysłanym stanem.
 - **Rezultat:** każde wysłanie i decyzja mają jednoznaczne powiązanie.
-- **Zakres / moduły:** submissions, reviews, audyt, submit transakcyjny/idempotentny, UI historii, migracja stanu zastanego z legacy provenance.
-- **Kryteria akceptacji:** review wymaga bieżącego submissionId i wersji; zmiana szkicu nie zmienia starego snapshotu; retry submit daje ten sam wynik; historia autora/czasu/feedback; stare nieznane dane opisane jako nieznane, obecny feedback zachowany także dla submitted; brak fikcyjnej dawnej decyzji.
+- **Zakres / moduły:** submissions, `application_status_history`, audyt, submit transakcyjny/idempotentny, UI historii, migracja stanu zastanego z legacy provenance.
+- **Kryteria akceptacji:** rzeczywiste wysłanie ma niezmienny snapshot, a każda zmiana statusu ma historię z aktorem, poprzednim i nowym statusem oraz czasem. `submission_id` może być NULL przy administracyjnym nadaniu statusu bez wcześniejszego wysłania; nie tworzyć fikcyjnych wysłań. Retry submit idempotentny, zmiana szkicu nie przepisuje starego snapshotu, zachowany historyczny feedback i jawne pochodzenie danych legacy.
 - **Testy:** cykl 2 poprawek, dwóch recenzentów, równoczesny submit/review, utrata odpowiedzi, migracja changes z edytowanym szkicem i submitted ze starym feedback.
 - **Zależności:** U01/U02/U07/U09/U05, D08/D09.
 - **Ryzyko regresji:** wysokie — transakcje, historia i prywatność.
@@ -411,18 +411,18 @@ Dowody S1–S15 i ustalenia F01–F12: [FUNCTIONAL_SPEC](../product/FUNCTIONAL_S
 
 ## E3/E4 — dodatkowe wymagania Ursunaliów 2027, zgłoszone po audycie
 
-### U30 — Rozszerzyć statusy i wyliczać przyjęcie uczestnika z zaakceptowanego formularza postaci
+### U30 — Wdrożyć siedem statusów i przyjęcie przez zaakceptowanie postaci
 
 - **Typ / priorytet / rozmiar:** feature / P1 / M.
-- **Potwierdzona reguła:** akceptacja formularza postaci oznacza przyjęcie uczestnika na Ursunalia 2027, bez drugiej decyzji. Zatwierdzenie logistyki nie oznacza przyjęcia. D16 / C07.
-- **Zatwierdzone statusy (C09/D18):** `draft`, `submitted`, `changes`, `accepted`, `waitlisted` (lista rezerwowa), `rejected` (odrzucono), `withdrawn` (wycofano), `cancelled` (anulowano). **Nie są jeszcze zaimplementowane** cztery nowe statusy. Szczegółową macierz przejść, uprawnienia i cofnięcia ustalić w D08.
-- **Zakres / moduły:** aplikacje API i statusy, jawne pole `forms.grants_admission`, lista zgłoszeń/uczestników organizatora, odświeżanie uczestnika, historia decyzji i audyt rezygnacji/anulowania. Nie tworzyć osobnej encji potwierdzającej przyjęcie dla tego wydarzenia.
-- **Kryteria akceptacji:** przy `accepted` na formularzu `grants_admission=1` użytkownik pojawia się wśród przyjętych; przy `accepted` na logistyce – nie; `waitlisted/rejected` nie nadają udziału; `withdrawn/cancelled` powodują utratę bieżącego uprawnienia do udziału bez kasowania historycznej akceptacji; API egzekwuje stan i rolę (nie tylko UI); każdy stan i przejście musi być zgodne z zatwierdzoną macierzą D08.
-- **Testy:** cykl postaci i logistyki tej samej osoby; lista przyjętych liczy osobę raz; cofnięcie/anulowanie oraz historia; brak akceptacji niesubmitowanych poprawek; macierz statusów/uprawnień.
-- **Zależności:** U01/U09/U11 oraz decyzja D08 dotycząca przejść (zestaw statusów D18 zatwierdzony); nie zakładać, że U26 (osobna Character) musi być gotowe.
-- **Ryzyko regresji:** wysokie dla logiki udziału i migracji statusów. Nie przepisywać historycznych zgłoszeń.
+- **Potwierdzona reguła:** akceptacja postaci oznacza przyjęcie na Ursunalia 2027; zatwierdzenie formularza logistycznego nie przyjmuje gracza (C07/D16). Składka nie zmienia statusu automatycznie.
+- **Zatwierdzone statusy (C09/D18):** `draft`, `submitted`, `changes`, `accepted`, `waitlisted`, `rejected`, `withdrawn`. `cancelled` skreślono na rzecz `rejected`.
+- **Zatwierdzone C10/D08:** organizator może ustawić każdy z siedmiu statusów z każdego stanu, również `withdrawn` i `rejected`. Rekomendowane przejścia w UI nie blokują dowolnej decyzji. Uczestnik po `withdrawn` może wznowić tę samą Application, edytować i ponownie wysłać postać.
+- **Zakres / moduły:** API statusów, serwerowe uprawnienia i walidacja właściciela, `forms.grants_admission`, lista przyjętych, historia U11, UI i audyt. Nie tworzyć drugiej encji przyjęcia.
+- **Kryteria akceptacji:** accepted na postaci oznacza przyjęcie niezależnie od wcześniejszego stanu; accepted logistyki nie; withdrawn/rejected nie przyjmują; 7×7 przejść dla uprawnionego organizatora; wznawianie `withdrawn → draft → submitted` lub ponowne wysłanie po walidacji, bez utraty ID i odpowiedzi; administracyjne nadanie statusu bez submission ma jawną historię i ostrzeżenie, nie blokadę; składka zachowana.
+- **Testy:** wszystkie statusy źródłowe/docelowe, historia, odzyskanie wycofanej postaci, przyjęcie wprost ze szkicu, ochrona obcych danych, niezależność składki, brak dublowania uczestników.
+- **Zależności:** U01/U09/U11, C07/C09/C10; U26 nie blokuje MVP.
+- **Ryzyko regresji:** wysokie – historia i uprawnienia; nie przepisywać historycznych zgłoszeń.
 - **Milestone / etykiety:** v28.1 / `feature`, `P1`, `workflow`, `events`, `epic:E3`.
-
 ### U31 — Potwierdzać składkę przelewem ręcznie w panelu organizatora
 
 - **Typ / priorytet / rozmiar:** feature / P1 / S/M.
