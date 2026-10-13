@@ -14,7 +14,7 @@ MVP nie wymaga kreatora kolejnych wydarzeń, **płatności wbudowanych w aplikac
 |---|---|---|---|
 | **v27.3 — stabilizacja procesu** | U01/U02/U03/U04/U06/U07/U08/U12/U16/U21; U20 porządek dokumentacji | Świadome, audytowane decyzje organizatora również wobec roboczego szkicu, bez fałszywej informacji o wysłanych odpowiedziach i bez cichej utraty danych; kompletna karta mobile; działający pełny E2E na istniejącym modelu; uzgodniona struktura generatora. | Decyzje D07/D08/D11; testy wykonywane wraz z poprawkami. |
 | **v28.0 — minimalny rdzeń, typy kont i prywatność** | U09/U10/U05/U33 | Jedno wydarzenie, typy kont `participant/organizer/administrator`, globalne uprawnienia Administratora i kontrola dostępu do grup danych; zachowana baza, ograniczony odczyt poufnych pól. | C15/C17, D03/D04/D15/D16, kopia i rehearsal migracji; U17 wcześniej. |
-| **v28.1 — zgłoszenia i konfigurowalne role** | U11/U14/U19/U23/**U30/U31/U32**; U13 warunkowo; U22 opcjonalnie | Snapshoty, siedem statusów i wznowienie `withdrawn`; lista przyjętych; profil konta, **tworzone przez organizatora role z prawami read/write dla grup danych** (C12/C16), ręczna składka i kontrolowane eksporty. | U09/U05/U11/U33, D06/D09/D16/D17/D18; zakres ról per wydarzenie zatwierdzony C18/D21. |
+| **v28.1 — zgłoszenia i konfigurowalne role** | U11/U14/U19/U23/**U30/U31/U32/U34**; U13 warunkowo; U22 opcjonalnie | Snapshoty, siedem statusów i wznowienie `withdrawn`; lista przyjętych; profil konta, **tworzone przez organizatora role z prawami read/write dla grup danych** (C12/C16), ręczna składka, kontrolowane eksporty i katalog zgłoszonych postaci dla zalogowanych uczestników z publicznym opisem, zdjęciem i dobrowolną publikacją kontaktów (C20/C21). | U09/U05/U11/U23/U32/U33, D06/D09/D16/D17/D18; zakres ról per wydarzenie zatwierdzony C18/D21. D23/D24 przed końcowym odbiorem katalogu. |
 | **v29.0 — uruchomienie** | U15/U17/U18/U29/U24 oraz regresja U16 | Staging HTTPS, backup/restore, odzyskanie dostępu, monitoring, pilot i zatwierdzony start zapisów. | Wszystkie P0 i wymagane P1; właściciele operacyjni i D01/D02/D14. |
 | **Po Ursunaliach** | U25/U26/U27/U28 i pozostałe P2 zależnie od wyników | Decyzja o kontynuacji platformy po ocenie wydarzenia; **U25: tworzenie wydarzeń wyłącznie przez Administratora albo Organizatora z uprawnieniem `events.create` nadanym przez Administratora, z automatycznym przypisaniem twórcy jako Organizatora nowego wydarzenia (C19/D22)**. | Retrospektywa i realne potrzeby; poza MVP zapisów na Ursunalia 2027. |
 
@@ -69,8 +69,9 @@ Kolejność jest priorytetem pobierania pracy; zadania zależne od decyzji mogą
 17. **U30** — siedem statusów, uczestnictwo wynikające z zaakceptowanej postaci, dowolne zmiany organizatora oraz wznawianie `withdrawn`.
 18. **U31** — ręczne potwierdzanie składki dla użytkownika i wydarzenia; historia zmian i uprawnienia organizatora.
 19. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz kontrola odczytu/edycji grup danych.
+20. **U34** — katalog zgłoszonych postaci i dobrowolne udostępnianie imienia/nazwiska, ksywy oraz social media przez właściciela.
 
-Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31, U32 oraz U33 i U14 (typy kont + role niestandardowe) są wymagane przed pierwszymi prawdziwymi zapisami, nie po wydarzeniu.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
+Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31, U32, U33 i U14 (typy kont + role niestandardowe) są wymagane przed pierwszymi prawdziwymi zapisami; U34 (katalog) musi być odebrany przed udostępnieniem tej funkcji uczestnikom, wraz z D23/D24 i ochroną danych.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
 
 ## Praca równoległa i ryzyko
 
@@ -98,7 +99,7 @@ Jeżeli pilot ujawni P0, przesunąć T lub ograniczyć zbierane dane/funkcje. Ni
 
 ## Warunki otwarcia i ograniczenia pilota
 
-- Wszystkie P0 zamknięte; P1 zweryfikowane dla publicznego zakresu, w tym U30 (przyjęcie/statusy), U31 (ręczne potwierdzenie składki) i U32 (globalny profil kontaktowy konta). Zakres ewentualnie wyłączonej funkcji i właściciel decyzji zapisani w DECISIONS.
+- Wszystkie P0 zamknięte; P1 zweryfikowane dla publicznego zakresu, w tym U30 (przyjęcie/statusy), U31 (ręczne potwierdzenie składki), U32 (globalny profil konta) i U34 (katalog postaci), jeżeli ma być dostępny w MVP. Zakres ewentualnie wyłączonej funkcji i właściciel decyzji zapisani w DECISIONS.
 - Pełny E2E na staging oraz testy Firefox/WebKit/Chromium, telefon fizyczny i klawiatura. Nie wymagamy pełnej automatyzacji wszystkich urządzeń, ale wynik kontroli musi być zapisany.
 - Backup odtworzony na pustym środowisku, zweryfikowana kompletność odpowiedzi; procedura ma właściciela.
 - Brak poufnych danych w listach bez uprawnienia, publicznych zasobach i logach. Pilot początkowo używa fikcyjnych danych.
