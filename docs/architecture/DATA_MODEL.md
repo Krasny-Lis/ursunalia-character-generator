@@ -36,7 +36,7 @@ Tych danych nie wolno wymyślić podczas migracji.
 | Identity | Konto, hasła, sesje, odzyskanie dostępu oraz wspólny profil kontaktowy użytkownika | Kontakt wprowadzany podczas rejestracji konta, a nie powielany w ankietach wydarzenia; uprawnienia do odczytu zależą od wydarzenia. |
 | Events/access | Metadane wydarzeń, trzy bazowe typy kont, dynamiczne role i uprawnienia read/write | Organizator zarządza rolami w swoim zakresie, Administrator działa globalnie. Akceptacja wskazanego formularza daje udział. |
 | Forms | Szkic, walidacja, publikacja niezmiennej rewizji | Nie przepisuje historycznych zgłoszeń. |
-| Applications | Szkic, wersja zapisu, wysłanie i immutable snapshot | Nie pozwala organizatorowi zmieniać odpowiedzi uczestnika. |
+| Applications | Szkic, wersja zapisu, wysłanie i immutable snapshot | Właściciel i uprawnieni aktorzy (w tym Administrator globalny) mogą poprawiać aktualne dane; historyczne wysłania są niezmiennymi wersjami. |
 | Status history / reviews | Historia wszystkich zmian statusu i decyzji organizatora; odnośnik do wysłanych odpowiedzi, jeśli istnieją | Nie udaje, że administracyjna zmiana statusu oznacza ocenę wysłanego formularza. |
 | Characters | Opcjonalny profil fabularny i powiązanie z zaakceptowanym zgłoszeniem | Nie zawiera kontaktu, zgód ani granic uczestnika. |
 | Privacy/operations | Ograniczone DTO, retencja, eksport, audyt, backup | Nie kopiuje treści poufnej do logów. |
@@ -467,12 +467,12 @@ Proponowane zmiany API (niezaimplementowane):
 - submit: expectedVersion + idempotencyKey; powtórzenie tego samego klucza zwraca ten sam wynik; status i snapshot w jednej transakcji;
 - organizer status: `applicationId + expectedVersion + newStatus + opcjonalny powód`; organizator ma dostęp do wszystkich siedmiu wartości niezależnie od statusu źródłowego. Przy istniejącym wysłaniu historia może wskazywać prawdziwy snapshot, a bez wysłania jawnie zapisuje `organizer_override` z `submission_id=NULL`; sugestie UI nie są blokadami API.
 - organizer list: filtry wydarzenia/formularza/statusu i cursor/limit; osobne detale i kontrolowany eksport; status przyjęcia użytkownika wyliczony z uprawnionego zgłoszenia oraz osobny status ręcznie potwierdzonej składki;
-- organizer contribution: odczyt/zmiana flagi `is_paid` dla pary `(event_id,user_id)` wyłącznie z `can_manage_contributions`; rejestrowanie w audit_log; bez bramki bankowej;
+- organizer contribution: odczyt/zmiana flagi `is_paid` dla pary `(event_id,user_id)` zgodnie z `contributions.read/write` niestandardowej roli albo przez globalnego Administratora; rejestrowanie w audit_log; bez bramki bankowej;
 - wspólny błąd `{code,message,fieldErrors?,currentVersion?,requestId}`; 401/403/404/409/413/422 obsługiwane jawnie przez frontend.
 
 Nie utrzymywać na stałe dwóch API. Podczas krótkiego wdrożenia można zastosować adapter starych DTO; dla serwera i klienta w jednej wersji wdrożenie atomowe jest prostsze. Stare buildy/cache muszą dostawać czytelny błąd wersji i prośbę odświeżenia, nie cicho nadpisywać danych.
 
-**Zadania realizujące tę część modelu:** U30 (statusy/przyjęcie), U31 (ręczne składki), przy zależnościach U09/U11/U14. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
+**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), przy zależnościach U09/U11. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
 
 ## 8. Plan migracji bez utraty informacji
 
