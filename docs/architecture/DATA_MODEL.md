@@ -1,6 +1,6 @@
 # Ursunalia — model danych, architektura i migracja
 
-Audyt: 13.10.2026, HEAD `68737a8794e426d612fe54c03c88f6d431ba394e`. **Model docelowy jest rekomendacją do zatwierdzenia. SQL poniżej jest projektem, nie wykonaną migracją.** Uzupełnienie biznesowe 13.10.2026: przyjęcie przez akceptację ankiety postaci i ręcznie rejestrowana składka są zatwierdzone; zestaw dodatkowych statusów został zatwierdzony decyzją C09/D18; szczegóły przejść wymagają D08. Dowody aktualnego stanu: [FUNCTIONAL_SPEC, mapa S1–S15](../product/FUNCTIONAL_SPEC.md#mapa-źródeł).
+Audyt: 13.10.2026, HEAD `68737a8794e426d612fe54c03c88f6d431ba394e`. **Model docelowy jest rekomendacją do zatwierdzenia. SQL poniżej jest projektem, nie wykonaną migracją.** Uzupełnienie biznesowe 13.10.2026: przyjęcie przez akceptację ankiety postaci i ręcznie rejestrowana składka są zatwierdzone; siedem statusów i nieblokujące organizatora reguły zmian zostały zatwierdzone decyzjami C09/D18 i C10/D08. Dowody aktualnego stanu: [FUNCTIONAL_SPEC, mapa S1–S15](../product/FUNCTIONAL_SPEC.md#mapa-źródeł).
 
 ## 1. Stan obecny
 
@@ -37,7 +37,7 @@ Tych danych nie wolno wymyślić podczas migracji.
 | Events/access | Metadane, terminy zapisów, EventMember i capabilities | Każde żądanie sprawdza wydarzenie i uprawnienia. Akceptacja wskazanego formularza daje udział. |
 | Forms | Szkic, walidacja, publikacja niezmiennej rewizji | Nie przepisuje historycznych zgłoszeń. |
 | Applications | Szkic, wersja zapisu, wysłanie i immutable snapshot | Nie pozwala organizatorowi zmieniać odpowiedzi uczestnika. |
-| Reviews | Decyzja wobec konkretnego wysłania, feedback, historia | Nie ocenia edytowanego szkicu. |
+| Status history / reviews | Historia wszystkich zmian statusu i decyzji organizatora; odnośnik do wysłanych odpowiedzi, jeśli istnieją | Nie udaje, że administracyjna zmiana statusu oznacza ocenę wysłanego formularza. |
 | Characters | Opcjonalny profil fabularny i powiązanie z zaakceptowanym zgłoszeniem | Nie zawiera kontaktu, zgód ani granic uczestnika. |
 | Privacy/operations | Ograniczone DTO, retencja, eksport, audyt, backup | Nie kopiuje treści poufnej do logów. |
 | Contributions | Ręczne potwierdzenie otrzymania składki za przelew per wydarzenie i użytkownik | Bez operatora płatności, bez statusu płatności jako części decyzji fabularnej. |
@@ -77,14 +77,15 @@ erDiagram
     USERS ||--o{ APPLICATIONS : tworzy
     FORM_REVISIONS ||--o{ APPLICATIONS : definiuje
     APPLICATIONS ||--o{ SUBMISSIONS : wysyla
-    SUBMISSIONS ||--o{ REVIEWS : otrzymuje
+    APPLICATIONS ||--o{ APPLICATION_STATUS_HISTORY : historia
+    SUBMISSIONS o|--o{ APPLICATION_STATUS_HISTORY : kontekst
     APPLICATIONS ||--o| CHARACTERS : zrodlo
 ```
 
 ```mermaid
 erDiagram
     SUBMISSIONS ||--o{ CONSENT_RECORDS : potwierdzenia
-    USERS o|--o{ REVIEWS : autor
+    USERS o|--o{ APPLICATION_STATUS_HISTORY : autor
     EVENTS ||--o{ AUDIT_LOG : zdarzenia
     USERS o|--o{ AUDIT_LOG : wykonawca
 ```
@@ -202,7 +203,7 @@ CREATE TABLE applications (
   slot INTEGER NOT NULL DEFAULT 1 CHECK(slot > 0),
   status TEXT NOT NULL CHECK(status IN (
     'draft','submitted','accepted','changes',
-    'waitlisted','rejected','withdrawn','cancelled'
+    'waitlisted','rejected','withdrawn'
   )),
   answers_json TEXT NOT NULL CHECK(json_valid(answers_json) AND json_type(answers_json)='object'),
   lock_version INTEGER NOT NULL DEFAULT 1 CHECK(lock_version > 0),
@@ -244,21 +245,23 @@ CREATE TABLE submission_sensitive_answers (
   answers_json TEXT NOT NULL CHECK(json_valid(answers_json) AND json_type(answers_json)='object')
 );
 
-CREATE TABLE reviews (
+CREATE TABLE application_status_history (
   id TEXT PRIMARY KEY NOT NULL,
   application_id TEXT NOT NULL REFERENCES applications(id),
-  submission_id TEXT NOT NULL,
-  reviewer_id TEXT REFERENCES users(id),
-  decision TEXT NOT NULL CHECK(decision IN ('accepted','changes','waitlisted','rejected')), 
-  feedback TEXT NOT NULL DEFAULT '',
-  reviewed_at TEXT,
-  source TEXT NOT NULL CHECK(source IN ('review','legacy_current')),
+  submission_id TEXT,
+  actor_user_id TEXT REFERENCES users(id),
+  previous_status TEXT CHECK(previous_status IS NULL OR previous_status IN (
+    'draft','submitted','changes','accepted','waitlisted','rejected','withdrawn'
+  )),
+  new_status TEXT NOT NULL CHECK(new_status IN (
+    'draft','submitted','changes','accepted','waitlisted','rejected','withdrawn'
+  )),
+  source TEXT NOT NULL CHECK(source IN ('participant_action','organizer_override','legacy_current')),
+  reason TEXT NOT NULL DEFAULT '',
   recorded_at TEXT NOT NULL,
   FOREIGN KEY(submission_id,application_id) REFERENCES submissions(id,application_id),
-  CHECK(source='legacy_current' OR (reviewer_id IS NOT NULL AND reviewed_at IS NOT NULL)),
-  CHECK(source='legacy_current' OR decision!='changes' OR length(trim(feedback)) > 0)
+  CHECK(source='legacy_current' OR actor_user_id IS NOT NULL)
 );
-
 CREATE TABLE characters (
   id TEXT PRIMARY KEY NOT NULL,
   event_id TEXT NOT NULL,
@@ -321,7 +324,7 @@ CREATE INDEX forms_event_status ON forms(event_id,status);
 CREATE INDEX applications_owner_event ON applications(user_id,event_id,updated_at DESC);
 CREATE INDEX applications_review_queue ON applications(event_id,status,updated_at DESC);
 CREATE INDEX applications_revision ON applications(form_id,form_revision);
-CREATE INDEX reviews_application_time ON reviews(application_id,recorded_at);
+CREATE INDEX application_status_history_time ON application_status_history(application_id,recorded_at);
 CREATE INDEX audit_event_time ON audit_log(event_id,occurred_at);
 ```
 
@@ -334,8 +337,8 @@ Wzajemne FK forms/revisions oraz applications/submissions są świadome i odrocz
 3. Nowy szkic wskazuje bieżącą opublikowaną rewizję i dostępne wydarzenie. Istniejący szkic pozostaje przypięty do swojej rewizji. Niedozwolona zmiana form_id/form_revision/user/event przez update.
 4. `definition_json` musi być zgodne z relacyjnym ID/revision/event. Prywatne i zwykłe answers są rozłączne; suma kluczy zgodna z definicją. Brak cichego usuwania danych przy migracji.
 5. `FormRevision` i `Submission` nie są edytowalne przez zwykłe API. Retencja/usunięcie to osobny, audytowany proces. Zmiana polityki poufności może zaostrzyć dostęp do starego pola bez przepisywania jego treści.
-6. `accepted` wymaga decyzji odnoszącej się do konkretnego, niezmiennego wysłania. Obecna reguła: tylko `submitted`; **propozycja reguły przejścia D08** dopuszcza także `waitlisted → accepted` dla tego samego wysłania, jeśli jego odpowiedzi nie uległy zmianie. `changes` nigdy nie można zatwierdzić bez ponownego submit. Wyjątki migracyjne jawnie oznaczone.
-7. Character tylko dla `kind=character`, na podstawie zaakceptowanego submitted snapshot; nigdy przez kopiowanie całego answers wraz z potrzebami/zgodami. UNIQUE źródła zapewnia idempotencję tworzenia.
+6. **Decyzja C10/D08:** uprawniony organizator może z każdego statusu ustawić dowolny inny (również `draft → accepted`, `changes → accepted`, `rejected → submitted` i `withdrawn → accepted`). Zmiana statusu rejestruje poprzedni/nowy status, aktora, czas i opcjonalny powód, z odnośnikiem do ostatniego prawdziwego wysłania, jeżeli istnieje. Jeśli nie ma wysłania, zdarzenie `organizer_override` ma `submission_id=NULL` i nie udaje wysłanych odpowiedzi. UI ostrzega przed nietypową zmianą, nie blokując decyzji. Uczestnik może wznowić `withdrawn` i ponownie wysłać tę samą Application, bez utraty ID, danych i historii. Zachowujemy kontrolę dostępu oraz ochronę przed nadpisaniem zmian z innej karty.
+7. Character tylko dla `kind=character`, na podstawie realnego snapshotu wysłania; `accepted` nadane ręcznie bez wcześniejszego wysłania nadaje uczestnictwo, lecz nie tworzy fikcyjnego snapshotu ani Character. Nie kopiować prywatnych odpowiedzi, potrzeb ani zgód do profilu.
 8. AuditLog zawiera nazwy operacji, ID i wyniki, nie hasła, tokeny, answers, portrety ani pełne treści feedback. Może zawierać hash/wersję operacji i request_id.
 
 ## 5. Odpowiedzi, kategorie, obrazy i zgody
@@ -375,20 +378,16 @@ stateDiagram-v2
     draft --> submitted: wyslanie
     submitted --> changes: prosba_o_poprawki
     changes --> submitted: ponowne_wyslanie
-    submitted --> accepted: akceptacja
+    submitted --> accepted: przykladowa_akceptacja
     submitted --> waitlisted: lista_rezerwowa
     submitted --> rejected: odrzucenie
-    waitlisted --> accepted: wolne_miejsce
-    waitlisted --> rejected: decyzja_odmowna
-    accepted --> withdrawn: rezygnacja_uczestnika
-    accepted --> cancelled: anulowanie_przez_organizatora
-    submitted --> withdrawn: rezygnacja
-    changes --> withdrawn: rezygnacja
-    waitlisted --> withdrawn: rezygnacja
+    submitted --> withdrawn: wycofanie
+    accepted --> withdrawn: wycofanie
+    withdrawn --> draft: wznowienie_przez_uczestnika
+    withdrawn --> submitted: ponowne_zgloszenie_po_walidacji
 ```
 
-**Zestaw statusów na diagramie jest zatwierdzony (C09/D18); strzałki między nimi pozostają propozycją do decyzji D08.** Statusy istniejące w aktualnym kodzie pozostają bez zmian do czasu implementacji U30. Zapis changes zmienia tylko szkic; organizator ocenia wyłącznie ostatnie niezmienne wysłanie, nie robocze odpowiedzi. Operacje rezygnacji i anulowania wymagają autora, daty i powodu oraz odpowiedniej autoryzacji. `accepted` oznacza przyjęcie na wydarzenie **wyłącznie**, jeśli `forms.grants_admission=1`; nie świadczy o zaksięgowaniu składki ani o obecności podczas imprezy. 
-
+**Diagram przedstawia rekomendowane ścieżki, NIE ograniczenia API dla organizatora.** Decyzja C10/D08: organizator z uprawnieniem oceny może zmienić status z każdego z siedmiu stanów na każdy inny. Także `draft → accepted`, `withdrawn → waitlisted` i `rejected → accepted` są dozwolone. UI może pokazać ostrzeżenie i żądać potwierdzenia, lecz nie blokuje zmiany statusu z powodu poprzedniego stanu. Zgłoszenie wycofane można wznowić i ponownie wysłać, zachowując jego ID i wszystkie wcześniejsze wysłania; wycofanie nie jest usunięciem. Administracyjne nadanie statusu bez wysłanego snapshotu otrzymuje jawny wpis historii z pustym `submission_id`; nie należy sugerować, że oceniono robocze odpowiedzi. `accepted` oznacza przyjęcie na wydarzenie **wyłącznie** dla formularza z `grants_admission=1`; nie potwierdza wpłaty ani fizycznej obecności.
 **Oś składki jest niezależna od statusu zgłoszenia:** pole `event_contributions.is_paid` może zmienić tylko uprawniony organizator po ręcznej weryfikacji przelewu. Brak rekordu = „Niepotwierdzona”. Zmiana wymaga audytu (kto, kiedy, poprzednia i nowa wartość); wycofanie potwierdzenia nie anuluje automatycznie udziału. Kwoty, zwolnienia i zwroty – otwarta decyzja D19, nie rozbudowywać obecnego schematu bez zatwierdzenia.
 
 Publikacja formularza tworzy nowy numer i hash. Nie zmienia definicji starej rewizji. FormDraft ma `base_revision` i `lock_version`; konflikt publikacji lub zapisu daje 409 i porównanie. Jedna wspólna wersja robocza na formularz wystarczy bez współedycji w czasie rzeczywistym. Nowy import ma jawne tryby „nowa ankieta” i „nowa wersja istniejącej”; pierwszy generuje nowe form.id.
@@ -398,7 +397,7 @@ Proponowane zmiany API (niezaimplementowane):
 - bootstrap: metadane wydarzenia i zwięzłe listy; `/events/:id/forms`, bez masowego ładowania obrazów;
 - zapis draft: ID + expectedVersion + answers, serwer sprawdza właściciela i klasę danych;
 - submit: expectedVersion + idempotencyKey; powtórzenie tego samego klucza zwraca ten sam wynik; status i snapshot w jednej transakcji;
-- review: submissionId + expectedVersion + decision + feedback; obecnie tylko aktualne `submitted`; po ustaleniu przejść w D08 ewentualnie `waitlisted → accepted` wobec tego samego niezmiennego snapshotu. Nie oceniać roboczego `changes`. Zaakceptowanie formularza z `grants_admission=1` przyznaje udział;
+- organizer status: `applicationId + expectedVersion + newStatus + opcjonalny powód`; organizator ma dostęp do wszystkich siedmiu wartości niezależnie od statusu źródłowego. Przy istniejącym wysłaniu historia może wskazywać prawdziwy snapshot, a bez wysłania jawnie zapisuje `organizer_override` z `submission_id=NULL`; sugestie UI nie są blokadami API.
 - organizer list: filtry wydarzenia/formularza/statusu i cursor/limit; osobne detale i kontrolowany eksport; status przyjęcia użytkownika wyliczony z uprawnionego zgłoszenia oraz osobny status ręcznie potwierdzonej składki;
 - organizer contribution: odczyt/zmiana flagi `is_paid` dla pary `(event_id,user_id)` wyłącznie z `can_manage_contributions`; rejestrowanie w audit_log; bez bramki bankowej;
 - wspólny błąd `{code,message,fieldErrors?,currentVersion?,requestId}`; 401/403/404/409/413/422 obsługiwane jawnie przez frontend.
@@ -419,7 +418,7 @@ Nie utrzymywać na stałe dwóch API. Podczas krótkiego wdrożenia można zasto
 
 ### M1 — stabilizacja bez zmiany domeny
 
-Najpierw U01/U02/U03/U04/U06/U07: kontrola stanu decyzji, konflikt zapisu, kompletność widoków i walidacja. Dodanie lock_version ma migrację addytywną z default 1. Nie zmieniać ID, hashy haseł ani rewizji. Ograniczyć zbieranie poufnych danych do czasu U05.
+Najpierw U01/U02/U03/U04/U06/U07: rozróżnienie administracyjnej zmiany statusu od oceny wysłanych odpowiedzi, konflikt zapisu, kompletność widoków i walidacja. Dodanie lock_version ma migrację addytywną z default 1. Nie zmieniać ID, hashy haseł ani rewizji. Ograniczyć zbieranie poufnych danych do czasu U05.
 
 ### M2 — wydarzenie i definicje
 
@@ -434,14 +433,14 @@ Najpierw U01/U02/U03/U04/U06/U07: kontrola stanu decyzji, konflikt zapisu, kompl
 1. Zachować pełną oryginalną answers w zaszyfrowanej kopii migracyjnej na czas zatwierdzonej retencji. Rozdzielić zwykłe i poufne klucze zgodnie z zatwierdzoną mapą. Porównać sumę kluczy i wartości z oryginałem; nieznany klucz zatrzymuje migrację do przeglądu, zamiast zostać odrzucony przez cleanAnswers.
 2. Draft nie tworzy historycznego wysłania. Dla submitted/accepted/changes utworzyć `legacy_current`, attempt=0, captured_at=czas migracji; zachować stare submitted_at jako informację źródłową.
 3. **Dla changes obecne answers mogą już być poprawionym szkicem.** Nie nazywać ich oryginalnymi odpowiedziami ocenionymi wcześniej. UI historii oznacza „stan zastany podczas migracji; poprzednie wysłanie niedostępne”.
-4. Aktualne accepted/changes przenieść jako review source=legacy_current, reviewer i reviewed_at null, recorded_at=migracja. Nie rekonstruować wcześniejszych ocen z updated_at. Każdy zastany feedback dodatkowo zachować dokładnie w `applications.legacy_feedback`, zwłaszcza przy statusie submitted po ponownym wysłaniu. Dla takiego submitted nie tworzyć review z wymyśloną decyzją. Wyświetlać „zastany komentarz, autor i czas nieznane”. Kolumna objęta tymi samymi uprawnieniami co feedback i usuwana dopiero zgodnie z retencją. Nie kopiować jej do audit_log.
+4. Aktualne accepted/changes przenieść jako wpis application_status_history source=legacy_current, reviewer i reviewed_at null, recorded_at=migracja. Nie rekonstruować wcześniejszych ocen z updated_at. Każdy zastany feedback dodatkowo zachować dokładnie w `applications.legacy_feedback`, zwłaszcza przy statusie submitted po ponownym wysłaniu. Dla takiego submitted nie tworzyć review z wymyśloną decyzją. Wyświetlać „zastany komentarz, autor i czas nieznane”. Kolumna objęta tymi samymi uprawnieniami co feedback i usuwana dopiero zgodnie z retencją. Nie kopiować jej do audit_log.
 5. Historyczne checkboxy, jeśli migrowane do consent_records, oznaczyć legacy_unverified, wersja dokumentu „legacy-form:<id>:<revision>”. Nie twierdzić, że istniało nowe oświadczenie ani aktualna zgoda.
 6. `Character` tworzyć dopiero po uruchomieniu modułu U26 dla zaakceptowanych formularzy character, z wybranych danych fabularnych. Nie generować postaci dla logistyki; nie uzależniać migracji rdzenia od tej tabeli.
 
 ### M3a — składki i przyjęci uczestnicy
 
 - Utworzyć pustą tabelę `event_contributions` w ramach kontrolowanej migracji; **nie zakładać wpłat z istniejących statusów lub formularzy**. Brak historycznego potwierdzenia oznacza „Niepotwierdzona”, nie „na pewno nie zapłacił”.
-- Lista przyjętych: unikatowi użytkownicy wydarzenia z `applications.status='accepted'` oraz `forms.grants_admission=1`, z wykluczeniem wycofanych/anulowanych; bez materializacji i bez drugiej decyzji.
+- Lista przyjętych: unikatowi użytkownicy wydarzenia z `applications.status='accepted'` oraz `forms.grants_admission=1`, bez materializacji (`withdrawn` i `rejected` nie spełniają warunku aktualnego `accepted`) i bez drugiej decyzji.
 - Test: zaakceptowanie formularza logistycznego nie przyjmuje gracza; zaakceptowanie ankiety postaci przyjmuje, niezależnie od `is_paid`; zaznaczenie składki nie zmienia statusu zgłoszenia; rezygnacja nie usuwa informacji o potwierdzonej wpłacie (możliwy późniejszy zwrot).
 
 ### M4 — szkice przeglądarkowe i kompatybilność
