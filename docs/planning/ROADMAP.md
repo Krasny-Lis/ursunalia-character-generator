@@ -62,13 +62,13 @@ Kolejność jest priorytetem pobierania pracy; zadania zależne od decyzji mogą
 10. **U17** — kopia i próba odtworzenia jako warunek migracji; automatyzacja będzie kontynuowana później.
 11. **U09** — minimalny Event/Form i migracja istniejących rewizji.
 12. **U10** — rodzaj formularza i ogólny renderer, usunięcie zależności od konkretnego ID.
-13. **U05** — egzekwowanie na serwerze odczytu/edycji grup danych, globalny Administrator i filtrowanie; projekt polityki od początku, realne dane dopiero po odbiorze.
-14. **U11** — snapshoty wysłań i historia decyzji.
-15. **U14** — edytor niestandardowych ról i praw read/write dla grup danych, bez możliwości nadania Administratora.
-16. **U30** — siedem statusów, uczestnictwo wynikające z zaakceptowanej postaci, dowolne zmiany organizatora oraz wznawianie `withdrawn`.
-17. **U31** — ręczne potwierdzanie składki dla użytkownika i wydarzenia; historia zmian i uprawnienia organizatora.
-18. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz kontrola odczytu/edycji grup danych.
-19. **U33** — trzy bazowe typy kont i globalny Administrator; rozpocząć przed U14/U05.
+13. **U33** — trzy bazowe typy kont i globalny Administrator; rozpocząć przed pełnym U14 i U05.
+14. **U05** — egzekwowanie na serwerze odczytu/edycji grup danych, globalny Administrator i filtrowanie; projekt polityki od początku, realne dane dopiero po odbiorze.
+15. **U11** — snapshoty wysłań i historia decyzji.
+16. **U14** — edytor niestandardowych ról i praw read/write dla grup danych, bez możliwości nadania Administratora.
+17. **U30** — siedem statusów, uczestnictwo wynikające z zaakceptowanej postaci, dowolne zmiany organizatora oraz wznawianie `withdrawn`.
+18. **U31** — ręczne potwierdzanie składki dla użytkownika i wydarzenia; historia zmian i uprawnienia organizatora.
+19. **U32** — profil danych kontaktowych globalnie przy koncie, pola rejestracji i edycja profilu oraz kontrola odczytu/edycji grup danych.
 
 Następnie U08/U15/U18/U19/U23/U29/U24 domykają gotowość. **U30, U31, U32 oraz U33 i U14 (typy kont + role niestandardowe) są wymagane przed pierwszymi prawdziwymi zapisami, nie po wydarzeniu.** U08 i przygotowanie U18 można wykonać znacznie wcześniej niezależnie od migracji. Nie wolno interpretować pozycji U05 jako zgody na wcześniejsze zbieranie poufnych danych.
 
@@ -104,7 +104,7 @@ Jeżeli pilot ujawni P0, przesunąć T lub ograniczyć zbierane dane/funkcje. Ni
 - Brak poufnych danych w listach bez uprawnienia, publicznych zasobach i logach. Pilot początkowo używa fikcyjnych danych.
 - Pełna informacja dla uczestników, uzgodniona retencja, kanał odzyskania dostępu i pomocy.
 - Osoba odpowiedzialna obserwuje problemy i potrafi zamknąć nowe zapisy bez utraty szkiców/poprawek.
-- Test: zaakceptowanie postaci daje udział niezależnie od flagi składki; formularz logistyczny nie daje udziału; administrator z właściwym uprawnieniem może oznaczyć przelew i cofnąć oznaczenie, zachowując audyt.
+- Test: zaakceptowanie postaci daje udział niezależnie od flagi składki; formularz logistyczny nie daje udziału; Administrator globalny może oznaczyć przelew i cofnąć oznaczenie z audytem, a zwykły Organizator lub rola niestandardowa wymaga uprawnienia `contributions.write`.
 - Organizator przygotował instrukcję przelewu do wysłania e-mailem poza systemem. Nie deklarować automatycznych maili lub potwierdzenia bankowego.
 
 ## Odłożone po wydarzeniu
