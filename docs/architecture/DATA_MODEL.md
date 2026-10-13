@@ -83,6 +83,7 @@ erDiagram
     APPLICATIONS ||--o{ APPLICATION_STATUS_HISTORY : historia
     SUBMISSIONS o|--o{ APPLICATION_STATUS_HISTORY : kontekst
     APPLICATIONS ||--o| CHARACTERS : zrodlo
+    APPLICATIONS ||--o| APPLICATION_PUBLIC_PROFILES : wizytowka
 ```
 
 ```mermaid
@@ -326,6 +327,26 @@ CREATE TABLE characters (
     REFERENCES submissions(id,application_id)
 );
 
+-- C30/D27a: osobna edytowalna wizytówka PUBLICZNA po faktycznym wysłaniu;
+-- brak rekordu oznacza domyślne pola jawne z ostatniego snapshotu wysłania.
+-- portrait_override_value jest nieprzetworzonym wskaźnikiem/wartością medium
+-- walidowaną serwerowo; docelowy format zależy od storage U04/U27.
+CREATE TABLE application_public_profiles (
+  application_id TEXT PRIMARY KEY NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  public_description_override TEXT,
+  portrait_override_mode TEXT NOT NULL DEFAULT 'inherit'
+    CHECK(portrait_override_mode IN ('inherit','replace','hide')),
+  portrait_override_value TEXT,
+  lock_version INTEGER NOT NULL DEFAULT 1 CHECK(lock_version > 0),
+  updated_by_user_id TEXT NOT NULL REFERENCES users(id),
+  updated_at TEXT NOT NULL,
+  CHECK(
+    (portrait_override_mode='replace' AND portrait_override_value IS NOT NULL)
+    OR
+    (portrait_override_mode!='replace' AND portrait_override_value IS NULL)
+  )
+);
+
 CREATE TABLE consent_records (
   id TEXT PRIMARY KEY NOT NULL,
   submission_id TEXT NOT NULL REFERENCES submissions(id),
@@ -455,15 +476,17 @@ Uprawnienie odczytu i edycji jest definiowane osobno dla każdej grupy, zamiast 
 - **Tożsamość odbiorcy katalogu:** anonimowy widzi podstawową, publiczną projekcję nazwy, jawnego opisu i portretu; **każdy zalogowany użytkownik platformy** widzi te same dane oraz dobrowolnie udostępnione kontakty (C29/D25c). **Nie trzeba własnego zgłoszenia, wysłania formularza, statusu, udziału ani uprawnień do wydarzenia.** Dawne ograniczenia po submit (C26) i utracie statusu (C28) zostały zastąpione przez C29. Nie należy stosować statusu zgłoszenia **oglądającego** do filtrowania kontaktów.
 - **Decyzja właściciela profilu:** widoczność opcjonalnych kontaktów zależy od czterech **globalnych**, niezależnych przełączników `user_profiles.show_real_name`, `show_nickname`, `show_facebook`, `show_discord` (C27/D26); wszystkie domyślnie 0. Nie ma `event_profile_publicity` ani innych kopii wyboru per wydarzenie. Cofnięcie globalnego wyboru usuwa pole z kolejnych odpowiedzi katalogów wszystkich wydarzeń. Nawet jeśli właściciel udostępnił pole, **anonimowy** odbiorca go nie widzi.
 
-**Jeden rekord katalogu na zgłoszoną postać (`applicationId`) w jednym wydarzeniu**, niekoniecznie odrębny byt `characters` (U26 może pojawić się później). Podstawowe informacje pochodzą z ostatniego faktycznego wysłania postaci, nigdy z edytowanego szkicu. Jawne pole semantyczne `character.publicDescription` jest oddzielone od prywatnej historii, tajemnic, celów i haków; nie tworzyć go automatycznie ze swobodnego `answers_json`. Nazwa i przesłany portret również pochodzą z niezmiennego snapshotu, portret musi przejść walidację i bezpieczną obsługę zasobów. Przed wysłaniem postaci użytkownik musi wiedzieć, że nazwa, publiczny opis i zdjęcie będą dostępne także **bez logowania**.
+**Jeden rekord katalogu na zgłoszoną postać (`applicationId`) w jednym wydarzeniu**, niekoniecznie odrębny byt `characters` (U26 może pojawić się później). Bazowe informacje pochodzą z ostatniego faktycznego wysłania postaci, nigdy z edytowanego szkicu. **C30/D27a:** właściciel może niezależnie zmieniać **publiczny opis i zdjęcie** po wysłaniu, bez ponownego wysyłania ankiety i bez zmiany statusu. Odrębne `application_public_profiles` nadpisuje dla katalogu tylko te dwa pola (o ile ustawiono override), a nie źródłowy snapshot; edytowany profil publiczny ma pierwszeństwo przed zawartością wysłania, dopóki właściciel nie zmieni ustawienia z powrotem. Wersje wysłań pozostają niezmienne. Dokładny moment udostępnienia edycji katalogowi (od razu czy po moderacji) wymaga D27b. Jawne pole semantyczne `character.publicDescription` jest oddzielone od prywatnej historii, tajemnic, celów i haków; nie tworzyć go automatycznie ze swobodnego `answers_json`. Nazwa nadal pochodzi ze snapshotu; portret katalogowy pochodzi ze snapshotu albo z niezależnej edycji publicznego zdjęcia C30. Każdy nowy obraz musi przejść walidację formatu/rozmiaru i bezpieczną obsługę zasobów. Nadpisanie portretu nie zmienia prywatnych odpowiedzi ani historii zgłoszenia. Przed wysłaniem postaci użytkownik musi wiedzieć, że nazwa, publiczny opis i zdjęcie będą dostępne także **bez logowania**.
+
+**Samodzielna edycja wizytówki (C30/U35):** serwer udostępnia aktualizację `PATCH /events/:eventId/applications/:applicationId/public-profile` tylko właścicielowi zgłoszenia lub osobie z jawnym uprawnieniem do edycji tej grupy (Administrator ma dostęp globalny). Zmiany dotykają wyłącznie `public_description_override` i portretu; są zabezpieczone wersją `lock_version`, walidacją oraz wpisem audytu (kto/kiedy/co zmieniono, bez niepotrzebnego kopiowania treści i zdjęć do logów). Dla `portrait_override_mode`: `inherit` używa ostatniego zdjęcia z wysłania; `replace` używa zweryfikowanego nowego zdjęcia; `hide` usuwa je z katalogu. Publiczny opis z `NULL` dziedziczy ostatnie wysłanie, a ustawiony override to osobna wartość. Gdy `status IN ('rejected','withdrawn')`, wpis pozostaje niewidoczny niezależnie od edycji wizytówki; przy `changes` prywatne robocze poprawki wciąż pozostają ukryte. Ponowne wysłanie formularza nie czyści niezależnej wizytówki. **D27b otwarte:** czy zapis zmienia od razu widok, czy wymaga zatwierdzenia, i ewentualny bufor zmian do moderacji; obecne DDL pokazuje tylko bazowe pola override, a politykę publikacji trzeba uwzględnić przed implementacją.
 
 **Globalne kontakty użytkownika:** imię/nazwisko, opcjonalna ksywa, FB i Discord pochodzą z `user_profiles` i mają po jednym przełączniku `show_*` na całe konto. Imię i nazwisko prezentować razem wyłącznie gdy włączone `show_real_name`; puste lub niewłączone pola pominąć, nie serializować ich jako ukryte wartości. Własność konta i sama możliwość zobaczenia publicznego katalogu nie ujawniają e-maila, telefonu, informacji zdrowotnych, triggerów, wykluczeń ani niejawnej treści postaci. Globalny wybór oznacza udostępnienie wybranych kontaktów **wszystkim zalogowanym kontom platformy**, niezależnie od wydarzenia, co należy jasno zakomunikować przy ustawianiu przełączników.
 
-**Kontrakt API:** paginowany `GET /events/:eventId/characters/directory` oraz endpoint szczegółów z taką samą polityką. Anonimowe żądanie → whitelistowana projekcja `{applicationId, characterName, publicDescription, portrait?}`. Żądanie z **ważną sesją** → projekcja podstawowa + opcjonalne `disclosedContact?`, wyliczane na serwerze tylko z włączonych `show_*` i niepustych pól właściciela. Serwer nie wymaga od odbiorcy posiadania `applications`, `submissions`, `event_role_assignments` ani kwalifikującego statusu na dane wydarzenie. Listy i szczegóły nie mogą zwracać `answers_json`, `application_sensitive_answers`, `submission_sensitive_answers`, danych zdrowotnych, granic, wykluczeń, nieudostępnionych kontaktów, e-maila, telefonu, składek ani uwag organizacyjnych. `character_lore.read` pozostaje niezależnym prawem personelu, nie skutkiem przeglądania katalogu.
+**Kontrakt API:** paginowany `GET /events/:eventId/characters/directory` oraz endpoint szczegółów z taką samą polityką. Anonimowe żądanie → whitelistowana projekcja `{applicationId, characterName, publicDescription, portrait?}`, gdzie `publicDescription/portrait` są obliczane ze źródłowego snapshotu i odrębnej edycji właściciela C30, zgodnie z ostateczną polityką D27b. Żądanie z **ważną sesją** → projekcja podstawowa + opcjonalne `disclosedContact?`, wyliczane na serwerze tylko z włączonych `show_*` i niepustych pól właściciela. Serwer nie wymaga od odbiorcy posiadania `applications`, `submissions`, `event_role_assignments` ani kwalifikującego statusu na dane wydarzenie. Listy i szczegóły nie mogą zwracać `answers_json`, `application_sensitive_answers`, `submission_sensitive_answers`, danych zdrowotnych, granic, wykluczeń, nieudostępnionych kontaktów, e-maila, telefonu, składek ani uwag organizacyjnych. `character_lore.read` pozostaje niezależnym prawem personelu, nie skutkiem przeglądania katalogu.
 
 **Bezpieczeństwo / cache:** rozdzielić treści anonimowe i uwierzytelnione po stronie serwera, w tym przy stronicowaniu, wyszukiwaniu, szczegółach, podglądach i eksportach. Preferowane `Cache-Control: no-store` na obu projekcjach do czasu wdrożenia prawidłowej separacji cache. Wylogowanie powinno usunąć `disclosedContact` z UI i odpowiedzi; cofnięcie globalnego przełącznika działa dla wszystkich wydarzeń i nie powinno zostać nadpisane starą wersją w pamięci przeglądarki. Link do samego portretu nie może prowadzić do poufnych załączników.
 
-**Testy graniczne:** anonimowy na katalogu i szczegółach → tylko podstawowe pola; zalogowany bez żadnego formularza, ze szkicem, `rejected`, `withdrawn` lub zgłoszeniem na innym wydarzeniu → identyczne uprawnienie do wybranych przez właścicieli kontaktów; wylogowanie blokuje kontakty. Osobno każda flaga `show_*`, jej cofnięcie w dwóch wydarzeniach, brak wartości, konto właściciela bez zaznaczonych pól. Odrębnie sprawdzić statusy **samej wystawionej postaci**: `rejected`/`withdrawn` ukrywają wpis dla wszystkich, `changes` pokazuje stary snapshot bez roboczych poprawek. Testy API/filtrów/paginacji/CSV oraz izolacji cache powinny wykrywać niejawne pola. Historyczne wymagania C26 i C28 nie są podstawą autoryzacji odbiorców po C29.
+**Testy graniczne:** anonimowy na katalogu i szczegółach → tylko podstawowe pola; zalogowany bez żadnego formularza, ze szkicem, `rejected`, `withdrawn` lub zgłoszeniem na innym wydarzeniu → identyczne uprawnienie do wybranych przez właścicieli kontaktów; wylogowanie blokuje kontakty. Osobno każda flaga `show_*`, jej cofnięcie w dwóch wydarzeniach, brak wartości, konto właściciela bez zaznaczonych pól. Odrębnie sprawdzić statusy **samej wystawionej postaci**: `rejected`/`withdrawn` ukrywają wpis dla wszystkich, `changes` pokazuje stary snapshot bez roboczych poprawek. Testy API/filtrów/paginacji/CSV oraz izolacji cache powinny wykrywać niejawne pola. Historyczne wymagania C26 i C28 nie są podstawą autoryzacji odbiorców po C29. Test edycji opisu/zdjęcia **po submit bez resubmit**: brak nowego rekordu `submissions`, brak zmiany statusu, poprawna historia, nowa publiczna wizytówka oraz brak ujawnienia roboczych odpowiedzi; test dostępu do obcej postaci, `changes`, `rejected/withdrawn`, konkurencyjnej edycji oraz przywrócenia zdjęcia z poprzedniego wysłania (C30/U35).
 
 ```mermaid
 stateDiagram-v2
@@ -497,7 +520,7 @@ Proponowane zmiany API (niezaimplementowane):
 
 Nie utrzymywać na stałe dwóch API. Podczas krótkiego wdrożenia można zastosować adapter starych DTO; dla serwera i klienta w jednej wersji wdrożenie atomowe jest prostsze. Stare buildy/cache muszą dostawać czytelny błąd wersji i prośbę odświeżenia, nie cicho nadpisywać danych.
 
-**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), U34 (katalog postaci z opt-in), przy zależnościach U09/U11/U23. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
+**Zadania realizujące tę część modelu:** U05 (kontrola dostępu), U14 (role), U30 (statusy/przyjęcie), U31 (ręczne składki), U32 (profile), U33 (typy kont/Administrator), U34 (katalog i kontakty), U35 (edycja opisu/portretu bez resubmit), przy zależnościach U09/U11/U23. Szczegóły kryteriów akceptacji – [BACKLOG](../planning/BACKLOG.md).
 
 ## 8. Plan migracji bez utraty informacji
 
@@ -553,7 +576,7 @@ Nie wykonywać automatycznej aktualizacji formularza istniejącego zgłoszenia. 
 
 ## 9. Testy modelu i migracji
 
-W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Po decyzjach C20/C21/C26/C27 dodano opcjonalną ksywę i **globalne przełączniki widoczności w `user_profiles`, usuwając proponowaną wcześniej (niewdrożoną) tabelę `event_profile_publicity`**; jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
+W **pierwotnym audycie Work** przetestowano proponowane DDL dla 16 tabel, wstawianie rekordów z odroczonymi FK i oczekiwane odrzucenia niepoprawnych danych. **Wcześniejsza wersja DDL**, po dopisaniu `event_contributions`, przeszła kontrolę na nowej bazie SQLite `:memory:` (Python sqlite3 3.46.1): 17 tabel, `integrity_check=ok`, `foreign_key_check=[]`. **Po decyzjach C10–C17 zrewidowano DDL: historia statusów i `user_profiles` oraz nowy `users.account_type`; zamiast `event_members` wprowadzono projekt `event_roles`, `event_role_permissions`, `event_role_assignments`**. Po decyzjach C20/C21/C26/C27 dodano opcjonalną ksywę i **globalne przełączniki widoczności w `user_profiles`, usuwając proponowaną wcześniej (niewdrożoną) tabelę `event_profile_publicity`**. C30 dodaje projekt `application_public_profiles` do niezależnej edycji opisu/zdjęcia postaci bez nadpisywania snapshotów; D27b (moderacja) nie jest jeszcze rozstrzygnięta. Jest to propozycja do przeglądu, a nie zweryfikowana migracja; liczba i powiązania tabel wymagają testów SQLite. Przed implementacją obowiązkowe są próba utworzenia nowej bazy i testy FK, wszystkich statusów, uprawnień, składek oraz migracji danych. DDL nie jest dowodem prawidłowości całego wdrożenia.
 
 Fixture: dwa konta uczestników, dwóch organizatorów, sesje aktywne/wygasłe, oba formularze, kilka rewizji, wszystkie 4 statusy, feedback przy submitted, changes z już edytowanymi answers, polskie znaki, portret graniczny, nieznane stare klucze, brak dawnego autora/czasu decyzji.
 
