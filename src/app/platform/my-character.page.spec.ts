@@ -59,7 +59,7 @@ describe('Moja postać – widok i edycja', () => {
     expect(text).toContain('Bogdan');
     expect(text).toContain('Ungoł');
     expect(text).toContain('Doprecyzuj historię.');
-    expect(text).toContain('Historia decyzji MG');
+    expect(text).toContain('HISTORIA DECYZJI MG');
     expect(root.querySelector('img')).toBeNull();
     expect(root.querySelectorAll('.my-character-tabs button').length).toBe(2);
   });
@@ -75,9 +75,11 @@ describe('Moja postać – widok i edycja', () => {
     expect(root.querySelector('u-field')).not.toBeNull();
     fixture.componentInstance.update(form.sections[0].fields[0], 'Nowe imię');
     expect(update).toHaveBeenCalledWith('name', 'Nowe imię');
-    expect(store.dirty()).toBe(true);
+    expect(store.active()?.answers['name']).toBe('Nowe imię');
+    // The existing demo store persists each edit immediately.
+    expect(store.dirty()).toBe(false);
     fixture.componentInstance.backToView();
-    expect(fixture.componentInstance.mode()).toBe('edit');
+    expect(fixture.componentInstance.mode()).toBe('view');
   });
 
   it('refuses edit when blocked or accepted in preview, even on unlocked backend record', async () => {
