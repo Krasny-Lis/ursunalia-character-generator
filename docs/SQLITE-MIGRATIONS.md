@@ -6,6 +6,8 @@ Kolejna migracja (R-02 / PR 2), `event_memberships_v1`, dodaje wydarzenia, uczes
 
 ## Co robi serwer przy starcie
 
+Poprawki PR #6 dodają migrację 4 (`character_edits_v1`): pusty trwały rejestr metadanych edycji MG. Nie zmienia migracji 1–3, istniejących rekordów ani decyzji; nie rekonstruuje dawnych edycji. Przy aktualizacji z wersji 3 stosuje się ta sama procedura kopii, preflight i transakcyjnego rollbacku. Starszy kod odmówi startu bazy z wersją 4. Szczegóły: [CHARACTERS-AND-REVIEW.md](CHARACTERS-AND-REVIEW.md).
+
 Aktualna migracja 3 (`characters_review_v1`, Etap 2) dodaje model postaci, mapping formularza i historię decyzji. Zachowuje wszystkie oryginalne tabele/rekordy; nierozpoznane ankiety i potencjalne kolizje blokują migrację zamiast automatycznego wyboru. Raport, mapowanie, testy i procedura przełączenia: [CHARACTERS-AND-REVIEW.md](CHARACTERS-AND-REVIEW.md). Wersje 1/2 pozostają niezmienne. Poniższy opis adopcji dotyczy bazowej migracji 1; aktualny runner następnie wykonuje wszystkie brakujące wersje 2/3 w tej samej transakcji. Przed wdrożeniem wersji 3 wymagany jest przegląd preflight na kopii. Nie wykonano migracji na produkcji.
 
 `server/migrations.mjs` zawiera uporządkowane, niezmienne migracje. Pierwsza (`version=1`, `baseline_v27_2`) jest identycznym DDL czterech obecnych tabel: `users`, `sessions`, `forms`, `applications`.

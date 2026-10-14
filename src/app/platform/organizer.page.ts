@@ -76,7 +76,6 @@ import { CharacterHistory } from './character-history';
           <label class="filter-label">Status
             <select [(ngModel)]="filter">
               <option value="all">Wszystkie</option>
-              <option value="draft">W edycji</option>
               <option value="submitted">Do weryfikacji</option>
               <option value="accepted">Zaakceptowane</option>
               <option value="changes">Do poprawy</option>

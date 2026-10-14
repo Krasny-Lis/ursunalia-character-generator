@@ -11,6 +11,61 @@ import { seed } from './test-fixtures/api.mjs';
 const legacySql = readFileSync(new URL('./test-fixtures/v27.2-schema.sql', import.meta.url), 'utf8');
 const snapshot = db => Object.fromEntries(['users','sessions','forms','applications'].map(table =>
   [table, db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]));
+
+test('version-4 upgrade preserves version-3 data/decisions and registry, creates no invented past edits, and is repeatable', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    legacy(db); migrateDatabase(db, { migrations: MIGRATIONS.slice(0, 3) });
+    const id = db.prepare('SELECT id FROM characters').get().id;
+    db.prepare("UPDATE characters SET revision=2,status='changes' WHERE id=?").run(id);
+    db.prepare('INSERT INTO character_decisions VALUES(?,?,?,?,?,?,?,?,?,?)').run(
+      'existing-decision', id, 'gm', 'Historical GM name', '2026-10-14T00:00:00.000Z', 'decision', 'accepted', 'changes', 'Preserve', 2);
+    const tables = ['users','sessions','forms','applications','events','event_memberships','event_grants',
+      'event_character_forms','characters','character_decisions'];
+    const capture = () => Object.fromEntries(tables.map(name => [name, db.prepare(`SELECT * FROM ${name} ORDER BY rowid`).all()]));
+    const before = capture(), log = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();
+    assert.deepEqual(preflightDatabase(db).pendingVersions, [4]);
+    assert.deepEqual(migrateDatabase(db).appliedVersions, [4]);
+    assert.deepEqual(capture(), before);
+    assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<4 ORDER BY version').all(), log);
+    assert.equal(db.prepare('SELECT COUNT(*) n FROM character_edits').get().n, 0);
+    const afterLog = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();
+    assert.deepEqual(migrateDatabase(db).appliedVersions, []);
+    assert.deepEqual(capture(), before);
+    assert.deepEqual(db.prepare('SELECT * FROM schema_migrations ORDER BY version').all(), afterLog);
+    assert.equal(preflightDatabase(db).counts.character_edits, 0);
+  } finally { db.close(); }
+});
+
+test('a failed version-4 migration rolls back only the new table/registry and leaves version-3 data usable', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    legacy(db); migrateDatabase(db, { migrations: MIGRATIONS.slice(0, 3) });
+    const before = snapshot(db), characters = db.prepare('SELECT * FROM characters').all();
+    const log = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();
+    const failing = [...MIGRATIONS.slice(0, 3), { ...MIGRATIONS[3], sql: MIGRATIONS[3].sql + '\nINSERT INTO missing_table VALUES(1);' }];
+    assert.throws(() => migrateDatabase(db, { migrations: failing }), /no such table/);
+    assert.deepEqual(snapshot(db), before);
+    assert.deepEqual(db.prepare('SELECT * FROM characters').all(), characters);
+    assert.deepEqual(db.prepare('SELECT * FROM schema_migrations ORDER BY version').all(), log);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name='character_edits'").get().n, 0);
+    assert.equal(preflightDatabase(db, { migrations: MIGRATIONS.slice(0, 3) }).ok, true);
+    assert.deepEqual(migrateDatabase(db).appliedVersions, [4]);
+  } finally { db.close(); }
+});
+
+test('preflight rejects an edit revision newer than its character without modifying the audit', () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    legacy(db); migrateDatabase(db);
+    const id = db.prepare('SELECT id FROM characters').get().id;
+    db.prepare('INSERT INTO character_edits VALUES(?,?,?,?,?)').run('invalid-edit', id, 'gm', '2026-10-14T00:00:00.000Z', 2);
+    const before = db.prepare('SELECT * FROM character_edits').all();
+    assert.ok(preflightDatabase(db).issues.some(i => i.code === 'INVALID_CHARACTER_EDIT_REVISION'));
+    assert.throws(() => migrateDatabase(db), MigrationError);
+    assert.deepEqual(db.prepare('SELECT * FROM character_edits').all(), before);
+  } finally { db.close(); }
+});
 function legacy(db) {
   db.exec(legacySql);
   db.prepare('INSERT INTO users VALUES(?,?,?,?,?)').run('player', 'Test', 'private@example.test', 'preserve-password-hash', 'participant');
@@ -45,7 +100,7 @@ test('fresh schema and legacy/version-2 backfill preserve exact original JSON, s
         assert.ok(report.characterMapping.preservedAnswerWarnings[0].invalidFieldIds.includes('traits'));
         assert.equal(JSON.stringify(report).includes('sensitive-preserved-answer'), false);
       }
-      assert.equal(migrateDatabase(db).currentVersion, 3);
+      assert.equal(migrateDatabase(db).currentVersion, 4);
       if (before) {
         assert.deepEqual(snapshot(db), before);
         const original = before.applications[0], migrated = db.prepare('SELECT * FROM characters').get();
@@ -104,7 +159,7 @@ test('failed version-3 data backfill rolls back all new tables and registry, ret
     assert.deepEqual(db.prepare('SELECT * FROM schema_migrations').all(), log);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name IN ('characters','character_decisions','event_character_forms')").get().n, 0);
     assert.equal(db.isTransaction, false);
-    assert.equal(migrateDatabase(db).currentVersion, 3);
+    assert.equal(migrateDatabase(db).currentVersion, 4);
   } finally { db.close(); }
 });
 

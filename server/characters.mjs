@@ -42,6 +42,9 @@ export function characterOperations(db, events) {
       history: db.prepare(`SELECT id,actor_id actorId,actor_name actorName,decided_at decidedAt,
         action,from_status fromStatus,status,comment,character_revision characterRevision
         FROM character_decisions WHERE character_id=? ORDER BY character_revision`).all(value.id),
+      editHistory: db.prepare(`SELECT e.id,e.character_id characterId,e.actor_id actorId,u.name actorName,
+        e.edited_at editedAt,e.character_revision characterRevision FROM character_edits e
+        JOIN users u ON u.id=e.actor_id WHERE e.character_id=? ORDER BY e.character_revision`).all(value.id),
     };
     if (reviewer) {
       const owner = db.prepare('SELECT id,name,email FROM users WHERE id=?').get(value.user_id);
@@ -173,7 +176,7 @@ export function characterOperations(db, events) {
       const query = params.get('q')?.trim().toLocaleLowerCase('pl') ?? '';
       if (query.length > 200) fail(400, 'Zapytanie jest zbyt długie.');
       return db.prepare(`SELECT c.* FROM characters c JOIN event_grants g ON g.event_id=c.event_id
-        AND g.user_id=? WHERE g.role IN ('organizer','gm') AND c.deleted_at IS NULL AND (? IS NULL OR c.event_id=?)
+        AND g.user_id=? WHERE g.role IN ('organizer','gm') AND c.deleted_at IS NULL AND c.status!='draft' AND (? IS NULL OR c.event_id=?)
         AND (? IS NULL OR c.status=?) ORDER BY c.updated_at DESC,c.id`).all(user.id, eventId, eventId, status, status)
         .map(r => dto(r, true)).filter(c => !query || [c.userName,c.userEmail,c.answers.name,c.answers.surname]
           .some(v => String(v ?? '').toLocaleLowerCase('pl').includes(query)));
@@ -183,7 +186,11 @@ export function characterOperations(db, events) {
         const value = row(id);
         events.requireGrant(user, value.event_id);
         revision(value, body.expectedRevision);
-        return dto(edit(value, updatedAnswers(value, body.answers), false), true);
+        const edited = edit(value, updatedAnswers(value, body.answers), false);
+        if (edited.revision !== value.revision)
+          db.prepare('INSERT INTO character_edits VALUES(?,?,?,?,?)')
+            .run(randomUUID(), edited.id, user.id, edited.updated_at, edited.revision);
+        return dto(edited, true);
       });
     },
     decide(user, id, body, unlock = false) {

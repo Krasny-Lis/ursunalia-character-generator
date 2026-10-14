@@ -416,3 +416,49 @@ it('GM unlock sends explicit action/revision and owner summary shows actor, time
   expect(summary.nativeElement.textContent).toContain('Make a correction');
   expect(summary.nativeElement.textContent).toContain('14.10.2026');
 });
+
+it('refresh removes a retracted draft from the MG list and detail, then shows it after resubmission', async () => {
+  const app = serverCharacter();
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'gm' }]);
+  const request = vi.spyOn(store, 'request').mockResolvedValueOnce([app]);
+  const fixture = TestBed.createComponent(OrganizerPage); await fixture.whenStable();
+  const page = fixture.componentInstance;
+  page.select(app); await fixture.whenStable();
+  expect(fixture.nativeElement.querySelector('.review-detail')).not.toBeNull();
+  expect(fixture.nativeElement.querySelector('option[value=draft]')).toBeNull();
+  request.mockResolvedValueOnce([]);
+  await page.refresh(); await fixture.whenStable();
+  expect(page.applications()).toEqual([]);
+  expect(page.selected()).toBeNull();
+  expect(fixture.nativeElement.querySelectorAll('.review-item')).toHaveLength(0);
+  expect(fixture.nativeElement.querySelector('.review-detail')).toBeNull();
+  request.mockResolvedValueOnce([{ ...app, revision: 9 }]);
+  await page.refresh(); await fixture.whenStable();
+  expect(fixture.nativeElement.querySelectorAll('.review-item')).toHaveLength(1);
+});
+
+it('MG answer edit audit renders separately from decision history in the panel and owner summary', async () => {
+  const app = { ...serverCharacter(), history: [] };
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'gm' }]);
+  const request = vi.spyOn(store, 'request').mockResolvedValueOnce([app]);
+  const fixture = TestBed.createComponent(OrganizerPage); await fixture.whenStable();
+  const page = fixture.componentInstance;
+  page.select(app); page.beginEdit(); page.changeAnswer('name', 'GM edited');
+  const edited = { ...app, answers: page.editAnswers(), revision: 8, editHistory: [{
+    id: 'edit-1', actorId: 'gm', actorName: 'Editing GM', characterId: app.id,
+    editedAt: '2026-10-14T10:15:00.000Z', characterRevision: 8,
+  }] };
+  request.mockResolvedValueOnce(edited);
+  await page.saveEdit(); await fixture.whenStable();
+  expect(page.selected()!.status).toBe('submitted');
+  expect(page.selected()!.history).toEqual([]);
+  const text = fixture.nativeElement.querySelector('u-character-history').textContent;
+  expect(text).toContain('Historia edycji MG');
+  expect(text).toContain('Editing GM');
+  expect(text).toContain('14.10.2026');
+  expect(text).toContain('rewizja 8');
+  expect(text).toContain('Brak nowych decyzji MG');
+  store.applications.set([edited]);
+  const summary = TestBed.createComponent(SummaryPage); await summary.whenStable();
+  expect(summary.nativeElement.querySelector('u-character-history').textContent).toContain('Editing GM');
+});

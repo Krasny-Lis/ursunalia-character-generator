@@ -13,6 +13,14 @@ import { Application, statusLabel } from './models';
           @if (entry.comment) { <br />{{ entry.comment }} }
         </p>
       } @empty { <p>Brak nowych decyzji MG.</p> }
+      @if (app().editHistory?.length) {
+        <h3>Historia edycji MG</h3>
+        @for (entry of app().editHistory ?? []; track entry.id) {
+          <p><strong>{{ entry.actorName }}</strong> · {{ entry.editedAt | date: 'dd.MM.yyyy, HH:mm' }}<br />
+            Edycja odpowiedzi · rewizja {{ entry.characterRevision }}
+          </p>
+        }
+      }
     </section>
   }`,
 })

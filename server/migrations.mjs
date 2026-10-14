@@ -22,11 +22,14 @@ const registry = `CREATE TABLE schema_migrations(
 const eventSql = readFileSync(new URL('./migrations/002-events.sql', import.meta.url), 'utf8');
 const eventSchema = eventSql.split('-- DATA BACKFILL')[0];
 const characterSql = readFileSync(new URL('./migrations/003-characters.sql', import.meta.url), 'utf8');
+const editSql = readFileSync(new URL('./migrations/004-character-edits.sql', import.meta.url), 'utf8');
 export const MIGRATIONS = Object.freeze([
   Object.freeze({ version: 1, name: 'baseline_v27_2', sql: baseline, schemaSql: baseline }),
   Object.freeze({ version: 2, name: 'event_memberships_v1', sql: eventSql, schemaSql: baseline + eventSchema }),
   Object.freeze({ version: 3, name: 'characters_review_v1', sql: characterSql,
     schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] }),
+  Object.freeze({ version: 4, name: 'character_edits_v1', sql: editSql,
+    schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] + editSql }),
 ]);
 
 export function migrationChecksum(migration) {
@@ -213,6 +216,12 @@ function inspect(db, migrations) {
           ON a.id=c.legacy_application_id WHERE c.id!=a.id OR c.user_id!=a.user_id
           OR c.form_id!=a.form_id OR c.form_revision!=a.form_revision`).get().n;
         if (invalidProvenance) issue('INVALID_CHARACTER_PROVENANCE', invalidProvenance);
+      }
+      if (migrations.slice(0, report.currentVersion).some(m => m.name === 'character_edits_v1')) {
+        report.counts.character_edits = db.prepare('SELECT COUNT(*) count FROM character_edits').get().count;
+        const invalidEdits = db.prepare(`SELECT COUNT(*) n FROM character_edits e JOIN characters c
+          ON c.id=e.character_id WHERE e.character_revision>c.revision`).get().n;
+        if (invalidEdits) issue('INVALID_CHARACTER_EDIT_REVISION', invalidEdits);
       }
     }
     report.pendingVersions = migrations.slice(report.currentVersion).map(m => m.version);

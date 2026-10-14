@@ -76,7 +76,7 @@ Etap postaci sprawdzono w Chromium z rzeczywistym API/SQLite oraz na szerokości
 
 ## Dane i migracja
 
-Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje wersjonowane migracje 1–3 bez aktualizacji oryginalnych kont, sesji, formularzy i zgłoszeń. Postacie otrzymują osobne rekordy; nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
+Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje wersjonowane migracje 1–4 bez aktualizacji oryginalnych kont, sesji, formularzy i zgłoszeń. Postacie otrzymują osobne rekordy; edycje MG — odrębny rejestr metadanych bez kopii odpowiedzi, imion i e-maili. Kolejka MG pomija szkice, także cofnięte po zmianach gracza. Nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
 
 - `public/data/platform.json` — wydarzenie, startowe ankiety i fikcyjny przykład. Katalogi z poprzedniej wersji pozostają w `public/data/`.
 - `shared/validation.mjs` — wspólna walidacja przeglądarki i serwera.

@@ -13,6 +13,8 @@ Migracja **3 — `characters_review_v1`** dodaje:
 | `one_active_character` | Częściowy UNIQUE `(user_id,event_id) WHERE deleted_at IS NULL`; egzekwuje limit także przy konkurencyjnym tworzeniu |
 | `character_decisions` | Aktor i nazwa z chwili decyzji, czas UTC, poprzedni/docelowy status, opcjonalny komentarz, akcja decyzji/odblokowania i rewizja postaci |
 
+Migracja **4 — `character_edits_v1`** dodaje osobną tabelę `character_edits`: ID wpisu, ID autora (FK do konta), ID postaci, czas UTC i rewizja po zmianie. Bez kopii imienia/e-maila, odpowiedzi, portretu, komentarza lub statusu decyzji. Wyświetlana nazwa autora pochodzi z bieżącego konta; trwałą tożsamością pozostaje jego ID. Rzeczywista edycja MG i wpis rejestru są atomowe. Brak zmian, zapis gracza, błąd walidacji, autoryzacji albo rewizji nie tworzą wpisu. API właściciela/uprawnionego MG udostępnia osobne `editHistory`, a istniejąca karta historii pokazuje edycje oddzielnie od decyzji. Nie odtwarzamy fikcyjnych dawnych edycji.
+
 `deleted_at` to podstawa indeksu limitu aktywnych postaci. Wszystkie utworzone/migrowane rekordy mają NULL; brak API i UI usuwania, przywracania czy archiwum. FK `(event_id,user_id)` wymaga uczestnictwa; grant MG nie jest uczestnictwem.
 
 Zapis istniejącej postaci, wysyłka, decyzja, edycja MG i odblokowanie wymagają całkowitego `expectedRevision >= 1`; nowa postać — `expectedRevision: 0`. Brak rewizji → 400, nieaktualna → 409 bez zapisu. Faktyczna zmiana zwiększa rewizję. Identyczny zapis nie zmienia rewizji, statusu ani daty. Kolejność kluczy JSON i opcji multiselectu jest nieistotna; zmiany tekstu są rzeczywistymi zmianami. Konflikt pozostawia lokalną pracę w pamięci, dostępną również przez dotychczasowy eksport szkicu/rekordu. Nie ma automatycznego scalania konfliktów.
@@ -56,13 +58,13 @@ Po migracji preflight sprawdza mapping formularz/event, proweniencję skopiowany
 2. Uruchomić preflight nowego kodu na **kopii**. Sprawdzić mapping, liczby i ostrzeżenia. Znany mapping seed wymaga potwierdzenia zgodności z rzeczywistym wdrożeniem przed uruchomieniem migracji na nim.
 3. Przy nierozpoznanych ankietach/kolizjach zachować oryginały i przedstawić raport właścicielowi. Właściciel wskazuje znaczenie ankiet, aktywny rekord i sposób zachowania pozostałych. Następnie potrzebny jest osobno przejrzany adapter/mapping i test na kopii. Nie poprawiać produkcji ręcznie, nie wybierać najnowszego rekordu, nie usuwać rejestru ani nie nadpisywać checksum. Ten PR nie dostarcza uniwersalnego importu ani rozstrzygania konfliktów.
 4. Na izolowanej kopii uruchomić zgodny frontend/backend, porównać oryginalne cztery tabele, postacie, ankiety i sesje; powtórzyć start oraz przepływ recenzji. Dopiero po przeglądzie wdrożyć w oknie serwisowym.
-5. Zachować backup. Stary kod nie obsługuje wersji 3. Po nowych zapisach preferować poprawkę naprzód; odtworzenie wcześniejszego backupu straciłoby późniejsze odpowiedzi/decyzje.
+5. Zachować backup. Stary kod nie obsługuje wersji 4. Po nowych zapisach preferować poprawkę naprzód; odtworzenie wcześniejszego backupu straciłoby późniejsze odpowiedzi/decyzje i rejestr edycji. Migracja 4 dodaje wyłącznie nową pustą tabelę, zachowuje wszystkie wcześniejsze dane i wpisy migracji 1–3; restart nie dopisuje historii. Preflight kontroluje również rewizje rejestru edycji.
 
 Nie odczytano rzeczywistej bazy produkcyjnej — liczba rzeczywistych konfliktów jest nieznana. Fixture z dwoma kandydatami blokuje start i zachowuje oba oryginały. Ryzyko bezpośredniej utraty danych przez migrację jest małe dzięki kopiowaniu bez transformacji i rollbackowi; ryzyka operacyjne to blokada startu, czas blokady zapisów i błędne odtwarzanie backupu.
 
 ## API i uprawnienia
 
-Mutacje wymagają sesji, właściwego Origin i JSON. Event, formularz, właściciel i role pochodzą z SQLite. Cookie, hashowanie, rozmiar żądania i granty pozostają aktywne. Publiczny bootstrap nie zawiera postaci. MG widzi także szkice we własnych wydarzeniach; przekazanie obcego event ID nie obchodzi grantu. Odebranie praw działa przy kolejnym żądaniu i restarcie.
+Mutacje wymagają sesji, właściwego Origin i JSON. Event, formularz, właściciel i role pochodzą z SQLite. Cookie, hashowanie, rozmiar żądania i granty pozostają aktywne. Publiczny bootstrap nie zawiera postaci. Kolejka MG pomija wszystkie `draft`, także zgłoszenia cofnięte wskutek zapisu zmian przez gracza. Filtr `status=draft` zwraca pustą listę; wyszukiwanie nie ujawnia szkiców. Po ponownym poprawnym wysłaniu postać wraca do kolejki. Właściciel nadal widzi swój szkic; istniejący dostęp MG przez ID pozostaje chroniony grantem, a decyzja dotycząca szkicu jest zabroniona. Przekazanie obcego event ID nie obchodzi grantu. Odebranie praw działa przy kolejnym żądaniu i restarcie.
 
 | Endpoint | Kontrakt |
 |---|---|
@@ -71,9 +73,9 @@ Mutacje wymagają sesji, właściwego Origin i JSON. Event, formularz, właścic
 | `POST /api/characters` | Własny szkic: `{id,form:{id,revision},answers,expectedRevision}`. Nowe ID `application-UUID`, rewizja 0; stare ID zachowane przez migrację |
 | `GET /api/characters/:id` | Tylko właściciel, z historią; cudzy rekord → 404 |
 | `POST /api/characters/:id/submit` | Właściciel i uczestnictwo; `{expectedRevision}`; pełna walidacja |
-| `GET /api/organizer/characters` | Tylko eventy z grantem MG/organizatora. Opcjonalne `eventId`, `status`, `q` (gracz/e-mail/imię/nazwisko postaci); brak grantów → 403 |
+| `GET /api/organizer/characters` | Tylko eventy z grantem MG/organizatora, bez szkiców. Opcjonalne `eventId`, `status`, `q` (gracz/e-mail/imię/nazwisko postaci); brak grantów → 403 |
 | `GET /api/organizer/characters/:id` | MG/organizer eventu; odpowiedzi, właściciel i historia |
-| `PATCH /api/organizer/characters/:id` | MG/organizer; `{answers,expectedRevision}`; status bez zmian |
+| `PATCH /api/organizer/characters/:id` | MG/organizer; `{answers,expectedRevision}`; status bez zmian, rzeczywista edycja atomowo zapisuje `editHistory` |
 | `POST /api/organizer/characters/:id/decision` | MG/organizer; `{status,feedback?,expectedRevision}` |
 | `POST /api/organizer/characters/:id/unlock` | MG/organizer; `{feedback?,expectedRevision}`; tylko accepted |
 
@@ -106,6 +108,8 @@ Skrypt sam tworzy/usuwa testową bazę, uruchamia serwer `127.0.0.1:31847` (zmia
 
 Do ręcznego przeglądu: powtórzyć ten przepływ na testowej bazie, spróbować obcego eventu i równoczesnych zmian z dwóch kart; porównać historię gracza/MG. Nie wykonano wdrożenia ani kontroli na rzeczywistych urządzeniach mobilnych.
 
-Wynik w środowisku chmurowym (Node.js 24.19.0): `npm ci`, build produkcyjny i `npm run verify` — powodzenie; **25 testów Angulara i 72 testy Node/SQLite**, bez pominiętych testów. Walidacja wszystkich **10 katalogów** — powodzenie. Rzeczywisty smoke Chromium/API/SQLite — powodzenie, brak błędów JS i poziomego overflow przy 1440/390/320 px; przejrzano zrzuty ekranów gracza i MG. Kontrolowany błąd zapisu historii (HTTP 500) jest testem rollbacku, nie nierozwiązanym błędem.
+Pierwotna weryfikacja Etapu 2 w środowisku chmurowym (Node.js 24.19.0): `npm ci`, build produkcyjny i `npm run verify` — powodzenie; **25 testów Angulara i 72 testy Node/SQLite**, bez pominiętych testów. Walidacja wszystkich **10 katalogów** — powodzenie. Rzeczywisty smoke Chromium/API/SQLite — powodzenie, brak błędów JS i poziomego overflow przy 1440/390/320 px; przejrzano zrzuty ekranów gracza i MG. Kontrolowany błąd zapisu historii (HTTP 500) jest testem rollbacku, nie nierozwiązanym błędem. Regresje poprawek PR #6 dodatkowo sprawdzają znikanie/powrót do kolejki, trwałość i minimalny zakres rejestru edycji, odrębność od decyzji oraz rollback przy błędzie audytu i migracji 4.
 
 Raport fixture konfliktowej: 1 rozpoznana postać, 1 zachowana ankieta logistyczna, 1 nierozpoznane zgłoszenie `potential-second-character` w `second-character-form`; para z istniejącą postacią tego gracza otrzymuje `CHARACTER_MAPPING_CONFLICT`. Migracja blokowana, wszystkie oryginały i rejestr wersji 1/2 pozostają identyczne. To wynik syntetycznych danych, nie raport rzeczywistego wdrożenia.
+
+Weryfikacja poprawek PR #6: `npm run verify` — build, **27 testów Angulara i 78 Node/SQLite** zakończonych powodzeniem; walidacja **10 katalogów** — powodzenie. Rozszerzony smoke Chromium/API/SQLite potwierdza usunięcie cofniętego szkicu z listy i otwartego panelu MG, powrót po wysyłce, trwałe metadane edycji oraz oddzielną prezentację obu historii. Szerokości 1440/390/320 px nadal bez poziomego overflow i błędów JS. Nie migrowano rzeczywistej bazy.

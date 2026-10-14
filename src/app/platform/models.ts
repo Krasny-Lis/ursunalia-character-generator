@@ -46,6 +46,10 @@ export interface CharacterDecision {
   action: 'decision' | 'unlock'; fromStatus: CharacterStatus; status: CharacterStatus;
   comment: string; characterRevision: number;
 }
+export interface CharacterEdit {
+  id: string; characterId: string; actorId: string; actorName: string;
+  editedAt: string; characterRevision: number;
+}
 export interface Application {
   id: string;
   form: FormDefinition;
@@ -55,6 +59,7 @@ export interface Application {
   eventId?: string;
   revision?: number;
   history?: CharacterDecision[];
+  editHistory?: CharacterEdit[];
   migrated?: boolean;
   updatedAt: string;
   submittedAt?: string;

@@ -67,6 +67,16 @@ try {
   await gm.getByRole('link', { name: 'Panel organizatora', exact: true }).click();
   await gm.getByPlaceholder('Gracz lub postać…').fill('Alena');
   await gm.locator('.review-item').click();
+  await player.getByRole('link', { name: 'Edytuj zgłoszenie', exact: true }).click();
+  await player.locator('#input-name').fill('Alena wycofana z kolejki');
+  c = await save(); assert.equal(c.status, 'draft');
+  await gm.getByRole('button', { name: 'Odśwież', exact: true }).click();
+  await gm.getByRole('heading', { name: 'Brak zgłoszeń w tym widoku', exact: true }).waitFor();
+  assert.equal(await gm.locator('.review-item').count(), 0);
+  assert.equal(await gm.locator('.review-detail').count(), 0);
+  await summary(); c = await send(); assert.equal(c.status, 'submitted');
+  await gm.getByRole('button', { name: 'Odśwież', exact: true }).click();
+  await gm.locator('.review-item').click();
   c = await apiResult(gm, () => gm.getByRole('button', { name: 'Odrzuć', exact: true }).click(), '/decision');
   assert.equal(c.status, 'rejected'); assert.equal(c.history[0].comment, '');
   await player.reload(); await player.getByRole('link', { name: 'Edytuj zgłoszenie', exact: true }).click();
@@ -77,6 +87,10 @@ try {
   await gm.locator('#input-occupation').fill('Zmienione przez MG');
   c = await apiResult(gm, () => gm.getByRole('button', { name: 'Zapisz odpowiedzi bez zmiany statusu', exact: true }).click(), `/characters/${c.id}`);
   assert.equal(c.status, 'submitted'); assert.equal(c.history.length, 1);
+  assert.equal(c.editHistory.length, 1);
+  assert.equal(c.editHistory[0].characterId, c.id);
+  assert.equal(c.editHistory[0].characterRevision, c.revision);
+  assert.ok(Number.isFinite(Date.parse(c.editHistory[0].editedAt)));
   c = await apiResult(gm, () => gm.getByRole('button', { name: 'Zaakceptuj', exact: true }).click(), '/decision');
   assert.equal(c.status, 'accepted'); assert.equal(c.history.length, 2);
   await player.reload(); await player.getByRole('link', { name: 'Edytuj zgłoszenie', exact: true }).click();
@@ -93,6 +107,7 @@ try {
   assert.equal(c.status, 'accepted'); assert.equal(c.history.length, 4);
   await player.reload(); await player.locator('u-character-history').waitFor();
   assert.ok((await player.locator('u-character-history').innerText()).includes('Organizator'));
+  assert.ok((await player.locator('u-character-history').innerText()).includes('Historia edycji MG'));
   await player.getByRole('link', { name: 'Edytuj zgłoszenie', exact: true }).click();
   for (const width of [1440, 390, 320]) {
     for (const [name, page] of [['player', player], ['gm', gm]]) {
