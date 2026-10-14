@@ -32,7 +32,7 @@ describe('Informacje o wydarzeniu', () => {
     const root = fixture.nativeElement as HTMLElement;
     const text = root.textContent ?? '';
     expect(text).toContain('22–24 kwietnia 2027');
-    expect(text).toContain('Adres');
+    expect(text).toContain('Krywulka to lokalizacja fabularna');
     expect(text).toContain('Do ogłoszenia');
     expect(text).toContain('Program ramowy');
     expect(text).toContain('Harmonogram w przygotowaniu');
