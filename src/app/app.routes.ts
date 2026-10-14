@@ -1,7 +1,5 @@
 import type { Routes } from '@angular/router';
 
-const planned = () => import('./platform/preview-public.page').then(m => m.PreviewPublicPage);
-
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./platform/home.page').then(m => m.HomePage) },
   { path: 'o-wydarzeniu',
@@ -10,10 +8,12 @@ export const routes: Routes = [
     loadComponent: () => import('./platform/world.page').then(m => m.WorldPage) },
   { path: 'swiat-gry/:slug',
     loadComponent: () => import('./platform/world-article.page').then(m => m.WorldArticlePage) },
-  { path: 'dla-gracza', loadComponent: planned,
-    data: { title: 'Dla gracza', description: 'Poradniki, zasady i informacje potrzebne do przygotowania się do LARPa.' } },
-  { path: 'aktualnosci', loadComponent: planned,
-    data: { title: 'Aktualności', description: 'Ogłoszenia i bieżące informacje organizatorów Ursunaliów.' } },
+  { path: 'dla-gracza',
+    loadComponent: () => import('./platform/player-guide.page').then(m => m.PlayerGuidePage) },
+  { path: 'aktualnosci',
+    loadComponent: () => import('./platform/news.page').then(m => m.NewsPage) },
+  { path: 'aktualnosci/:slug',
+    loadComponent: () => import('./platform/news-article.page').then(m => m.NewsArticlePage) },
   { path: 'wydarzenie/:id', loadComponent: () => import('./platform/event.page').then((m) => m.EventPage) },
   { path: 'zgloszenie-postaci', loadComponent: () => import('./platform/form.page').then((m) => m.FormPage) },
   { path: 'karta-postaci', loadComponent: () => import('./platform/summary.page').then((m) => m.SummaryPage) },
