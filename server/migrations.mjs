@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { definitionIssues } from '../shared/validation.mjs';
 import { validEventDefinition } from './events.mjs';
+import { characterMappingReport } from './character-mapping.mjs';
 
 // Immutable baseline: the four tables shipped in Royal Manuscript v27.2.
 const baseline = `
@@ -20,9 +21,12 @@ const registry = `CREATE TABLE schema_migrations(
 );`;
 const eventSql = readFileSync(new URL('./migrations/002-events.sql', import.meta.url), 'utf8');
 const eventSchema = eventSql.split('-- DATA BACKFILL')[0];
+const characterSql = readFileSync(new URL('./migrations/003-characters.sql', import.meta.url), 'utf8');
 export const MIGRATIONS = Object.freeze([
   Object.freeze({ version: 1, name: 'baseline_v27_2', sql: baseline, schemaSql: baseline }),
   Object.freeze({ version: 2, name: 'event_memberships_v1', sql: eventSql, schemaSql: baseline + eventSchema }),
+  Object.freeze({ version: 3, name: 'characters_review_v1', sql: characterSql,
+    schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] }),
 ]);
 
 export function migrationChecksum(migration) {
@@ -180,6 +184,36 @@ function inspect(db, migrations) {
         } catch { invalidAnswers++; }
       }
       if (invalidAnswers) issue('INVALID_ANSWERS_JSON', invalidAnswers);
+      const charactersPlanned = migrations.some(m => m.name === 'characters_review_v1');
+      const charactersApplied = migrations.slice(0, report.currentVersion).some(m => m.name === 'characters_review_v1');
+      if (charactersPlanned && !charactersApplied && !invalidForms && !invalidAnswers) {
+        report.characterMapping = characterMappingReport(db);
+        if (report.characterMapping.unresolved.length)
+          issue('CHARACTER_MAPPING_REQUIRED', report.characterMapping.unresolved.length);
+        if (report.characterMapping.conflicts.length)
+          issue('CHARACTER_MAPPING_CONFLICT', report.characterMapping.conflicts.length);
+        if (db.prepare('SELECT COUNT(*) n FROM applications WHERE id IS NULL').get().n)
+          issue('INVALID_APPLICATION_IDENTIFIERS');
+      }
+      if (charactersApplied) {
+        for (const table of ['event_character_forms', 'characters', 'character_decisions'])
+          report.counts[table] = db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count;
+        const mismatches = db.prepare(`SELECT COUNT(*) n FROM characters c JOIN forms f
+          ON f.id=c.form_id AND f.revision=c.form_revision LEFT JOIN event_character_forms m
+          ON m.event_id=c.event_id WHERE json_extract(f.definition,'$.eventId')!=c.event_id
+          OR m.form_id IS NULL OR m.form_id!=c.form_id`).get().n;
+        if (mismatches) issue('INVALID_CHARACTER_MAPPING', mismatches);
+        const invalidMappings = db.prepare(`SELECT COUNT(*) n FROM event_character_forms m JOIN forms f
+          ON f.id=m.form_id AND f.revision=m.form_revision WHERE json_extract(f.definition,'$.eventId')!=m.event_id`).get().n;
+        if (invalidMappings) issue('INVALID_CHARACTER_FORM', invalidMappings);
+        const missingCharacters = db.prepare(`SELECT COUNT(*) n FROM applications a LEFT JOIN characters c
+          ON c.legacy_application_id=a.id WHERE a.form_id='character-2027' AND c.id IS NULL`).get().n;
+        if (missingCharacters) issue('MISSING_MIGRATED_CHARACTERS', missingCharacters);
+        const invalidProvenance = db.prepare(`SELECT COUNT(*) n FROM characters c JOIN applications a
+          ON a.id=c.legacy_application_id WHERE c.id!=a.id OR c.user_id!=a.user_id
+          OR c.form_id!=a.form_id OR c.form_revision!=a.form_revision`).get().n;
+        if (invalidProvenance) issue('INVALID_CHARACTER_PROVENANCE', invalidProvenance);
+      }
     }
     report.pendingVersions = migrations.slice(report.currentVersion).map(m => m.version);
     report.ok = !report.issues.length;

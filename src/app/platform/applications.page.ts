@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { PlatformStore } from './platform.store';
 import { Icon } from './icon';
+import { statusLabel } from './models';
 @Component({
   standalone: true,
   imports: [RouterLink, Icon, DatePipe],
@@ -20,7 +21,7 @@ import { Icon } from './icon';
         <article class="paper application-item">
           <div class="wax-icon"><u-icon name="feather" /></div>
           <div>
-            <span class="eyebrow">{{ app.form.title }}</span>
+            <span class="eyebrow">{{ app.form.title }}{{ app.kind === 'survey' ? ' · ankieta dodatkowa' : '' }}</span>
             <h2>
               {{ app.answers['name'] || 'Nowe zgłoszenie' }} {{ app.answers['surname'] || '' }}
             </h2>
@@ -56,14 +57,5 @@ export class ApplicationsPage {
     this.store.open(id);
     void this.router.navigate(['/karta-postaci']);
   }
-  status(s: string) {
-    return (
-      {
-        draft: 'Szkic',
-        submitted: 'Wysłane',
-        accepted: 'Zaakceptowane',
-        changes: 'Do poprawy',
-      } as Record<string, string>
-    )[s];
-  }
+  readonly status = statusLabel;
 }

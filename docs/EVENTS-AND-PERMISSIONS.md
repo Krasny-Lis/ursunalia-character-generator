@@ -4,6 +4,8 @@ Zakres: istniejący Node.js/SQLite i Royal Manuscript. Dodano trwałe wydarzenia
 
 ## Dane i migracja 2
 
+Powyższy zakres opisuje historyczny PR 2. Aktualny Etap 2 dodaje osobny model postaci, pięć statusów i historię, wykorzystując te same uczestnictwa/granty. Kontrakt nowych endpointów, podział bootstrapu na postacie i zachowane ankiety oraz migrację 3 opisuje [CHARACTERS-AND-REVIEW.md](CHARACTERS-AND-REVIEW.md). Żywy schemat nadal jest odłożony.
+
 `server/migrations/002-events.sql` to niezmienna, wersjonowana migracja `event_memberships_v1`. Sumy i wpis migracji 1 pozostają bez zmian. Runner z PR 1 zapewnia preflight, kontrolę checksum i atomowy zapis/rollback.
 
 | Tabela | Zawartość i zabezpieczenia |

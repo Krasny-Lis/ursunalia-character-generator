@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Answers, Application, FormDefinition, Seed, User, GameEvent, EventGrant, EventMembership } from './models';
+import { Answers, Application, FormDefinition, Seed, User, GameEvent, EventGrant, EventMembership, CharacterForm } from './models';
 import { answerIssues, definitionIssues } from '../../../shared/validation.mjs';
 const KEY = 'ursunalia:manuscript:v1';
 export const uid = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -22,6 +22,8 @@ export class PlatformStore {
   readonly events = signal<GameEvent[]>([]);
   readonly eventGrants = signal<EventGrant[]>([]);
   readonly memberships = signal<EventMembership[]>([]);
+  readonly characterForms = signal<CharacterForm[]>([]);
+  readonly reviewDirty = signal(false);
   readonly mode = signal<'loading' | 'demo' | 'server'>('loading');
   readonly ready = signal(false);
   readonly error = signal('');
@@ -42,6 +44,16 @@ export class PlatformStore {
   isMember(eventId: string) {
     return this.mode() === 'demo' || this.memberships().some(m => m.eventId === eventId);
   }
+  isCharacter(form: FormDefinition) {
+    return this.mode() === 'demo' ? form.id === 'character-2027'
+      : this.characterForms().some(m => m.eventId === form.eventId && m.formId === form.id);
+  }
+  canEdit(app: Application) {
+    return app.status !== 'accepted' && (app.kind === 'character' || this.mode() === 'demo'
+      || ['draft', 'changes'].includes(app.status));
+  }
+  private saveEndpoint(app: Application) { return app.kind === 'character' ? 'api/characters' : 'api/applications'; }
+  private saveBody(app: Application) { return { ...app, expectedRevision: app.revision ?? 0 }; }
   async joinEvent(eventId: string) {
     if (this.mode() !== 'server' || this.isMember(eventId)) return;
     const membership = await this.request<EventMembership>(`api/events/${eventId}/join`, 'POST', {});
@@ -89,16 +101,20 @@ export class PlatformStore {
       events: GameEvent[];
       eventGrants: EventGrant[];
       memberships: EventMembership[];
+      characterForms: CharacterForm[];
+      characters: Application[];
     }>('api/bootstrap');
     this.forms.set(data.forms);
     this.user.set(data.user);
     this.events.set(data.events);
     this.eventGrants.set(data.eventGrants);
     this.memberships.set(data.memberships);
+    this.characterForms.set(data.characterForms ?? []);
     const event = data.events.find(e => e.id === this.seed()?.event.id);
     if (event) this.seed.update(seed => seed ? { ...seed, event } : seed);
-    this.applications.set(data.applications);
-    this.activeId.set(data.applications[0]?.id ?? '');
+    const all = [...(data.characters ?? []), ...data.applications];
+    this.applications.set(all);
+    this.activeId.set(all[0]?.id ?? '');
     this.dirty.set(false);
   }
   private restoreDemo(seed: Seed) {
@@ -214,7 +230,9 @@ export class PlatformStore {
       return null;
     }
     const existing = this.applications().find(
-      (a) => a.form.id === form.id && a.id !== 'demo-alena',
+      (a) => a.id !== 'demo-alena' && (this.isCharacter(form)
+        ? (a.kind === 'character' || (this.mode() === 'demo' && a.form.id === 'character-2027')) && a.form.eventId === form.eventId
+        : a.form.id === form.id),
     );
     if (existing) {
       this.open(existing.id);
@@ -225,6 +243,9 @@ export class PlatformStore {
       form: structuredClone(form),
       answers: {},
       status: 'draft',
+      kind: this.isCharacter(form) ? 'character' : 'survey',
+      eventId: form.eventId,
+      revision: 0,
       updatedAt: new Date().toISOString(),
     };
     this.applications.update((all) => [...all, a]);
@@ -234,7 +255,7 @@ export class PlatformStore {
   }
   update(fieldId: string, value: Answers[string]) {
     const current = this.active();
-    if (!current || !['draft', 'changes'].includes(current.status)) return;
+    if (!current || !this.canEdit(current) || this.busy()) return;
     this.applications.update((all) =>
       all.map((a) =>
         a.id === current.id
@@ -251,11 +272,11 @@ export class PlatformStore {
   }
   async save() {
     const current = this.active();
-    if (!current || this.busy()) return;
+    if (!current || this.busy() || !this.canEdit(current)) return;
     this.busy.set(true);
     try {
       if (this.mode() === 'server') {
-        const saved = await this.request<Application>('api/applications', 'POST', current);
+        const saved = await this.request<Application>(this.saveEndpoint(current), 'POST', this.saveBody(current));
         this.replace(saved);
         this.dirty.set(false);
       } else this.persistDemo();
@@ -285,11 +306,13 @@ export class PlatformStore {
     }
     this.busy.set(true);
     try {
-      const saved = await this.request<Application>('api/applications', 'POST', current);
+      const saved = await this.request<Application>(this.saveEndpoint(current), 'POST', this.saveBody(current));
+      this.replace(saved);
+      this.dirty.set(false);
       const result = await this.request<Application>(
-        `api/applications/${saved.id}/submit`,
+        `${this.saveEndpoint(saved)}/${saved.id}/submit`,
         'POST',
-        {},
+        { expectedRevision: saved.revision },
       );
       this.replace(result);
       this.dirty.set(false);
@@ -314,6 +337,8 @@ export class PlatformStore {
     this.user.set(null);
     this.eventGrants.set([]);
     this.memberships.set([]);
+    this.characterForms.set([]);
+    this.reviewDirty.set(false);
     this.events.set([]);
     this.forms.set([]);
     if (this.initialEvent) this.seed.update(seed => seed ? { ...seed, event: this.initialEvent! } : seed);
@@ -333,6 +358,7 @@ export class PlatformStore {
     if (this.mode() === 'server')
       published = await this.request<FormDefinition>('api/forms', 'POST', published);
     this.forms.update((all) => [...all.filter((f) => f.id !== published.id), published]);
+    this.characterForms.update(all => all.map(m => m.formId === published.id ? { ...m, formRevision: published.revision } : m));
     this.persistDemo();
     this.notice.set(
       this.mode() === 'demo'

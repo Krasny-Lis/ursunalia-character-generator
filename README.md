@@ -41,7 +41,9 @@ SQLite przechowuje użytkowników, sesje, wersje ankiet, szkice, zgłoszenia i d
 
 Wydarzenia, uczestnictwo i uprawnienia MG/organizatora są teraz trwałe i przypisane do konkretnego wydarzenia. Założenie konta nie zapisuje na wydarzenie; istniejąca akcja „Dołącz i wypełnij” wykonuje osobne dołączenie przed rozpoczęciem szkicu. Zamknięcie zapisów blokuje nowych uczestników, zachowując możliwość tworzenia i poprawiania zgłoszeń przez już zapisanych. API zarządzania wydarzeniami i grantami oraz zasady bezpiecznej migracji: [docs/EVENTS-AND-PERMISSIONS.md](docs/EVENTS-AND-PERMISSIONS.md).
 
-Przepływ: **szkic → wysłane → zaakceptowane / do poprawy → ponownie wysłane**. Jeden uczestnik może mieć jedno zgłoszenie na ankietę. Nowe wersje formularza nie zmieniają ankiet już rozpoczętych. Portret jest opcjonalny, JPG/PNG/WebP do 750 KB; całe żądanie może mieć maksymalnie 2 MB. Szkice na serwerze zapisuje przycisk „Zapisz szkic”. Przed opuszczeniem strony przeglądarka ostrzega o niezapisanych zmianach.
+Przepływ postaci: **W edycji → Do weryfikacji → Zaakceptowana / Do poprawy / Odrzucona**. Jeden uczestnik ma jedną aktywną postać na wydarzenie. Gracz poprawia także odrzuconą postać; faktycznie zmieniony zapis podczas weryfikacji cofa ją do szkicu, zapis bez zmian zachowuje status. Zaakceptowaną postać może odblokować MG. Panel MG umożliwia edycję bez zmiany statusu, opcjonalne komentarze i historię decyzji. Zapis chronią rewizje; konflikty nie nadpisują lokalnej pracy. Bezstratna migracja, API, granice przypiętych schematów oraz test przepływu: [docs/CHARACTERS-AND-REVIEW.md](docs/CHARACTERS-AND-REVIEW.md).
+
+Dodatkowe ankiety i oryginalne zgłoszenia pozostają zachowane. Nowe rewizje formularza nie zmieniają postaci już rozpoczętych — żywy schemat jest kolejnym etapem. Portret jest opcjonalny, JPG/PNG/WebP do 750 KB; całe żądanie ma limit 2 MB. Szkice zapisuje przycisk „Zapisz szkic”. Przeglądarka ostrzega o niezapisanych zmianach; panel MG ostrzega również przy opuszczaniu widoku.
 
 ### Produkcja
 
@@ -70,11 +72,11 @@ node scripts/validate-catalog.mjs
 
 `verify` wykonuje build produkcyjny, testy komponentów Angular/Vitest i integracyjne testy rzeczywistego HTTP/SQLite. Testy obejmują wypełnianie formularza, podsumowanie, trwały zapis, migrację szkiców, edycję i wersjonowanie ankiet, izolację danych uczestników, decyzje organizatora, walidację i odrzucanie obcych źródeł żądań.
 
-Nie wykonano wizualnej kontroli w przeglądarce. Responsywne układy przygotowano dla szerokości od 320 px, z progami 700, 980, 1250 i 1650 px; przed wdrożeniem należy przejrzeć je na rzeczywistych urządzeniach. Szczegóły: `docs/QA-v27.md`.
+Etap postaci sprawdzono w Chromium z rzeczywistym API/SQLite oraz na szerokościach 1440, 390 i 320 px. Powtarzalny smoke: [docs/CHARACTERS-AND-REVIEW.md](docs/CHARACTERS-AND-REVIEW.md). Responsywne układy mają progi 700, 980, 1250 i 1650 px; przed wdrożeniem przejrzeć je również na rzeczywistych urządzeniach. Szczegóły wcześniejszego projektu: `docs/QA-v27.md`.
 
 ## Dane i migracja
 
-Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem nowej wersji na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje schemat v27.2 i dodaje rejestr migracji bez przepisywania kont, sesji ani zgłoszeń; nieznana lub niespójna baza blokuje start.
+Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje wersjonowane migracje 1–3 bez aktualizacji oryginalnych kont, sesji, formularzy i zgłoszeń. Postacie otrzymują osobne rekordy; nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
 
 - `public/data/platform.json` — wydarzenie, startowe ankiety i fikcyjny przykład. Katalogi z poprzedniej wersji pozostają w `public/data/`.
 - `shared/validation.mjs` — wspólna walidacja przeglądarki i serwera.

@@ -4,13 +4,16 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { PlatformStore, downloadJson } from './platform.store';
 import { Field, Section } from './models';
 import { Icon } from './icon';
+import { CharacterHistory } from './character-history';
+import { statusLabel } from './models';
 import { answerIssues, isPortrait } from '../../../shared/validation.mjs';
 @Component({
   standalone: true,
-  imports: [RouterLink, Icon, A11yModule],
+  imports: [RouterLink, Icon, A11yModule, CharacterHistory],
   templateUrl: './summary.page.html',
 })
 export class SummaryPage {
+  readonly status = statusLabel;
   readonly store = inject(PlatformStore);
   readonly confirmOpen = signal(false);
   readonly issues = computed(() =>

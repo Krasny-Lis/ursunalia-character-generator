@@ -4,12 +4,13 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import seedData from '../../../public/data/platform.json';
 import { PlatformStore } from './platform.store';
-import { Seed, Field } from './models';
+import { Seed, Field, Application } from './models';
 import { FormPage } from './form.page';
 import { SummaryPage } from './summary.page';
 import { BuilderPage } from './builder.page';
 import { FieldControl } from './field.control';
 import { EventPage } from './event.page';
+import { OrganizerPage } from './organizer.page';
 import { answerIssues } from '../../../shared/validation.mjs';
 const seed = seedData as Seed;
 let store: PlatformStore;
@@ -50,6 +51,13 @@ it('creates a blank draft without deleting the example and reopens the same appl
   expect(store.active()!.answers).toEqual({});
   expect(store.start(store.forms()[0])).toBe(id);
   expect(store.applications()).toHaveLength(2);
+});
+it('a retained logistics questionnaire never occupies the character slot in demo', () => {
+  const questionnaire = store.start(store.forms()[1]);
+  const character = store.start(store.forms()[0]);
+  expect(character).not.toBe(questionnaire);
+  expect(store.active()!.form.id).toBe('character-2027');
+  expect(store.applications().some(a => a.id === questionnaire)).toBe(true);
 });
 it('demo submission never claims to send to an organizer', async () => {
   expect(await store.submit()).toBe(false);
@@ -272,4 +280,139 @@ it('event routes show only the chosen persistent event and join it through the e
   await page.start(page.forms()[0]);
   expect(fetchMock.mock.calls[0][0].pathname).toBe('/api/events/beta/join');
   expect(store.active()?.form.eventId).toBe('beta');
+});
+
+function serverCharacter(status: Application['status'] = 'submitted'): Application {
+  store.mode.set('server');
+  store.user.set({ id: 'owner', name: 'Owner', email: 'owner@example.test', role: 'participant' });
+  store.characterForms.set([{ eventId: seed.event.id, formId: seed.forms[0].id, formRevision: 1 }]);
+  const app: Application = { id: 'application-11111111-1111-1111-1111-111111111111', kind: 'character',
+    eventId: seed.event.id, form: structuredClone(seed.forms[0]), answers: structuredClone(seed.example),
+    status, revision: 7, updatedAt: '2026-10-14T00:00:00.000Z', history: [] };
+  store.applications.set([app]); store.activeId.set(app.id); store.dirty.set(false);
+  return app;
+}
+
+it('submitted character remains editable in real controls; only the saved server result changes status and revision', async () => {
+  const app = serverCharacter();
+  const fixture = TestBed.createComponent(FormPage);
+  await fixture.whenStable();
+  const input = fixture.nativeElement.querySelector('#input-name') as HTMLInputElement;
+  expect(input.disabled).toBe(false);
+  input.value = 'Edited player'; input.dispatchEvent(new Event('input', { bubbles: true }));
+  await fixture.whenStable();
+  expect(store.active()!.status).toBe('submitted');
+  expect(store.dirty()).toBe(true);
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...store.active(), status: 'draft', revision: 8 }) });
+  vi.stubGlobal('fetch', fetchMock);
+  await store.save();
+  expect(fetchMock.mock.calls[0][0].pathname).toBe('/api/characters');
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).expectedRevision).toBe(app.revision);
+  expect(store.active()!.status).toBe('draft');
+  expect(store.active()!.revision).toBe(8);
+  expect(store.dirty()).toBe(false);
+});
+
+it('save without edits preserves submitted state; accepted player controls and both save buttons are locked', async () => {
+  const app = serverCharacter();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => app }));
+  await store.save();
+  expect(store.active()!.status).toBe('submitted');
+  expect(store.active()!.revision).toBe(7);
+  store.applications.set([{ ...app, status: 'accepted' }]);
+  const fixture = TestBed.createComponent(FormPage);
+  await fixture.whenStable();
+  expect(fixture.nativeElement.querySelector('#input-name').disabled).toBe(true);
+  const saveButtons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+  expect(saveButtons.filter(b => b.textContent?.includes('Zapisz szkic')).every(b => b.disabled)).toBe(true);
+  store.update('name', 'Blocked');
+  expect(store.active()!.answers['name']).toBe(seed.example['name']);
+});
+
+it('stale player save keeps local answers and dirty flag; submit uses the revision returned by save', async () => {
+  const app = serverCharacter('rejected');
+  store.update('name', 'My local work');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ error: 'Konflikt rewizji' }) }));
+  await store.save();
+  expect(store.active()!.answers['name']).toBe('My local work');
+  expect(store.active()!.revision).toBe(7);
+  expect(store.dirty()).toBe(true);
+  const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ ...app, answers: store.active()!.answers, revision: 8 }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ ...app, revision: 9, status: 'submitted' }) });
+  vi.stubGlobal('fetch', fetchMock);
+  expect(await store.submit()).toBe(true);
+  expect(fetchMock.mock.calls[1][0].pathname).toBe(`/api/characters/${app.id}/submit`);
+  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ expectedRevision: 8 });
+  expect(store.active()!.revision).toBe(9);
+});
+
+it('bootstrap combines characters and retained questionnaires; reopening respects the event limit across form revisions', async () => {
+  const app = serverCharacter('draft');
+  const survey = { ...app, id: 'survey', kind: 'survey', form: seed.forms[1] };
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+    forms: seed.forms, characters: [app], applications: [survey], user: store.user(),
+    events: [seed.event], memberships: [], eventGrants: [], characterForms: store.characterForms(),
+  }) }));
+  await store.refreshServer();
+  expect(store.applications()).toHaveLength(2);
+  expect(store.start({ ...seed.forms[0], revision: 2 })).toBe(app.id);
+  expect(store.applications()).toHaveLength(2);
+  expect(store.active()!.form.revision).toBe(1);
+});
+
+it('MG uses existing field controls, preserves edits on conflict and records optional-comment decisions with CAS', async () => {
+  const app = { ...serverCharacter(), userName: 'Owner', userEmail: 'owner@example.test' };
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'gm' }]);
+  const request = vi.spyOn(store, 'request').mockResolvedValueOnce([app]);
+  const fixture = TestBed.createComponent(OrganizerPage);
+  await fixture.whenStable();
+  const page = fixture.componentInstance;
+  page.select(app); page.beginEdit(); await fixture.whenStable();
+  const input = fixture.nativeElement.querySelector('#input-name') as HTMLInputElement;
+  input.value = 'GM work'; input.dispatchEvent(new Event('input', { bubbles: true }));
+  await fixture.whenStable();
+  request.mockRejectedValueOnce(new Error('Konflikt rewizji'));
+  await page.saveEdit();
+  expect(page.editAnswers()['name']).toBe('GM work');
+  expect(page.selected()!.revision).toBe(7);
+  expect(page.editing()).toBe(true);
+  expect(store.reviewDirty()).toBe(true);
+  request.mockResolvedValueOnce({ ...app, answers: page.editAnswers(), revision: 8 });
+  await page.saveEdit();
+  expect(page.selected()!.status).toBe('submitted');
+  expect(page.editing()).toBe(false);
+  const decided = { ...page.selected()!, status: 'rejected' as const, revision: 9, history: [{ id: 'decision', actorId: 'gm',
+    actorName: 'Our GM', decidedAt: '2026-10-14T00:00:00.000Z', action: 'decision' as const,
+    fromStatus: 'submitted' as const, status: 'rejected' as const, comment: '', characterRevision: 9 }] };
+  request.mockResolvedValueOnce(decided);
+  page.feedback = ''; await page.review('rejected'); await fixture.whenStable();
+  expect(request).toHaveBeenLastCalledWith(`api/organizer/characters/${app.id}/decision`, 'POST',
+    { expectedRevision: 8, status: 'rejected', feedback: '' });
+  expect(fixture.nativeElement.textContent).toContain('Our GM');
+  expect(fixture.nativeElement.textContent).toContain('Odrzucona');
+  page.userQuery = 'GM work'; expect(page.filtered()).toHaveLength(1);
+  page.filter = 'accepted'; expect(page.filtered()).toHaveLength(0);
+});
+
+it('GM unlock sends explicit action/revision and owner summary shows actor, time and optional feedback', async () => {
+  const app = serverCharacter('accepted');
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'gm' }]);
+  const request = vi.spyOn(store, 'request').mockResolvedValueOnce([app]);
+  const fixture = TestBed.createComponent(OrganizerPage); await fixture.whenStable();
+  fixture.componentInstance.select(app);
+  const updated = { ...app, status: 'changes' as const, revision: 8, feedback: 'Make a correction', history: [{
+    id: 'unlock', actorId: 'gm', actorName: 'Our GM', decidedAt: '2026-10-14T12:30:00.000Z', action: 'unlock' as const,
+    fromStatus: 'accepted' as const, status: 'changes' as const, comment: 'Make a correction', characterRevision: 8,
+  }] };
+  request.mockResolvedValueOnce(updated);
+  fixture.componentInstance.feedback = 'Make a correction';
+  await fixture.componentInstance.review('changes', true);
+  expect(request).toHaveBeenLastCalledWith(`api/organizer/characters/${app.id}/unlock`, 'POST',
+    { expectedRevision: 7, status: 'changes', feedback: 'Make a correction' });
+  store.applications.set([updated]);
+  const summary = TestBed.createComponent(SummaryPage); await summary.whenStable();
+  expect(summary.nativeElement.textContent).toContain('Odblokowanie');
+  expect(summary.nativeElement.textContent).toContain('Our GM');
+  expect(summary.nativeElement.textContent).toContain('Make a correction');
+  expect(summary.nativeElement.textContent).toContain('14.10.2026');
 });

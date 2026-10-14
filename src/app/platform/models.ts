@@ -37,11 +37,25 @@ export interface FormDefinition {
 }
 export type Answer = string | number | string[];
 export type Answers = Record<string, Answer>;
+export type CharacterStatus = 'draft' | 'submitted' | 'accepted' | 'changes' | 'rejected';
+export const statusLabel = (status: string) => ({ draft: 'W edycji', submitted: 'Do weryfikacji',
+  changes: 'Do poprawy', accepted: 'Zaakceptowana', rejected: 'Odrzucona' } as Record<string,string>)[status] ?? status;
+export interface CharacterForm { eventId: string; formId: string; formRevision: number; }
+export interface CharacterDecision {
+  id: string; actorId: string; actorName: string; decidedAt: string;
+  action: 'decision' | 'unlock'; fromStatus: CharacterStatus; status: CharacterStatus;
+  comment: string; characterRevision: number;
+}
 export interface Application {
   id: string;
   form: FormDefinition;
   answers: Answers;
-  status: 'draft' | 'submitted' | 'accepted' | 'changes';
+  status: CharacterStatus;
+  kind?: 'character' | 'survey';
+  eventId?: string;
+  revision?: number;
+  history?: CharacterDecision[];
+  migrated?: boolean;
   updatedAt: string;
   submittedAt?: string;
   feedback?: string;

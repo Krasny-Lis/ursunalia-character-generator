@@ -12,6 +12,7 @@ const seed = JSON.parse(readFileSync(new URL('../public/data/platform.json', imp
 const legacySql = readFileSync(new URL('./test-fixtures/v27.2-schema.sql', import.meta.url), 'utf8');
 const origin = 'http://localhost:3000';
 const password = 'fixture-password-12345';
+const eventSurvey = { ...structuredClone(seed.forms[0]), id: 'event-survey' };
 const appId = () => `application-${randomUUID()}`;
 function folder(t) {
   const path = mkdtempSync(join(tmpdir(), 'ursunalia-events-'));
@@ -49,6 +50,7 @@ async function fixture(t) {
   }
   assert.equal((await request('admin', '/api/auth/login', 'POST', { email: options.adminEmail, password })).status, 200);
   const admin = (await request('admin', '/api/bootstrap')).data.user;
+  assert.equal((await request('admin', '/api/forms', 'POST', eventSurvey)).status, 201);
   return {
     request, register, admin, get db() { return app.db; },
     restart: async () => { await app.close(); await start(); },
@@ -73,7 +75,7 @@ test('registration, event participation and application status are independent; 
   const initial = (await f.request('member', '/api/bootstrap')).data;
   assert.deepEqual(initial.memberships, []);
   assert.deepEqual(initial.applications, []);
-  const draft = { id: appId(), form: seed.forms[0], answers: seed.example };
+  const draft = { id: appId(), form: eventSurvey, answers: seed.example };
   assert.equal((await f.request('member', '/api/applications', 'POST', draft)).status, 403);
   const joined = await joinEvent(f, 'member');
   assert.equal(joined.status, 200);
@@ -139,7 +141,7 @@ test('GM and global organizers cannot read, review, publish or grant permissions
   f.db.prepare("UPDATE users SET role='organizer' WHERE id=?").run(ownerB.id);
   assert.equal((await f.request('owner-b', '/api/events', 'POST', eventBody('beta', { published: true, registrationsOpen: true }))).status, 201);
   const bForm = (await f.request('owner-b', '/api/forms', 'POST', formBody('beta-form', 'beta'))).data;
-  const a = await submitted(f, 'player-a', seed.forms[0]);
+  const a = await submitted(f, 'player-a', eventSurvey);
   const b = await submitted(f, 'player-b', bForm);
   assert.equal((await grant(f, 'admin', seed.event.id, gm.id, 'gm')).status, 200);
   assert.equal((await f.request('gm', '/api/bootstrap')).data.user.role, 'participant');
@@ -226,7 +228,7 @@ test('legacy and version-1 upgrade preserve all records and sessions, with one i
     const before = originalRows(db);
     const firstLog = versioned ? db.prepare('SELECT * FROM schema_migrations WHERE version=1').get() : null;
     const upgraded = migrateDatabase(db);
-    assert.equal(upgraded.currentVersion, 2);
+    assert.equal(upgraded.currentVersion, 3);
     assert.deepEqual(originalRows(db), before);
     if (firstLog) assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version=1').get(), firstLog);
     assert.deepEqual(db.prepare('SELECT event_id,user_id,source,status FROM event_memberships').all().map(r => ({ ...r })),
@@ -246,7 +248,8 @@ test('legacy and version-1 upgrade preserve all records and sessions, with one i
       const response = await fetch(`http://127.0.0.1:${app.server.address().port}/api/bootstrap`, { headers: { Cookie: 'ursunalia_session=legacy-token' } });
       const state = await response.json();
       assert.equal(state.user.id, 'player');
-      assert.equal(state.applications.length, 2);
+      assert.equal(state.applications.length, 1);
+      assert.equal(state.characters.length, 1);
       assert.equal(state.memberships.length, 1);
       assert.equal(state.memberships[0].source, 'legacy_application');
     } finally { await app.close(); }
@@ -292,7 +295,8 @@ test('event preflight detects corrupted definitions, lost memberships and versio
   ]) await t.test(code, t => {
     const db = legacyFixture(join(folder(t), 'bad.sqlite'));
     try {
-      migrateDatabase(db); db.exec(sql);
+      // This regression checks the deployed version-2 contract before the character backfill.
+      migrateDatabase(db, { migrations: MIGRATIONS.slice(0, 2) }); db.exec(sql);
       const before = originalRows(db);
       const report = preflightDatabase(db);
       assert.equal(report.ok, false);
