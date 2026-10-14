@@ -59,7 +59,7 @@ async function fixture(t) {
 const eventBody = (id, extra = {}) => ({ id, name: `Event ${id}`, ...extra });
 const formBody = (id, eventId) => ({ ...structuredClone(seed.forms[0]), id, eventId });
 const joinEvent = (f, as, id = seed.event.id) => f.request(as, `/api/events/${id}/join`, 'POST', {});
-const grant = (f, as, eventId, userId, role) => f.request(as, `/api/events/${eventId}/grants/${userId}`, 'PUT', { role });
+const grant = (f, as, eventId, userId, role) => f.request(as, `/api/events/${eventId}/grants/${userId}`, 'PUT', { role, expectedRevision: f.db.prepare('SELECT revision FROM events WHERE id=?').get(eventId).revision });
 async function submitted(f, as, form) {
   assert.equal((await joinEvent(f, as, form.eventId)).status, 200);
   const draft = { id: appId(), form, answers: seed.example };
@@ -174,12 +174,12 @@ test('revoked event grants stay revoked across startup and cannot remove the fin
   const replacement = await f.register('replacement');
   assert.equal((await grant(f, 'admin', seed.event.id, gm.id, 'gm')).status, 200);
   assert.equal((await f.request('gm', '/api/organizer/applications')).status, 200);
-  assert.equal((await f.request('admin', `/api/events/${seed.event.id}/grants/${gm.id}`, 'DELETE', {})).status, 200);
+  assert.equal((await f.request('admin', `/api/events/${seed.event.id}/grants/${gm.id}`, 'DELETE', { expectedRevision: f.db.prepare('SELECT revision FROM events WHERE id=?').get(seed.event.id).revision })).status, 200);
   assert.equal((await f.request('gm', '/api/organizer/applications')).status, 403);
-  assert.equal((await f.request('admin', `/api/events/${seed.event.id}/grants/${f.admin.id}`, 'DELETE', {})).status, 409);
+  assert.equal((await f.request('admin', `/api/events/${seed.event.id}/grants/${f.admin.id}`, 'DELETE', { expectedRevision: f.db.prepare('SELECT revision FROM events WHERE id=?').get(seed.event.id).revision })).status, 409);
   assert.equal((await grant(f, 'admin', seed.event.id, f.admin.id, 'gm')).status, 409);
   assert.equal((await grant(f, 'admin', seed.event.id, replacement.id, 'organizer')).status, 200);
-  assert.equal((await f.request('admin', `/api/events/${seed.event.id}/grants/${f.admin.id}`, 'DELETE', {})).status, 200);
+  assert.equal((await f.request('admin', `/api/events/${seed.event.id}/grants/${f.admin.id}`, 'DELETE', { expectedRevision: f.db.prepare('SELECT revision FROM events WHERE id=?').get(seed.event.id).revision })).status, 200);
   await f.restart(); // ADMIN_EMAIL bootstrap must not restore revoked permissions.
   const state = (await f.request('admin', '/api/bootstrap')).data;
   assert.equal(state.user.id, f.admin.id);
@@ -228,7 +228,7 @@ test('legacy and version-1 upgrade preserve all records and sessions, with one i
     const before = originalRows(db);
     const firstLog = versioned ? db.prepare('SELECT * FROM schema_migrations WHERE version=1').get() : null;
     const upgraded = migrateDatabase(db);
-    assert.equal(upgraded.currentVersion, 5);
+    assert.equal(upgraded.currentVersion, 6);
     assert.deepEqual(originalRows(db), before);
     if (firstLog) assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version=1').get(), firstLog);
     assert.deepEqual(db.prepare('SELECT event_id,user_id,source,status FROM event_memberships').all().map(r => ({ ...r })),

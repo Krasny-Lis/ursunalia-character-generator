@@ -19,6 +19,7 @@
       </button>
     </div>
   </section>
+  @if (app.locked) { <div class="info-strip" role="status"><u-icon name="shield" />Karta zablokowana</div> }
   @if (app.status === 'submitted' || app.status === 'accepted') {
     <div class="info-strip">
       <u-icon name="check" />{{

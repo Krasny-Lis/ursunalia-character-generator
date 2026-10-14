@@ -2,9 +2,11 @@
 
 Zakres: istniejący Node.js/SQLite i Royal Manuscript. Dodano trwałe wydarzenia, osobne uczestnictwo, otwieranie/zamykanie zapisów i uprawnienia MG/organizatora na wydarzenie. Nadal istnieją stare `forms/applications`, cztery statusy zgłoszeń i historyczne rewizje formularzy. Limit aktywnej postaci na wydarzenie, nowy model postaci, pięć statusów i żywy schemat należą do kolejnych zatwierdzanych PR-ów.
 
+**Aktualny Etap 4:** istnieje pełny panel administracji, lista uczestników/zespołu i ograniczone wyszukiwanie kont; granty wymagają rewizji wydarzenia. Żywy schemat działa od Etapu 3. Pozostałe opisy dawnych zakresów są historyczne. Aktualny kontrakt: [MVP-STAGE-4.md](MVP-STAGE-4.md).
+
 ## Dane i migracja 2
 
-Powyższy zakres opisuje historyczny PR 2. Aktualny Etap 2 dodaje osobny model postaci, pięć statusów i historię, wykorzystując te same uczestnictwa/granty. Kontrakt nowych endpointów, podział bootstrapu na postacie i zachowane ankiety oraz migrację 3 opisuje [CHARACTERS-AND-REVIEW.md](CHARACTERS-AND-REVIEW.md). Żywy schemat nadal jest odłożony.
+Powyższy zakres opisuje historyczny PR 2. Aktualny Etap 2 dodaje osobny model postaci, pięć statusów i historię, wykorzystując te same uczestnictwa/granty. Kontrakt nowych endpointów, podział bootstrapu na postacie i zachowane ankiety oraz migrację 3 opisuje [CHARACTERS-AND-REVIEW.md](CHARACTERS-AND-REVIEW.md). Żywy schemat działa od Etapu 3: [LIVE-CHARACTER-SCHEMA.md](LIVE-CHARACTER-SCHEMA.md).
 
 `server/migrations/002-events.sql` to niezmienna, wersjonowana migracja `event_memberships_v1`. Sumy i wpis migracji 1 pozostają bez zmian. Runner z PR 1 zapewnia preflight, kontrolę checksum i atomowy zapis/rollback.
 
@@ -55,8 +57,8 @@ Nowe endpointy pozostają na tej samej domenie co aplikacja. Zapisy wymagają se
 | `POST /api/events` | `id`, `name`, opcjonalne `subtitle/date/location/locationNote/description` oraz flagi (domyślnie false). Tworzy event i grant twórcy; bez uczestnictwa |
 | `PATCH /api/events/:id` | `expectedRevision` i zmieniane dane/flagi; 409 przy nieaktualnej rewizji. Nie zmienia ID |
 | `POST /api/events/:id/join` | Puste `{}`; zwraca własny rekord uczestnictwa. Nie przyjmuje cudzego user ID ani roli |
-| `PUT /api/events/:id/grants/:userId` | `{ "role": "gm" }` lub `organizer`; tylko organizer tego eventu, tylko istniejące konto |
-| `DELETE /api/events/:id/grants/:userId` | Puste `{}`; odebranie praw z ochroną ostatniego organizatora |
+| `PUT /api/events/:id/grants/:userId` | `{ "role": "gm", "expectedRevision": 1 }` lub `organizer`; tylko organizer tego eventu, tylko istniejące konto |
+| `DELETE /api/events/:id/grants/:userId` | `{expectedRevision}`; odebranie praw z ochroną ostatniego organizatora i CAS |
 
 Przykład zmiany zapisów po odczycie rewizji wydarzenia:
 
@@ -74,7 +76,7 @@ Style i układ Royal Manuscript nie zostały zmienione. W trybie serwerowym istn
 
 Menu/panel recenzji i kreator używają grantów wydarzeń, zamiast ufać globalnej roli konta. MG nie dostaje akcji zarządzania formularzem. Wylogowanie czyści cache prywatnych danych i praw także przy awarii odświeżenia. Tryb demonstracyjny zachowuje dotychczasowe lokalne działanie.
 
-Nie dodano nowego ekranu administracyjnego do tworzenia wydarzeń, przełączania zapisów i grantów — te operacje są dostępne przez API opisane powyżej. Istniejący kreator nadal tworzy nową ankietę dla Ursunaliów 2027; edytowanie formularzy innych wydarzeń jest możliwe przez wskazanie istniejącego formularza, a nowe formularze innych wydarzeń można publikować przez API. Rozbudowa panelu administracyjnego wymaga osobnego uzgodnienia; nie jest ukrytą przebudową UI w tym PR.
+Etap 4 dodaje ekran `/#/organizator/wydarzenia` z tworzeniem/edycją/publikacją, zapisami, uczestnikami, wyszukiwaniem kont i grantami. Link do istniejącego kreatora wybiera to konkretne wydarzenie i jego jeden żywy formularz; nie tworzy dodatkowych ankiet. Role i granty zachowują dotychczasową izolację. Zmiany praw wymagają aktualnej rewizji i ją zwiększają; 409 zachowuje lokalne dane panelu.
 
 ## Weryfikacja i ryzyka
 

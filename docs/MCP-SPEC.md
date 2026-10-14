@@ -4,6 +4,8 @@
 **Wersja zastana:** Royal Manuscript **v27.2**, Angular 22 + Node.js 24 + SQLite.  
 **Data aktualizacji:** 2026-10-14.
 
+**Etap 4 — obowiązujące decyzje:** nieodwracalne usuwanie treści zamiast soft delete z przywracaniem; odrębne archiwum tekstowe bez zdjęć, niezależne blokady kart, trwałe powiadomienia i pełna administracja wydarzeń. Szczegóły i test odbiorczy: [MVP-STAGE-4.md](MVP-STAGE-4.md). Te zasady mają pierwszeństwo przed historycznym audytem i opisami wcześniejszych PR-ów.
+
 > **WAŻNE:** to jest właściwa specyfikacja wykonawcza dla najnowszej wersji projektu. Dokument `docs/MCP-SPEC.md` umieszczony wcześniej na `feature/platform-foundation-v24` opierał się na starszym kodzie i **nie jest instrukcją do implementowania od nowa backendu ani interfejsu**. NIE merguj `feature/platform-foundation-v24` do `feature/royal-manuscript-rebuild` i NIE cherry-pickuj poprawek U-01 w ciemno. Wszelkie kolejne gałęzie robocze i PR-y mają wychodzić z `feature/royal-manuscript-rebuild` oraz do niego wracać, chyba że właściciel projektu postanowi inaczej.
 
 ## 1. Cel i zasada ograniczenia złożoności
@@ -33,7 +35,7 @@ Ostatni sprawdzony CI gałęzi `royal-manuscript-rebuild` dla commita `68737a8` 
 ### Wydarzenie i postać
 - Jedno wydarzenie może mieć **jeden aktywny formularz zgłoszenia postaci**, konfigurowany przez organizatora.
 - Status uczestnictwa w wydarzeniu jest odrębny od statusu postaci i ewentualnych płatności.
-- Gracz może posiadać **jedną aktywną postać na wydarzenie**. Usunięta logicznie postać nie liczy się do limitu.
+- Gracz może posiadać **jedną aktywną postać na wydarzenie**. Usunięta lub zarchiwizowana postać nie liczy się do limitu; nie można jej przywrócić do aktywnego zgłoszenia.
 - Zamknięcie zapisów dotyczy nowych uczestników, a nie możliwości utworzenia, poprawienia czy zastąpienia postaci przez już zapisanego uczestnika.
 
 ### Cykl zgłoszenia — pięć stanów
@@ -51,14 +53,18 @@ Historia decyzji MG (aktor, czas, status, komentarz) jest widoczna dla MG i wła
 - Jeden **aktualnie obowiązujący schemat** na wydarzenie; nie utrzymujemy osobnych historycznych wersji biznesowych formularza. Techniczny licznik rewizji do bezpiecznego zapisu jest dozwolony.
 - Organizator konfiguruje sekcje, kolejność i rodzaje pól, etykiety, opisy, wymagalność i walidację. Zachowujemy istniejące możliwości UI, o ile nie kolidują z produktem.
 - W edytorze zapis formularza jest **ręczny i zbiorczy**; niezapisane zmiany nie wpływają na postacie. W razie opuszczenia ekranu ostrzegamy, a konflikt rewizji nie może nadpisać cudzej pracy.
-- Zmiany schematu działają na istniejące postacie, także logicznie usunięte. Usuwanie pól/opcji lub zmiana typu mogą niszczyć odpowiedzi; przed zapisem ostrzegamy i wymagamy potwierdzenia, a status weryfikacji pozostaje bez automatycznej zmiany.
-- Kontekstowy eksport JSON przed zmianami destrukcyjnymi oraz pełny eksport w dowolnym momencie są dostępne dla organizatora/osób zarządzających formularzem; JSON ma obejmować także logicznie usunięte postacie i notatki MG. Nie przechowujemy historii eksportów i nie implementujemy automatycznego importu z kopii.
+- Zmiany schematu działają na wszystkie aktywne postacie, niezależnie od statusu. Archiwa zachowują własny historyczny schemat, a usunięte postacie nie zachowują odpowiedzi. Usuwanie pól/opcji lub zmiana typu mogą niszczyć odpowiedzi; przed zapisem ostrzegamy i wymagamy potwierdzenia, a status weryfikacji pozostaje bez automatycznej zmiany.
+- Kontekstowy eksport JSON przed zmianami destrukcyjnymi oraz pełny eksport w dowolnym momencie są dostępne dla organizatora/osób zarządzających formularzem; JSON obejmuje tekstowe archiwa z historycznym kontekstem, minimalne ślady usuniętych rekordów (bez treści) i dostępne notatki MG. Obecnie prywatne notatki nie istnieją — eksport oznacza to jawnie. Nie przechowujemy historii eksportów i nie implementujemy automatycznego importu z kopii.
 - Zaawansowane warunki widoczności, rozbudowane analizy skutków zmian i ręczne scalanie dużych konfliktów mogą powstać później. Jeśli wdrażamy pola warunkowe, niewidoczne pola nie są walidowane, zachowują wartości i mogą zależeć tylko od wcześniejszych pól.
 
-### Usuwanie
-- Usunięcie postaci jest logiczne i nie usuwa automatycznie uczestnictwa. Gracz może usunąć także zaakceptowaną postać po potwierdzeniu.
-- MG może przywrócić rekord wyłącznie, gdy jego właściciel nie ma innej aktywnej postaci na tym wydarzeniu; przywrócony status pozostaje bez zmian.
-- Archiwum po wydarzeniu, odtwarzanie postaci na inne wydarzenie, zaawansowane operacje masowe i rozbudowane filtry są późniejszym etapem.
+### Blokady, usuwanie, archiwum i powiadomienia
+- Organizator może zablokować/odblokować kartę niezależnie od statusu; gracz nadal ją widzi, lecz API odmawia edycji i wysłania. Komunikat: „Karta zablokowana”. Zbiorcza blokada obejmuje tylko jawnie wskazane istniejące ID, bez dziedziczenia przez nowe karty. Nie tworzy powiadomienia. Odblokowanie `accepted → changes` przez MG nie usuwa tej osobnej blokady.
+- Właściciel może nieodwracalnie usunąć także zaakceptowaną/zablokowaną postać po potwierdzeniu i z kontrolą rewizji. Treść, opis, zdjęcie i kopie wewnętrzne (`applications`, `character_schema_origins`, komentarze, ewentualne archiwum) są czyszczone. Minimalne ślady FK nie zawierają treści; nie ma przywracania przez MG. Uczestnictwo pozostaje i aktywny slot zostaje zwolniony.
+- Archiwizacja jest odrębna: właściciel lub organizator zbiorczo po wydarzeniu zachowuje trwałą kopię tekstu, historycznego schematu, wydarzenia i statusu, bez zdjęć. Fotografie są usuwane również z bieżącej karty i kopii wewnętrznych. Archiwum właściciela nie podlega późniejszym zmianom schematu, edycji ani przywracaniu.
+- Właściciel może użyć archiwum na **innym** wydarzeniu: nowy szkic, tylko zgodne odpowiedzi; bez zdjęcia, decyzji lub akceptacji MG. Limit jednej aktywnej postaci i zwykła weryfikacja pozostają. Niekompatybilne dane pozostają w archiwum.
+- Powiadomienia nowych decyzji/komentarzy MG są trwałe, własne, przypisane do wydarzenia, z oznaczeniem odczytu i linkiem do dostępnej postaci/archiwum. Brak zmian nie powiadamia. Decyzja, historia i powiadomienie są atomowe. Bez e-mail/SMS/push.
+- Niewysłane i cofnięte szkice nie są dostępne recenzentowi przez listę lub bezpośrednie GET/PATCH. Organizator zarządzający ma osobny, jawnie chroniony dostęp do metadanych bez odpowiedzi oraz pełnego eksportu formularza, obejmującego szkice.
+- Fizyczne pozostałości wcześniejszych WAL, eksportów i zewnętrznych backupów podlegają operacyjnej retencji, opisanej w dokumentacji Etapu 4. Usunięcie w aplikacji nie wymazuje wcześniej pobranych kopii.
 
 ## 4. Najważniejsze rozbieżności obecnego v27.2 z celem
 
@@ -67,7 +73,7 @@ Te rozbieżności wynikają z istniejącego kodu, **nie są krytyką funkcjonuj�
 | W v27.2 jest | Docelowo potrzebujemy |
 |---|---|
 | W `platform.json` i UI są różne formularze/ankiety, a API udostępnia wiele formularzy | Jeden formularz **postaci** na wydarzenie; pozostałe rodzaje ankiet poza MVP |
-| `applications` ma unikalność `user_id, form_id` | Limit jednej **aktywnej postaci na wydarzenie**, uwzględniający soft delete |
+| `applications` ma unikalność `user_id, form_id` | Limit jednej **aktywnej postaci na wydarzenie**, zwalniany przez usunięcie/archiwizację |
 | `forms` przechowuje rewizje; zgłoszenia wskazują konkretną `form_revision` | Jeden żywy schemat; konieczna ostrożna migracja starych danych i odpowiedzi |
 | API obsługuje `draft/submitted/accepted/changes` | Dodać `rejected`, właściwe przejścia i historię decyzji |
 | Wysłane zgłoszenie ma blokadę edycji; prośba o poprawki wymaga wpisania komentarza | Edycja `submitted` przez gracza z cofnięciem do szkicu dopiero przy faktycznym zapisie zmian; komentarze opcjonalne |
@@ -84,10 +90,10 @@ Nie kasować drugiego formularza demonstracyjnego ani nie przepisywać istnieją
 3. **R-03: jedna postać na wydarzenie** — ograniczenie po stronie bazy i API; zachowaj obecny renderer i formularz.
 4. **R-04: statusy i weryfikacja MG** — pięć stanów, poprawne przejścia, opcjonalne komentarze i podstawowa historia decyzji.
 5. **R-05: integracja żywego schematu** — dostosuj edytor i dane postaci bez nadpisywania odpowiedzi; zapisywanie ręczne i zabezpieczenia.
-6. **R-06: powiadomienia i odzyskiwanie** — proste powiadomienia w aplikacji, soft delete, dostęp MG.
+6. **R-06 / Etap 4: dopełnienie MVP** — administracja, blokady, nieodwracalne usuwanie, archiwum/reuse i powiadomienia; bez przywracania.
 7. **R-07: test przepływu, responsywność i wdrożenie** — konto → uczestnictwo → szkic → weryfikacja → poprawa → akceptacja; build, testy, API, klawiatura i mobile.
 
-**Najbliższe zlecenie Codex: wyłącznie R-01 (audyt i plan migracji).** U-01 na Royal Manuscript jest już pokryte działającym CI. Nie rozpoczynać budowy nowego backendu ani zamiany frameworka.
+**Aktualny etap: Etap 4 — komplet MVP do odbioru, zgodnie z zatwierdzonym zakresem i jednym PR.** U-01 na Royal Manuscript jest już pokryte działającym CI. Nie rozpoczynać budowy nowego backendu ani zamiany frameworka.
 
 ## 6. Zasady techniczne dla Codex
 
@@ -97,7 +103,7 @@ Nie kasować drugiego formularza demonstracyjnego ani nie przepisywać istnieją
 - Każda zmiana schematu SQLite musi mieć **jawny plan migracji** i test na danych istniejących. Nie używać `DROP TABLE` albo resetu bazy jako „migracji”.
 - Nie obniżać poziomu zabezpieczeń (autoryzacja po stronie serwera, izolacja uczestników, poprawność danych, sesje). Testy odmowy dostępu są obowiązkowe.
 - Testy: `npm ci`, `npm run verify`, `node scripts/validate-catalog.mjs`; ręczny przegląd istotnych zmian UI.
-- Zmiany realizować małymi PR-ami, z kryteriami akceptacji; nie implementować na zapas szczegółów z dalszych etapów.
+- Zmiany dzielić na małe kroki z kryteriami akceptacji; Etap 4 jest jednym zatwierdzonym dużym PR-em. Nie implementować zakresu wykluczonego.
 - Po każdym zadaniu raportować: zmienione pliki, wyniki testów, ryzyka migracji, instrukcję testu użytkownika, link do PR.
 
 **Definicja sukcesu MVP:** organizator publikuje wydarzenie i jego formularz postaci; uczestnik rejestruje się, zapisuje postać trwale i wysyła ją MG; MG kieruje do poprawy albo akceptuje; uczestnik widzi decyzję po ponownym zalogowaniu. Wszystko na istniejącym interfejsie Royal Manuscript.

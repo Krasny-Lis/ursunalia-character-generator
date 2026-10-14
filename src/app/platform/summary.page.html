@@ -15,7 +15,7 @@
       @if (['draft', 'changes', 'rejected'].includes(app.status) || (app.status === 'submitted' && store.dirty() && app.kind === 'character')) {
         <button
           class="button primary"
-          [disabled]="!complete() || store.busy()"
+          [disabled]="!complete() || store.busy() || !store.canEdit(app)"
           (click)="confirmOpen.set(true)"
         >
           <u-icon name="send" />{{
@@ -25,6 +25,8 @@
       }
     </div>
   </section>
+  @if (app.locked) { <div class="info-strip" role="status"><u-icon name="shield" />Karta zablokowana</div> }
+  <u-character-actions [app]="app" />
   <div class="content-layout summary-layout">
     <div class="summary-content">
       <section class="paper character-hero">

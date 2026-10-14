@@ -23,7 +23,7 @@ export function liveSchemaOperations(db, events, characters) {
     if (definition.eventId !== eventId || (current && definition.id !== current.form_id)) fail(400, 'Nie można zmienić wydarzenia ani identyfikatora formularza.');
     const target = { ...definition, revision: (current?.revision ?? 0) + 1, status: 'published' };
     const before = current ? JSON.parse(current.definition) : target;
-    const rows = db.prepare('SELECT * FROM characters WHERE event_id=? ORDER BY id').all(eventId);
+    const rows = db.prepare('SELECT * FROM characters WHERE event_id=? AND deleted_at IS NULL ORDER BY id').all(eventId);
     const updates = rows.map(row => ({ row, ...transformAnswers(before, target, JSON.parse(row.answers)) }));
     const changes = schemaChanges(before, target);
     const affected = updates.filter(u => u.lostFieldIds.length);
@@ -86,6 +86,12 @@ export function liveSchemaOperations(db, events, characters) {
         if (!current) fail(404, 'Nie znaleziono formularza postaci.');
         return { format: 'ursunalia-character-schema-backup', formatVersion: 1, exportedAt: new Date().toISOString(),
           event: events.get(user, eventId), definition: JSON.parse(current.definition), characters: characters.forExport(eventId),
+          archives: db.prepare('SELECT * FROM character_archives WHERE event_id=? ORDER BY character_id').all(eventId)
+            .map(a => ({ characterId: a.character_id, userId: a.user_id, event: JSON.parse(a.event_snapshot), form: JSON.parse(a.schema_snapshot), answers: JSON.parse(a.answers), status: a.status, archivedAt: a.archived_at,
+              history: db.prepare('SELECT * FROM character_decisions WHERE character_id=? ORDER BY character_revision').all(a.character_id),
+              editHistory: db.prepare('SELECT * FROM character_edits WHERE character_id=? ORDER BY character_revision').all(a.character_id) })),
+          retiredCharacters: db.prepare(`SELECT c.id,c.event_id eventId,c.user_id userId,c.revision,c.deleted_at retiredAt,k.disposition
+            FROM characters c JOIN character_controls k ON k.character_id=c.id WHERE c.event_id=? AND c.deleted_at IS NOT NULL ORDER BY c.id`).all(eventId),
           migrationOrigins: db.prepare(`SELECT o.* FROM character_schema_origins o JOIN characters c ON c.id=o.character_id WHERE c.event_id=?`).all(eventId)
             .map(o => ({ characterId: o.character_id, originalRecord: JSON.parse(o.original_record) })),
           legacyForms: db.prepare('SELECT definition FROM forms WHERE id=? ORDER BY revision').all(current.form_id).map(r => JSON.parse(r.definition)),

@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Answers, Application, FormDefinition, Seed, User, GameEvent, EventGrant, EventMembership, CharacterForm } from './models';
+import { Answers, Application, FormDefinition, Seed, User, GameEvent, EventGrant, EventMembership, CharacterForm, ArchivedCharacter, AppNotification } from './models';
 import { answerIssues, definitionIssues } from '../../../shared/validation.mjs';
 import { schemaChanges, transformAnswers, type SchemaChange } from '../../../shared/schema-impact.mjs';
 export interface SchemaImpact {
@@ -25,11 +25,21 @@ export class PlatformStore {
   readonly applications = signal<Application[]>([]);
   readonly user = signal<User | null>(null);
   readonly events = signal<GameEvent[]>([]);
+  readonly selectedEventId = signal('');
+  readonly selectedEvent = computed(() => {
+    if (this.mode() === 'demo') return this.seed()?.event ?? null;
+    return this.events().find(e => e.id === this.selectedEventId())
+      ?? this.events().find(e => e.id === this.seed()?.event.id) ?? this.events()[0] ?? null;
+  });
   readonly eventGrants = signal<EventGrant[]>([]);
   readonly memberships = signal<EventMembership[]>([]);
   readonly characterForms = signal<CharacterForm[]>([]);
+  readonly archives = signal<ArchivedCharacter[]>([]);
+  readonly notifications = signal<AppNotification[]>([]);
+  readonly unreadCount = computed(() => this.notifications().filter(n => !n.readAt).length);
   readonly reviewDirty = signal(false);
   readonly builderDirty = signal(false);
+  readonly adminDirty = signal(false);
   readonly mode = signal<'loading' | 'demo' | 'server'>('loading');
   readonly ready = signal(false);
   readonly error = signal('');
@@ -42,10 +52,14 @@ export class PlatformStore {
     () => this.applications().find((a) => a.id === this.activeId()) ?? null,
   );
   readonly canOrganize = computed(
-    () => this.mode() === 'demo' || this.eventGrants().length > 0,
+    () => this.mode() === 'demo' || this.user()?.role === 'organizer' || this.eventGrants().length > 0,
   );
+  readonly canAdminEvents = computed(() => this.user()?.role === 'organizer' || this.eventGrants().some(g => g.role === 'organizer'));
   canManageForm(eventId: string) {
     return this.mode() === 'demo' || this.eventGrants().some(g => g.eventId === eventId && g.role === 'organizer');
+  }
+  selectEvent(id: string) {
+    if (this.mode() === 'demo' ? this.seed()?.event.id === id : this.events().some(e => e.id === id)) this.selectedEventId.set(id);
   }
   isMember(eventId: string) {
     return this.mode() === 'demo' || this.memberships().some(m => m.eventId === eventId);
@@ -55,7 +69,7 @@ export class PlatformStore {
       : this.characterForms().some(m => m.eventId === form.eventId && m.formId === form.id);
   }
   canEdit(app: Application) {
-    return app.status !== 'accepted' && (app.kind === 'character' || this.mode() === 'demo'
+    return !app.locked && app.status !== 'accepted' && (app.kind === 'character' || this.mode() === 'demo'
       || ['draft', 'changes'].includes(app.status));
   }
   private saveEndpoint(app: Application) { return app.kind === 'character' ? 'api/characters' : 'api/applications'; }
@@ -66,6 +80,7 @@ export class PlatformStore {
     this.memberships.update(all => [...all.filter(m => m.eventId !== eventId), membership]);
   }
   private initialized = false;
+  private authEpoch = 0;
   private initialEvent: GameEvent | null = null;
   async initialize() {
     if (this.initialized) return;
@@ -100,6 +115,7 @@ export class PlatformStore {
     return data as T;
   }
   async refreshServer() {
+    const epoch = this.authEpoch;
     const data = await this.request<{
       forms: FormDefinition[];
       user: User | null;
@@ -109,19 +125,26 @@ export class PlatformStore {
       memberships: EventMembership[];
       characterForms: CharacterForm[];
       characters: Application[];
+      archives?: ArchivedCharacter[];
+      notifications?: AppNotification[];
     }>('api/bootstrap');
+    if (epoch !== this.authEpoch) return;
     this.forms.set(data.forms);
     this.user.set(data.user);
     this.events.set(data.events);
     this.eventGrants.set(data.eventGrants);
     this.memberships.set(data.memberships);
     this.characterForms.set(data.characterForms ?? []);
+    this.archives.set(data.archives ?? []);
+    this.notifications.set(data.notifications ?? []);
     const event = data.events.find(e => e.id === this.seed()?.event.id);
     if (event) this.seed.update(seed => seed ? { ...seed, event } : seed);
     const all = [...(data.characters ?? []), ...data.applications];
-    this.applications.set(all);
-    this.activeId.set(all.some(a => a.id === this.activeId()) ? this.activeId() : all[0]?.id ?? '');
-    this.dirty.set(false);
+    if (!this.dirty()) {
+      this.applications.set(all);
+      this.activeId.set(all.some(a => a.id === this.activeId()) ? this.activeId() : all[0]?.id ?? '');
+      if (!this.selectedEventId() && this.active()) this.selectEvent(this.active()!.form.eventId);
+    }
   }
   private restoreDemo(seed: Seed) {
     try {
@@ -237,6 +260,7 @@ export class PlatformStore {
   }
   open(id: string) {
     this.activeId.set(id);
+    if (this.active()) this.selectEvent(this.active()!.form.eventId);
     this.persistDemo();
   }
   start(form: FormDefinition): string | null {
@@ -308,7 +332,7 @@ export class PlatformStore {
   }
   async submit(): Promise<boolean> {
     const current = this.active();
-    if (!current || this.busy()) return false;
+    if (!current || this.busy() || !this.canEdit(current)) return false;
     if (Object.keys(answerIssues(current.form, current.answers)).length) {
       this.notice.set('Uzupełnij wymagane pola przed wysłaniem.');
       return false;
@@ -344,16 +368,22 @@ export class PlatformStore {
     this.applications.update((all) => all.map((a) => (a.id === app.id ? app : a)));
   }
   async auth(mode: 'login' | 'register', name: string, email: string, password: string) {
+    this.authEpoch++;
     await this.request(`api/auth/${mode}`, 'POST', { name, email, password });
     await this.refreshServer();
   }
   async logout() {
+    this.authEpoch++;
     await this.request('api/auth/logout', 'POST', {});
     this.user.set(null);
+    this.selectedEventId.set('');
     this.eventGrants.set([]);
     this.memberships.set([]);
     this.characterForms.set([]);
+    this.archives.set([]);
+    this.notifications.set([]);
     this.reviewDirty.set(false);
+    this.adminDirty.set(false);
     this.events.set([]);
     this.forms.set([]);
     if (this.initialEvent) this.seed.update(seed => seed ? { ...seed, event: this.initialEvent! } : seed);
@@ -403,6 +433,51 @@ export class PlatformStore {
     const form = this.forms().find(f => f.eventId === eventId && this.isCharacter(f));
     return { format: 'ursunalia-character-schema-backup', formatVersion: 1, definition: form,
       characters: this.applications().filter(a => a.form.id === form?.id), gmNotes: [], gmNotesAvailable: false };
+  }
+  async refreshNotifications() {
+    const owner = this.user()?.id;
+    if (this.mode() === 'server' && owner) {
+      const notifications = await this.request<AppNotification[]>('api/notifications');
+      if (this.user()?.id === owner) this.notifications.set(notifications);
+    }
+  }
+  async markRead(id: string) {
+    const saved = await this.request<AppNotification>(`api/notifications/${id}/read`, 'POST', {});
+    this.notifications.update(all => all.map(n => n.id === id ? saved : n));
+  }
+  async retireCharacter(app: { id: string; revision?: number }, archive: boolean) {
+    if (this.mode() !== 'server') throw new Error('Ta operacja wymaga konta i serwera.');
+    const owner = this.user()?.id;
+    await this.request(`api/characters/${app.id}${archive ? '/archive' : ''}`, archive ? 'POST' : 'DELETE',
+      { expectedRevision: app.revision, ...(archive ? { confirmArchive: true } : { confirmDelete: true }) });
+    if (this.user()?.id !== owner) return;
+    // Commit succeeded: discard only this character, including a possible unsaved local copy.
+    this.applications.update(all => all.filter(a => a.id !== app.id));
+    if (this.activeId() === app.id) { this.activeId.set(''); this.dirty.set(false); }
+    this.archives.update(all => all.filter(a => a.id !== app.id));
+    this.notice.set(archive ? 'Postać przeniesiona do archiwum. Zdjęcie usunięte.' : 'Postać i jej kopie wewnętrzne zostały usunięte.');
+    try { const archives = await this.request<ArchivedCharacter[]>('api/archives'); if (this.user()?.id === owner) this.archives.set(archives); await this.refreshNotifications(); }
+    catch { this.notice.set('Operacja wykonana. Odśwież konto po odzyskaniu połączenia.'); }
+  }
+  async reuseArchive(app: ArchivedCharacter, eventId: string) {
+    if (this.dirty()) throw new Error('Zapisz bieżący szkic przed utworzeniem kolejnego.');
+    const form = this.forms().find(f => f.eventId === eventId && this.isCharacter(f));
+    if (!form) throw new Error('Wydarzenie nie ma formularza postaci.');
+    await this.joinEvent(eventId);
+    const owner = this.user()?.id;
+    const saved = await this.request<Application>(`api/characters/${app.id}/reuse`, 'POST', { eventId, expectedSchemaRevision: form.revision });
+    if (this.user()?.id !== owner) throw new Error('Konto zmieniło się. Odśwież własne postacie.');
+    this.applications.update(all => [...all, saved]); this.open(saved.id);
+    this.notice.set('Utworzono nowy szkic z pasujących odpowiedzi. Wymaga zwykłej weryfikacji MG.');
+    return saved;
+  }
+  async openNotification(notification: AppNotification) {
+    if (this.dirty()) throw new Error('Zapisz bieżące zmiany przed otwarciem innej postaci.');
+    const owner = this.user()?.id;
+    const character = await this.request<Application>(`api/characters/${notification.characterId}`);
+    if (this.user()?.id !== owner) throw new Error('Konto zmieniło się. Odśwież własne postacie.');
+    this.applications.update(all => [...all.filter(a => a.id !== character.id), character]);
+    this.open(character.id); await this.markRead(notification.id);
   }
   message(e: unknown) {
     return e instanceof Error ? e.message : 'Operacja nie powiodła się. Spróbuj ponownie.';

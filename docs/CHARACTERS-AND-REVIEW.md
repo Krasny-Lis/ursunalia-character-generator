@@ -4,6 +4,8 @@ Baza: `feature/royal-manuscript-rebuild`. Istniejący Angular 22, Node.js 24, SQ
 
 Ten dokument zachowuje kontrakt Etapu 2. Aktualny Etap 3 zastępuje przypięte schematy jednym bieżącym formularzem i dodaje ręczny kreator oraz pełny eksport; zasady migracji i aktualne API: [LIVE-CHARACTER-SCHEMA.md](LIVE-CHARACTER-SCHEMA.md). Model statusów, historia decyzji i odrębny rejestr edycji pozostają.
 
+**Etap 4:** niewysłane szkice są ukryte także w GET/PATCH recenzenta przez ID. Działają niezależne blokady, powiadomienia, decyzje zbiorcze, nieodwracalne usuwanie i oddzielne archiwum bez zdjęć. Historyczny zakres Etapu 2 poniżej nie wyklucza aktualnych funkcji. Usunięcie nie pozwala na przywrócenie; ochrona źródeł migracji nie jest wyjątkiem od późniejszego żądania usunięcia treści/zdjęć. Aktualne zasady: [MVP-STAGE-4.md](MVP-STAGE-4.md).
+
 ## Model i zapis
 
 Migracja **3 — `characters_review_v1`** dodaje:
@@ -17,7 +19,7 @@ Migracja **3 — `characters_review_v1`** dodaje:
 
 Migracja **4 — `character_edits_v1`** dodaje osobną tabelę `character_edits`: ID wpisu, ID autora (FK do konta), ID postaci, czas UTC i rewizja po zmianie. Bez kopii imienia/e-maila, odpowiedzi, portretu, komentarza lub statusu decyzji. Wyświetlana nazwa autora pochodzi z bieżącego konta; trwałą tożsamością pozostaje jego ID. Rzeczywista edycja MG i wpis rejestru są atomowe. Brak zmian, zapis gracza, błąd walidacji, autoryzacji albo rewizji nie tworzą wpisu. API właściciela/uprawnionego MG udostępnia osobne `editHistory`, a istniejąca karta historii pokazuje edycje oddzielnie od decyzji. Nie odtwarzamy fikcyjnych dawnych edycji.
 
-`deleted_at` to podstawa indeksu limitu aktywnych postaci. Wszystkie utworzone/migrowane rekordy mają NULL; brak API i UI usuwania, przywracania czy archiwum. FK `(event_id,user_id)` wymaga uczestnictwa; grant MG nie jest uczestnictwem.
+`deleted_at` to podstawa indeksu limitu aktywnych postaci. W Etapie 2 wszystkie utworzone/migrowane rekordy miały NULL. Od Etapu 4 usuwanie/archiwizacja ustawiają datę wycofania, czyszczą aktywne odpowiedzi i zwalniają limit; przywracania nie ma. FK `(event_id,user_id)` wymaga uczestnictwa; grant MG nie jest uczestnictwem.
 
 Zapis istniejącej postaci, wysyłka, decyzja, edycja MG i odblokowanie wymagają całkowitego `expectedRevision >= 1`; nowa postać — `expectedRevision: 0`. Brak rewizji → 400, nieaktualna → 409 bez zapisu. Faktyczna zmiana zwiększa rewizję. Identyczny zapis nie zmienia rewizji, statusu ani daty. Kolejność kluczy JSON i opcji multiselectu jest nieistotna; zmiany tekstu są rzeczywistymi zmianami. Konflikt pozostawia lokalną pracę w pamięci, dostępną również przez dotychczasowy eksport szkicu/rekordu. Nie ma automatycznego scalania konfliktów.
 
@@ -35,7 +37,7 @@ Szkice mogą być niekompletne i mieć krótkie odpowiedzi. Podane wartości nad
 | Gracz wysyła poprawną postać | `draft`, `changes`, `rejected` | `submitted`, nowa data wysłania i rewizja |
 | Gracz edytuje/wysyła | `accepted` | 409; potrzebne odblokowanie MG |
 | MG podejmuje decyzję | Każdy stan poza `draft` | `accepted`, `changes` albo `rejected`; komentarz opcjonalny |
-| MG zapisuje odpowiedzi | Każdy z pięciu stanów | Status bez zmian; niekompletność dopuszczalna jak w szkicu |
+| MG zapisuje odpowiedzi | Każdy stan poza prywatnym `draft` (aktualizacja Etapu 4) | Status bez zmian; niekompletność dopuszczalna jak w szkicu |
 | MG odblokowuje | Wyłącznie `accepted` | `changes`, jawna historia `action=unlock` |
 
 Decyzja/odblokowanie zapisuje status, komentarz, datę, rewizję i historię w jednej transakcji `BEGIN IMMEDIATE`. Błąd historii cofa całość. Historia jest widoczna właścicielowi i MG/organizatorowi tego wydarzenia. Edycja odpowiedzi MG nie udaje nowej decyzji. Nie ma prywatnych notatek ani fikcyjnie odtworzonych dawnych aktorów.
@@ -66,7 +68,7 @@ Nie odczytano rzeczywistej bazy produkcyjnej — liczba rzeczywistych konfliktó
 
 ## API i uprawnienia
 
-Mutacje wymagają sesji, właściwego Origin i JSON. Event, formularz, właściciel i role pochodzą z SQLite. Cookie, hashowanie, rozmiar żądania i granty pozostają aktywne. Publiczny bootstrap nie zawiera postaci. Kolejka MG pomija wszystkie `draft`, także zgłoszenia cofnięte wskutek zapisu zmian przez gracza. Filtr `status=draft` zwraca pustą listę; wyszukiwanie nie ujawnia szkiców. Po ponownym poprawnym wysłaniu postać wraca do kolejki. Właściciel nadal widzi swój szkic; istniejący dostęp MG przez ID pozostaje chroniony grantem, a decyzja dotycząca szkicu jest zabroniona. Przekazanie obcego event ID nie obchodzi grantu. Odebranie praw działa przy kolejnym żądaniu i restarcie.
+Mutacje wymagają sesji, właściwego Origin i JSON. Event, formularz, właściciel i role pochodzą z SQLite. Cookie, hashowanie, rozmiar żądania i granty pozostają aktywne. Publiczny bootstrap nie zawiera postaci. Kolejka MG pomija wszystkie `draft`, także zgłoszenia cofnięte wskutek zapisu zmian przez gracza. Filtr `status=draft` zwraca pustą listę; wyszukiwanie nie ujawnia szkiców. Po ponownym poprawnym wysłaniu postać wraca do kolejki. Właściciel nadal widzi swój szkic; dostęp MG przez ID do `draft` od Etapu 4 zwraca 404 także przy grancie, a decyzja dotycząca szkicu jest zabroniona. Przekazanie obcego event ID nie obchodzi grantu. Odebranie praw działa przy kolejnym żądaniu i restarcie.
 
 | Endpoint | Kontrakt |
 |---|---|
@@ -76,7 +78,7 @@ Mutacje wymagają sesji, właściwego Origin i JSON. Event, formularz, właścic
 | `GET /api/characters/:id` | Tylko właściciel, z historią; cudzy rekord → 404 |
 | `POST /api/characters/:id/submit` | Właściciel i uczestnictwo; `{expectedRevision}`; pełna walidacja |
 | `GET /api/organizer/characters` | Tylko eventy z grantem MG/organizatora, bez szkiców. Opcjonalne `eventId`, `status`, `q` (gracz/e-mail/imię/nazwisko postaci); brak grantów → 403 |
-| `GET /api/organizer/characters/:id` | MG/organizer eventu; odpowiedzi, właściciel i historia |
+| `GET /api/organizer/characters/:id` | MG/organizer eventu; wysłana postać (bez draft), właściciel i historia |
 | `PATCH /api/organizer/characters/:id` | MG/organizer; `{answers,expectedRevision}`; status bez zmian, rzeczywista edycja atomowo zapisuje `editHistory` |
 | `POST /api/organizer/characters/:id/decision` | MG/organizer; `{status,feedback?,expectedRevision}` |
 | `POST /api/organizer/characters/:id/unlock` | MG/organizer; `{feedback?,expectedRevision}`; tylko accepted |

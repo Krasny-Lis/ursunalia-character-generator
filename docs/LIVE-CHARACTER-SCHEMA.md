@@ -2,9 +2,11 @@
 
 Baza: `feature/royal-manuscript-rebuild`. Jeden PR rozwija istniejący Angular/Node.js 24/SQLite. Style i zasoby Royal Manuscript, sekcje, pola, opisy, opcje, porządek, DnD, podgląd i import definicji pozostają. Nie powstaje nowy backend, system niezależnych ankiet ani moduł notatek/płatności. Testy korzystają wyłącznie z fikcyjnych, izolowanych baz.
 
+**Aktualizacja Etapu 4:** aktywne postacie nadal korzystają z jednego schematu. Archiwa zachowują własny tekstowy snapshot bez zdjęć; usunięte rekordy nie mają odpowiedzi ani przywracania. Usunięcie i archiwizacja celowo czyszczą odpowiednie kopie wewnętrzne, również źródła migracji. Bieżący cykl i eksport: [MVP-STAGE-4.md](MVP-STAGE-4.md).
+
 ## Aktualne źródło prawdy
 
-`character_schemas` ma jeden rekord na wydarzenie: stabilne ID formularza, bieżący JSON i techniczną rewizję. Wszystkie odczyty postaci i walidacja wysyłki/każdej nowej akceptacji używają tego rekordu. Zmiana obejmuje szkice, wysłane, skierowane do poprawy, zaakceptowane, odrzucone oraz logicznie usunięte rekordy. Nowe wymagane pola są bez odpowiedzi; stare statusy pozostają bez zmian, nawet gdy postać wymaga uzupełnienia według nowego schematu.
+`character_schemas` ma jeden rekord na wydarzenie: stabilne ID formularza, bieżący JSON i techniczną rewizję. Wszystkie odczyty postaci i walidacja wysyłki/każdej nowej akceptacji używają tego rekordu. Zmiana obejmuje szkice, wysłane, skierowane do poprawy, zaakceptowane, odrzucone; archiwa są wyłączone z późniejszych zmian, a usunięte rekordy nie przechowują treści. Nowe wymagane pola są bez odpowiedzi; stare statusy pozostają bez zmian, nawet gdy postać wymaga uzupełnienia według nowego schematu.
 
 Historyczne `forms`, `applications`, `event_character_forms` i kolumny `characters.form_id/form_revision` są zachowanymi kotwicami pochodzenia/FK. Nie są wersjami biznesowymi wybieranymi przez gracza ani źródłem walidacji. Zapis schematu nie dopisuje kolejnej historycznej definicji do `forms`. Dodatkowa ankieta logistyczna i jej odpowiedzi pozostają nietknięte, bez nowych funkcji kreatora dla niezależnych ankiet.
 
@@ -20,7 +22,7 @@ Router i `beforeunload` ostrzegają przed utratą niezapisanej pracy. Podgląd j
 
 Istniejące zapisane demo również odczytuje jeden zatwierdzony schemat dla postaci. Zgodne snapshoty przechodzą do bieżącej definicji bez zmiany odpowiedzi i bez przepisania oryginalnego localStorage przy odczycie. Destrukcyjne mapowanie blokuje odczyt z komunikatem i zachowuje pełną kopię zamiast automatycznego rozstrzygnięcia.
 
-Serwer porównuje stabilne ID sekcji, pól i opcji. Usunięcie sekcji/pola/opcji i zmiana typu są destrukcyjne. Liczy osobno **różne aktywne postacie** i **różne usunięte postacie** faktycznie tracące odpowiedzi oraz liczbę pól z utratą. Jedna postać z kilkoma zmienianymi polami liczy się raz. Przesunięcie pola między sekcjami nie usuwa odpowiedzi, gdy jego ID i typ pozostają.
+Serwer porównuje stabilne ID sekcji, pól i opcji. Usunięcie sekcji/pola/opcji i zmiana typu są destrukcyjne. Liczy **różne aktywne postacie** faktycznie tracące odpowiedzi oraz liczbę pól z utratą. Pole kompatybilności `affectedDeletedCharacters` od Etapu 4 wynosi 0: usunięte karty nie mają odpowiedzi, a archiwa są niezmienne. Jedna postać z kilkoma zmienianymi polami liczy się raz. Przesunięcie pola między sekcjami nie usuwa odpowiedzi, gdy jego ID i typ pozostają.
 
 - Usunięcie pola/sekcji usuwa wartości tych pól po potwierdzeniu.
 - Zmiana typu usuwa starą wartość, bez zgadywania konwersji.
@@ -30,9 +32,9 @@ Serwer porównuje stabilne ID sekcji, pól i opcji. Usunięcie sekcji/pola/opcji
 
 Dialog pokazuje liczby, oferuje pełną kopię JSON i wymaga zaznaczenia potwierdzenia. Usunięcie elementu w lokalnym kreatorze nie jest zgodą na zmianę zapisanych odpowiedzi. Potwierdzenie jest wymagane także przy zmianie destrukcyjnej z zerem odpowiedzi do utraty.
 
-Token analizy jest podpisany HMAC i związany z aktorem, wydarzeniem, dokładną definicją, rewizją schematu oraz ID/rewizjami/odpowiedziami/stanem usunięcia wszystkich postaci. Ważność 5 minut. Zapis odpowiedzi, decyzja, nowa postać, inne zmiany schematu lub restart unieważniają odpowiednio analizę. Nie przechowujemy historii analiz/eksportów. Serwer ponownie liczy skutki pod `BEGIN IMMEDIATE`; schemat, odpowiedzi i rewizje zapisuje atomowo. Błąd w środku cofa wszystko.
+Token analizy jest podpisany HMAC i związany z aktorem, wydarzeniem, dokładną definicją, rewizją schematu oraz ID/rewizjami/odpowiedziami wszystkich aktywnych postaci. Wycofanie/archiwizacja w międzyczasie również unieważnia analizę. Ważność 5 minut. Zapis odpowiedzi, decyzja, nowa postać, inne zmiany schematu lub restart unieważniają odpowiednio analizę. Nie przechowujemy historii analiz/eksportów. Serwer ponownie liczy skutki pod `BEGIN IMMEDIATE`; schemat, odpowiedzi i rewizje zapisuje atomowo. Błąd w środku cofa wszystko.
 
-Każda rzeczywista zmiana schematu zwiększa rewizję wszystkich postaci wydarzenia, również usuniętych, chroniąc przed starymi klientami. Statusy, daty wysłania, uczestnictwa i historie decyzji/edycji MG pozostają. Sam zapis schematu nie udaje decyzji ani edycji odpowiedzi przez MG. Nieaktualna rewizja formularza lub postaci → 409. Edycja MG wymaga także `expectedSchemaRevision`; gracz przekazuje rewizję w `form.revision`.
+Każda rzeczywista zmiana schematu zwiększa rewizję wszystkich aktywnych postaci wydarzenia, chroniąc przed starymi klientami. Statusy, daty wysłania, uczestnictwa i historie decyzji/edycji MG pozostają. Sam zapis schematu nie udaje decyzji ani edycji odpowiedzi przez MG. Nieaktualna rewizja formularza lub postaci → 409. Edycja MG wymaga także `expectedSchemaRevision`; gracz przekazuje rewizję w `form.revision`.
 
 ## API i eksport
 
@@ -45,11 +47,11 @@ Każda rzeczywista zmiana schematu zwiększa rewizję wszystkich postaci wydarze
 
 Nowy formularz ma `expectedRevision:0`, a istniejący — bieżący licznik. Tożsamości eventu/istniejącego formularza nie można podmienić. Dawne `/api/forms` nie może publikować kolejnej historycznej wersji aktualnego formularza postaci ani ominąć analizy. Pozostaje adapterem zastanych ankiet i pierwszego jawnego przypisania istniejącej definicji. Grant MG uprawnia do recenzji, nie zarządzania schematem lub pełnego eksportu. Sesje, Origin, limity JSON, FK i izolacja eventów pozostają aktywne.
 
-Eksport w jednym snapshotcie obejmuje: wydarzenie, aktualny formularz, wszystkie postacie (także szkice/usunięte), ich odpowiedzi, statusy, rewizje, właścicieli, decyzje i rejestr edycji, zachowane źródła migracji, oryginalne definicje i powiązane legacy zgłoszenia. Bez haseł, hashy, tokenów i sesji. Plik zawiera dane uczestników — przechowywać prywatnie. To kopia danych formularza, nie automatyczny import lub backup całej SQLite.
+Eksport w jednym snapshotcie obejmuje: wydarzenie, aktualny formularz, aktywne postacie (także szkice), odpowiedzi/statusy/rewizje/właścicieli i obie historie, tekstowe archiwa z historycznym schematem/kontekstem, minimalne ślady usuniętych kart oraz pozostałe źródła migracji, oryginalne definicje i powiązane legacy zgłoszenia po wymaganym czyszczeniu. Nigdy nie eksportuje usuniętej treści lub archiwalnych zdjęć. Bez haseł, hashy, tokenów i sesji. Plik zawiera dane uczestników — przechowywać prywatnie. To kopia danych formularza, nie automatyczny import lub backup całej SQLite.
 
 Aktualny backend nie posiada notatek MG. Eksport jawnie podaje `gmNotes:[]` i `gmNotesAvailable:false`; nie deklaruje eksportu nieistniejących notatek. Jeżeli notatki zostaną dodane, kontrakt wymaga dołączenia ich wyłącznie do autoryzowanego eksportu, nigdy do API gracza.
 
-## Migracja 5 i ochrona oryginałów
+## Migracja 5 i ochrona oryginałów podczas adopcji
 
 Migracje 1–4 i ich checksum pozostają niezmienne. Migracja `live_character_schema_v1` dodaje `character_schemas` oraz `character_schema_origins`. Bieżący schemat bierze z **jawnego, dotychczasowego mappingu** wydarzenia, nie z rankingu dat/tytułów postaci. Dla legacy adopcji stosowane są te same wcześniejsze zasady rozpoznania formularza postaci i ankiety logistycznej.
 

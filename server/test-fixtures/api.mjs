@@ -34,7 +34,10 @@ export async function apiFixture(t) {
     return (await request(as, '/api/bootstrap')).data.user;
   }
   assert.equal((await request('admin', '/api/auth/login', 'POST', { email: options.adminEmail, password: options.adminPassword })).status, 200);
-  return { request, register, get db() { return app.db; },
+  return { request, register,
+    grant: async (as, eventId, userId, role) => request(as, `/api/events/${eventId}/grants/${userId}`, role ? 'PUT' : 'DELETE',
+      { ...(role ? { role } : {}), expectedRevision: app.db.prepare('SELECT revision FROM events WHERE id=?').get(eventId).revision }),
+    get db() { return app.db; },
     join: (as, id = seed.event.id) => request(as, `/api/events/${id}/join`, 'POST', {}),
     save: (as, c, answers = c.answers, expectedRevision = c.revision ?? 0) => request(as, '/api/characters', 'POST', { ...c, answers, expectedRevision }),
     submit: (as, c) => request(as, `/api/characters/${c.id}/submit`, 'POST', { expectedRevision: c.revision }),

@@ -95,7 +95,7 @@ try {
   assert.equal(c.status, 'accepted'); assert.equal(c.history.length, 2);
   await player.reload(); await player.getByRole('link', { name: 'Edytuj zgłoszenie', exact: true }).click();
   assert.equal(await player.locator('#input-name').isDisabled(), true);
-  await gm.locator('textarea').fill('Możesz poprawić postać.');
+  await gm.locator('.review-detail textarea').fill('Możesz poprawić postać.');
   c = await apiResult(gm, () => gm.getByRole('button', { name: 'Odblokuj dla gracza', exact: true }).click(), '/unlock');
   assert.equal(c.status, 'changes'); assert.equal(c.history.at(-1).action, 'unlock');
   await player.reload(); await player.locator('#input-name').waitFor();
@@ -109,7 +109,7 @@ try {
   assert.ok((await player.locator('u-character-history').innerText()).includes('Organizator'));
   assert.ok((await player.locator('u-character-history').innerText()).includes('Historia edycji MG'));
   await player.getByRole('link', { name: 'Edytuj zgłoszenie', exact: true }).click();
-  for (const width of [1440, 390, 320]) {
+  for (const width of [1440, 980, 390, 320]) {
     for (const [name, page] of [['player', player], ['gm', gm]]) {
       await page.setViewportSize({ width, height: 900 });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${name} horizontal overflow at ${width}px`);
@@ -120,7 +120,7 @@ try {
     }
   }
   assert.deepEqual(errors, []);
-  console.log('PASS: real Angular/API/SQLite workflow; draft, no-op, retract, reject, correct, GM edit, accept, unlock, history; widths 1440/390/320.');
+  console.log('PASS: real Angular/API/SQLite workflow; draft, no-op, retract, reject, correct, GM edit, accept, unlock, history; widths 1440/980/390/320.');
 } finally {
   if (browser) await browser.close();
   if (app) await app.close();

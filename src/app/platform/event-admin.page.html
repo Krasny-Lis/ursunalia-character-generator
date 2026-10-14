@@ -1,0 +1,45 @@
+<a class="back-link" routerLink="/organizator/ankiety"><u-icon name="back" />Panel organizatora</a>
+<section class="page-heading"><div><span class="eyebrow">ADMINISTRACJA WYDARZENIA</span><h1>Wydarzenia i uczestnicy</h1><p>Dane wydarzenia, zapisy i uprawnienia jego zespołu.</p></div></section>
+@if (store.mode() !== 'server' || !store.canAdminEvents()) {
+  <section class="paper empty-state"><h2>Dostęp dla organizatora wydarzenia</h2><p>Ta administracja wymaga konta i serwera.</p><a class="button primary" routerLink="/konto">Moje konto</a></section>
+} @else {
+  <section class="paper survey-card">
+    <label>Wybierz wydarzenie<select [ngModel]="eventId" (ngModelChange)="chooseEvent($event)" [disabled]="busy()"><option value="">{{ canCreate() ? 'Nowe wydarzenie' : 'Wybierz wydarzenie' }}</option>@for (item of managed(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }</select></label>
+    @if (eventId || canCreate()) {
+      <form (ngSubmit)="save()" [attr.inert]="busy() ? '' : null">
+        @if (!eventId) { <label>Identyfikator wydarzenia<input name="id" [(ngModel)]="event.id" (ngModelChange)="changed()" required pattern="[a-zA-Z0-9_-]+" maxlength="100" placeholder="np. ursunalia-2028" /></label> }
+        <div class="field-grid">
+          <label>Nazwa<input name="name" [(ngModel)]="event.name" (ngModelChange)="changed()" required maxlength="500" /></label>
+          <label>Podtytuł<input name="subtitle" [(ngModel)]="event.subtitle" (ngModelChange)="changed()" maxlength="500" /></label>
+          <label>Termin<input name="date" [(ngModel)]="event.date" (ngModelChange)="changed()" maxlength="500" placeholder="np. 22–24.04.2027" /></label>
+          <label>Lokalizacja<input name="location" [(ngModel)]="event.location" (ngModelChange)="changed()" maxlength="500" /></label>
+          <label class="full">Wskazówki dojazdu<input name="locationNote" [(ngModel)]="event.locationNote" (ngModelChange)="changed()" maxlength="500" /></label>
+          <label class="full">Opis<textarea name="description" [(ngModel)]="event.description" (ngModelChange)="changed()" maxlength="10000" rows="4"></textarea></label>
+        </div>
+        <div class="actions"><label class="checkbox-label"><input type="checkbox" name="published" [(ngModel)]="event.published" (ngModelChange)="changed()" />Wydarzenie opublikowane</label><label class="checkbox-label"><input type="checkbox" name="open" [(ngModel)]="event.registrationsOpen" (ngModelChange)="changed()" />Zapisy otwarte</label></div>
+        <p>{{ event.published ? 'Wydarzenie widoczne publicznie.' : 'Wydarzenie nieopublikowane.' }} Zamknięcie zapisów nie odbiera udziału dotychczasowym uczestnikom.</p>
+        <div class="actions"><button class="button primary" type="submit">{{ eventId ? 'Zapisz wydarzenie' : 'Utwórz wydarzenie' }}</button>
+          @if (eventId) { <button class="button light" type="button" (click)="load()">Wczytaj aktualne dane</button><a class="button outline" [routerLink]="['/wydarzenie', eventId]">Otwórz wydarzenie</a><a class="button light" routerLink="/organizator/ankiety/edytor" [queryParams]="{ id: 'new', eventId }">Formularz postaci</a> }
+        </div>
+      </form>
+    }
+  </section>
+  @if (error()) { <p class="error-banner" role="alert">{{ error() }}</p> }
+  @if (data(); as admin) {
+    <section class="section-title"><h2>Uczestnicy · {{ admin.participants.length }}</h2></section>
+    <div class="application-list">@for (account of admin.participants; track account.id) { <article class="paper survey-card"><h3>{{ account.name }}</h3><p>{{ account.email }}</p><small>Dołączenie: {{ account.joinedAt | date: 'dd.MM.yyyy, HH:mm' }}</small></article> } @empty { <section class="paper empty-state"><h3>Nie ma jeszcze uczestników</h3><p>Opublikuj wydarzenie i otwórz zapisy.</p></section> }</div>
+    <section class="section-title"><h2>Zespół i uprawnienia</h2></section>
+    <div class="application-list">@for (account of admin.grants; track account.id) { <article class="paper survey-card"><h3>{{ account.name }} · {{ account.role === 'organizer' ? 'Organizator' : 'MG' }}</h3><p>{{ account.email }}</p><div class="actions"><button class="button light" [disabled]="busy() || store.adminDirty()" (click)="grant(account, account.role === 'organizer' ? 'gm' : 'organizer')">{{ account.role === 'organizer' ? 'Zmień na MG' : 'Zmień na organizatora' }}</button><button class="button light" [disabled]="busy() || store.adminDirty()" (click)="grant(account)">Odbierz uprawnienia</button></div></article> }</div>
+    <section class="paper survey-card"><h3>Znajdź konto do zespołu</h3><form (ngSubmit)="search()"><label>Nazwa lub e-mail<input name="query" [(ngModel)]="query" type="search" minlength="3" maxlength="200" required placeholder="Co najmniej 3 znaki" /></label><button class="button outline" [disabled]="busy()" type="submit">Szukaj kont</button></form><p>Wyniki dostępne tylko organizatorowi tego wydarzenia, maksymalnie 20 kont.</p>
+      @for (account of accounts(); track account.id) { <div class="info-strip"><span>{{ account.name }} · {{ account.email }}</span><div class="actions"><button class="button light" [disabled]="busy() || store.adminDirty()" (click)="grant(account, 'gm')">Nadaj MG</button><button class="button light" [disabled]="busy() || store.adminDirty()" (click)="grant(account, 'organizer')">Nadaj organizatora</button></div></div> }
+    </section>
+    <section class="section-title"><h2>Karty postaci · {{ characters().length }}</h2></section>
+    <section class="paper survey-card"><p>Blokada jest niezależna od statusu. Niewysłane szkice mają tutaj wyłącznie metadane, bez odpowiedzi gracza.</p>
+      <label class="checkbox-label"><input type="checkbox" [checked]="characters().length > 0 && selected().size === characters().length" [disabled]="busy()" (change)="selectAll($any($event.target).checked)" />Zaznacz wszystkie istniejące karty</label>
+      <div class="actions"><button class="button outline" [disabled]="busy() || store.adminDirty() || !selected().size" (click)="operate(false)">Zablokuj zaznaczone · {{ selected().size }}</button><button class="button light" [disabled]="busy() || store.adminDirty() || !selected().size" (click)="operate(false, false)">Odblokuj zaznaczone</button></div>
+      <label class="checkbox-label"><input type="checkbox" [(ngModel)]="completed" [disabled]="busy()" />Potwierdzam, że wydarzenie zostało zakończone</label>
+      <button class="button light" [disabled]="busy() || store.adminDirty() || !selected().size || !completed || event.registrationsOpen" (click)="operate(true)">Archiwizuj zaznaczone po wydarzeniu</button><p>Najpierw zamknij zapisy. Archiwizacja jest nieodwracalna i usuwa zdjęcia.</p>
+    </section>
+    <div class="application-list">@for (card of characters(); track card.id) { <article class="paper survey-card"><label class="checkbox-label"><input type="checkbox" [checked]="selected().has(card.id)" [disabled]="busy()" (change)="toggle(card.id, $any($event.target).checked)" />{{ card.userName }} · {{ status(card.status) }}</label><p>{{ card.locked ? 'Karta zablokowana' : 'Bez dodatkowej blokady karty' }}</p><button class="button light" [disabled]="busy() || store.adminDirty()" (click)="operate(false, !card.locked, card)">{{ card.locked ? 'Odblokuj kartę' : 'Zablokuj kartę' }}</button></article> } @empty { <section class="paper empty-state"><h3>Brak aktywnych postaci</h3></section> }</div>
+  }
+}

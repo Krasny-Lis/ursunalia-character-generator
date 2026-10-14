@@ -13,9 +13,13 @@
         (click)="menu.set(false)"
         >Wydarzenie</a
       >
-      <a routerLink="/wydarzenie/ursunalia-2027" routerLinkActive="active" (click)="menu.set(false)">Ankiety</a>
+      <a [routerLink]="store.selectedEvent() ? ['/wydarzenie', store.selectedEvent()!.id] : ['/']"
+        fragment="ankiety" routerLinkActive="active" (click)="menu.set(false)">Ankiety</a>
       @if (store.canOrganize()) {
         <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
+      }
+      @if (store.user()) {
+        <a routerLink="/powiadomienia" routerLinkActive="active" (click)="menu.set(false)">Powiadomienia@if (store.unreadCount()) { · {{ store.unreadCount() }} }</a>
       }
     </nav>
     <div class="header-tools">
