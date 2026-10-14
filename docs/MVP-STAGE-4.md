@@ -124,3 +124,17 @@ Node.js 24.19.0, npm 11.6.2 do instalacji zgodnej z lockfile:
 Testy nowych scenariuszy: niezależne blokady i ich no-op, przyszłe karty bez dziedziczenia; rollback partii i konkurencyjne rewizje; właścicielskie usuwanie accepted/locked i archiwum; redakcja `applications/origins/decisions` i brak treści w nowych eksportach; zachowanie innych postaci/ankiet/kont/sesji; trwałość tekstu/statusu/kontekstu i usunięcie obrazów także z nieznanych kluczy; bezpieczne dopasowanie archiwum; izolacja eventów i cofnięcie grantów; prywatne/idempotentne powiadomienia oraz rollback ich awarii; ograniczona wyszukiwarka z polską wielkością liter; inicjalizacja/adopcja/restart/checksum/rollback migracji 6 i blokada niejednoznacznych nieaktywnych rekordów. Kontrolowane HTTP 500 po testowych triggerach potwierdzają rollback, nie oznaczają niewyjaśnionych błędów.
 
 Raport syntetycznego konfliktu: fixture wersji 5 z nieaktywną kartą `historical` zwraca `LEGACY_INACTIVE_MAPPING_REQUIRED`, zachowując identyczne oryginały/rejestr 1–5 i bez tworzenia archiwum lub usuwania danych. Zgodna fixture zachowuje wszystkie poprzednie rekordy i aktywne sesje, dodaje wyłącznie nowe struktury/kontrolki. Żadna z tych liczb nie dotyczy produkcji.
+
+## Korekta PR #8 — kontekst wielu wydarzeń
+
+Teksty Budzenia Niedźwiedzi, Krywulki, Ziemi Braci i kultur Kisleva są teraz przypisane wyłącznie do wydarzenia `ursunalia-2027`; jego typografia, ornamenty i dotychczasowe teksty pozostają. Pozostałe wydarzenia pokazują opis, termin, lokalizację i wskazówki organizatora oraz neutralne informacje o zgłoszeniu. Puste dane/formularze mają komunikaty, nie zastępczą fabułę Ursunaliów.
+
+Wybór wydarzenia w istniejącej liście i wejście bezpośrednim adresem `/#/wydarzenie/:id` ustawia kontekst nawigacji. Link „Ankiety” prowadzi do sekcji formularzy tego wydarzenia; otwarcie postaci, kreatora lub administracji również aktualizuje kontekst. Strona główna zachowuje bieżący wybór w ramach otwartej aplikacji. Wybór jest wyłącznie w pamięci, nie dopisuje danych do SQLite lub localStorage; po wylogowaniu jest czyszczony, a niedostępne wydarzenie nie jest celem linku. Nieznany bezpośredni adres pokazuje niedostępność, bez podstawiania Ursunaliów. Routing z `#` pozostaje kompatybilny z F5 i statyczną demonstracją.
+
+Aktualna weryfikacja poprawki: `npm run verify` — build, **44/44 testy Angulara i 115/115 Node/HTTP/SQLite**, bez pominiętych; walidacja **10/10 katalogów**. Cztery scenariusze Chromium: dodatkowy `smoke-events` oraz wcześniejsze MVP, recenzja i kreator — powodzenie. Nowy scenariusz sprawdza dwa odmienne wydarzenia organizatora, Ursunalia, bezpośrednie linki/F5, przełączanie tej samej trasy, menu „Ankiety”, właściwy formularz i niedostępne ID przy **1440/980/390/320 px**, bez błędów JS lub poziomego overflow. Przejrzano desktopowy i mobilny wygląd. Backend, model, migracje/checksum, wspólne style, zasoby i zależności nie zmieniają się w tej korekcie.
+
+```bash
+PLAYWRIGHT_MODULE=/tmp/ursunalia-browser/node_modules/playwright-core/index.mjs node scripts/smoke-events.mjs
+```
+
+Skrypt korzysta wyłącznie z własnej tymczasowej fikcyjnej SQLite, domyślnie port 31850. Test ręczny: otworzyć dwa wydarzenia o różnych opisach/terminach/lokalizacjach, przełączać je listą, kliknąć „Ankiety” i wejść w ich formularze; powtórzyć przez adres/F5 i menu mobilne. Ursunalia mają zachować swoje teksty, a pozostałe nie mają ich dziedziczyć.

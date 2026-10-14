@@ -24,3 +24,17 @@ describe('Royal Manuscript application shell', () => {
     expect(root.querySelector('router-outlet')).not.toBeNull();
   });
 });
+
+it('the surveys link follows the selected visible event and opens its form section, without a hard-coded Ursunalia target', async () => {
+  TestBed.configureTestingModule({ imports:[App],providers:[provideRouter(routes)] });
+  const store=TestBed.inject(PlatformStore);vi.spyOn(store,'initialize').mockResolvedValue();
+  const event={id:'beta',name:'Noc latarni',subtitle:'',date:'17.05.2028',location:'Gdańsk',locationNote:'',description:'Własny opis',status:'Zapisy otwarte'};
+  store.mode.set('server');store.events.set([event]);
+  const fixture=TestBed.createComponent(App);await fixture.whenStable();
+  const surveys=()=>Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a')).find(a=>a.textContent?.trim()==='Ankiety')!;
+  expect(surveys().getAttribute('href')).toBe('/wydarzenie/beta#ankiety');
+  store.events.set([event,{...event,id:'gamma',name:'Drugi świat'}]);store.selectEvent('gamma');await fixture.whenStable();
+  expect(surveys().getAttribute('href')).toBe('/wydarzenie/gamma#ankiety');
+  store.events.set([event]);await fixture.whenStable();expect(surveys().getAttribute('href')).toBe('/wydarzenie/beta#ankiety');
+  store.events.set([]);await fixture.whenStable();expect(surveys().getAttribute('href')).toBe('/#ankiety');
+});

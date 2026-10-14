@@ -267,7 +267,7 @@ it('event routes show only the chosen persistent event and join it through the e
   await store.initialize();
   store.mode.set('server');
   store.user.set({ id: 'fixture', name: 'Fixture', email: 'fixture@example.test', role: 'participant' });
-  store.events.set([seed.event, { ...seed.event, id: 'beta', name: 'Beta event', subtitle: 'Beta subtitle' }]);
+  store.events.set([seed.event, { ...seed.event, id: 'beta', name: 'Beta event', subtitle: 'Beta subtitle', date: '17 maja 2028', location: 'Gdańsk', locationNote: 'Wejście od ulicy Portowej', description: 'Opowieść o latarnikach przygotowana przez organizatora.' }]);
   store.forms.set([...seed.forms, { ...seed.forms[0], id: 'beta-form', eventId: 'beta', title: 'Beta form' }]);
   store.applications.set([]);
   const harness = await RouterTestingHarness.create('/wydarzenie/beta');
@@ -275,6 +275,10 @@ it('event routes show only the chosen persistent event and join it through the e
   expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Beta event');
   expect(harness.routeNativeElement?.querySelectorAll('.survey-card')).toHaveLength(1);
   expect(harness.routeNativeElement?.querySelector('.survey-card h3')?.textContent).toContain('Beta form');
+  const text = harness.routeNativeElement!.textContent!;
+  for (const story of ['Budzenie Niedźwiedzi', 'Krywulka', 'Ziemiach Braci', 'kultur Kisleva']) expect(text).not.toContain(story);
+  for (const data of ['17 maja 2028', 'Gdańsk', 'Wejście od ulicy Portowej', 'Opowieść o latarnikach']) expect(text).toContain(data);
+  expect(store.selectedEvent()?.id).toBe('beta');
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ eventId: 'beta', status: 'joined', joinedAt: '2026-10-14T00:00:00.000Z' }) });
   vi.stubGlobal('fetch', fetchMock);
   vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -642,4 +646,60 @@ it('background refresh preserves an unsaved local character that was edited whil
   const pending=store.refreshServer();store.update('name','Keep unsaved change');
   finish({forms:store.forms(),user:null,events:[],eventGrants:[],memberships:[],characterForms:[],characters:[original],applications:[]});await pending;
   expect(store.active()?.answers['name']).toBe('Keep unsaved change');expect(store.dirty()).toBe(true);
+});
+
+it('switching explicit event routes preserves Ursunalia lore only for its ID and keeps the selected event on the home page', async () => {
+  const router = TestBed.inject(Router);
+  router.resetConfig([{ path: '', component: EventPage }, { path: 'wydarzenie/:id', component: EventPage }]);
+  store.mode.set('server');
+  const beta = { ...seed.event, id: 'beta', name: 'Noc latarni', subtitle: 'Opowieści portu', date: '17 maja 2028', location: 'Gdańsk', locationNote: 'Wejście od Portowej', description: 'Własna historia latarników.' };
+  store.events.set([seed.event, beta]);
+  store.forms.set([...seed.forms, { ...seed.forms[0], id: 'beta-form', eventId: 'beta', title: 'Karta latarnika' }]);
+  const harness = await RouterTestingHarness.create('/wydarzenie/ursunalia-2027'); harness.detectChanges();
+  expect(harness.routeNativeElement?.textContent).toContain('Budzenie Niedźwiedzi');
+  expect(harness.routeNativeElement?.textContent).toContain('Witaj na Ziemiach Braci');
+  expect(harness.routeNativeElement?.querySelector('.page-eyebrow')?.textContent).toBe('LARP FANTASY · KISLEV · 2027');
+  await harness.navigateByUrl('/wydarzenie/beta', EventPage); harness.detectChanges();
+  expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(beta.name);
+  expect(harness.routeNativeElement?.querySelector('.page-eyebrow')?.textContent).toBe('WYDARZENIE');
+  expect(harness.routeNativeElement?.querySelector('.event-bottom')?.textContent).toContain(beta.description);
+  for (const lore of ['Budzenie Niedźwiedzi','Krywulka','Ziemiach Braci','Kisleva','biletach']) expect(harness.routeNativeElement?.textContent).not.toContain(lore);
+  expect(harness.routeNativeElement?.querySelectorAll('.survey-card')).toHaveLength(1);
+  expect(harness.routeNativeElement?.querySelector('.event-selector [aria-current="page"]')?.textContent).toBe(beta.name);
+  expect(store.selectedEvent()?.id).toBe(beta.id);
+  await harness.navigateByUrl('/', EventPage); harness.detectChanges();
+  expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(beta.name);
+  await harness.navigateByUrl('/wydarzenie/ursunalia-2027', EventPage); harness.detectChanges();
+  expect(harness.routeNativeElement?.textContent).toContain('Budzenie Niedźwiedzi');
+  expect(harness.routeNativeElement?.querySelectorAll('.survey-card')).toHaveLength(seed.forms.length);
+});
+
+it('missing event data and unpublished forms show neutral empty states, while unknown direct links never substitute Ursunalia', async () => {
+  const router = TestBed.inject(Router); router.resetConfig([{ path: 'wydarzenie/:id', component: EventPage }]);
+  store.mode.set('server');
+  store.events.set([seed.event,{ ...seed.event, id:'empty-event', name:'Nowe wydarzenie', subtitle:'',date:'',location:'',locationNote:'',description:'' }]);
+  const harness = await RouterTestingHarness.create('/wydarzenie/empty-event'); harness.detectChanges();
+  expect(harness.routeNativeElement?.textContent).toContain('Organizator nie podał jeszcze opisu wydarzenia.');
+  expect(harness.routeNativeElement?.textContent).toContain('Brak opublikowanych formularzy');
+  expect(harness.routeNativeElement?.textContent).not.toContain('Krywulka');
+  await harness.navigateByUrl('/wydarzenie/unknown',EventPage); harness.detectChanges();
+  expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Wydarzenie niedostępne');
+  expect(harness.routeNativeElement?.querySelector('.event-bottom')).toBeNull();
+  expect(store.selectedEvent()?.id).toBe('empty-event');
+});
+
+it('opening a character or its creator selects that event for navigation without persisting a new selection in local storage', async () => {
+  const beta = { ...seed.event, id:'beta',name:'Beta event' };
+  const betaForm = { ...seed.forms[0], id:'beta-form',eventId:'beta' };
+  store.mode.set('server'); store.events.set([seed.event,beta]); store.forms.set([...seed.forms,betaForm]);
+  store.characterForms.set([{eventId:beta.id,formId:betaForm.id,formRevision:1}]);
+  store.applications.set([{...store.active()!,id:'beta-character',form:betaForm}]);
+  const previous=localStorage.getItem('ursunalia:manuscript:v1');
+  store.open('beta-character'); expect(store.selectedEvent()?.id).toBe('beta');
+  store.selectEvent(seed.event.id);
+  store.eventGrants.set([{eventId:beta.id,role:'organizer'}]);
+  const router = TestBed.inject(Router); router.resetConfig([{path:'edytor',component:BuilderPage}]);
+  await RouterTestingHarness.create('/edytor?id=beta-form');
+  expect(store.selectedEvent()?.id).toBe('beta'); expect(localStorage.getItem('ursunalia:manuscript:v1')).toBe(previous);
+  store.events.set([seed.event]); expect(store.selectedEvent()?.id).toBe(seed.event.id);
 });

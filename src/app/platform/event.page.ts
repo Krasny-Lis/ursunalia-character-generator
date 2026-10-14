@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, effect } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlatformStore } from './platform.store';
@@ -7,29 +7,30 @@ import { Icon } from './icon';
 @Component({
   standalone: true,
   imports: [RouterLink, Icon],
+  styles: [`.event-selector .button { white-space: normal; max-width: 100%; }`],
   template: `
     @if (store.mode() === 'server' && store.events().length > 1) {
-      <section class="section-title"><h2>Wydarzenia</h2><div class="actions">@for (item of store.events(); track item.id) { <a class="button light" [routerLink]="['/wydarzenie', item.id]">{{ item.name }}</a> }</div></section>
+      <section class="section-title event-selector"><h2>Wydarzenia</h2><div class="actions">@for (item of store.events(); track item.id) { <a class="button light" [routerLink]="['/wydarzenie', item.id]" [attr.aria-current]="event()?.id === item.id ? 'page' : null">{{ item.name }}</a> }</div></section>
     }
     @if (event(); as currentEvent) {
-    <div class="eyebrow page-eyebrow">LARP FANTASY · KISLEV · 2027</div>
+    <div class="eyebrow page-eyebrow">{{ isUrsunalia() ? 'LARP FANTASY · KISLEV · 2027' : 'WYDARZENIE' }}</div>
     <section class="event-hero">
       <div>
         <span class="status-tag"
           ><span class="status-dot"></span>{{ currentEvent.status }}</span
         >
         <h1>
-          @if (currentEvent.name === 'Ursunalia 2027') {Ursunalia <span>2027</span>}
+          @if (isUrsunalia() && currentEvent.name === 'Ursunalia 2027') {Ursunalia <span>2027</span>}
           @else { {{ currentEvent.name }} }
         </h1>
-        <h2>
-          @if (currentEvent.subtitle === 'Nowe początki. Stare długi.') {Nowe początki.<br />Stare długi.}
+        @if (currentEvent.subtitle) { <h2>
+          @if (isUrsunalia() && currentEvent.subtitle === 'Nowe początki. Stare długi.') {Nowe początki.<br />Stare długi.}
           @else { {{ currentEvent.subtitle }} }
-        </h2>
+        </h2> }
         <p class="hero-description">{{ currentEvent.description }}</p>
         <div class="event-meta">
-          <span><u-icon name="calendar" />{{ currentEvent.date }}</span
-          ><span><u-icon name="pin" />{{ currentEvent.location }}</span>
+          @if (currentEvent.date) { <span><u-icon name="calendar" />{{ currentEvent.date }}</span> }
+          @if (currentEvent.location) { <span><u-icon name="pin" />{{ currentEvent.location }}</span> }
         </div>
         <div class="actions">
           <a class="button primary" href="#ankiety" (click)="scroll($event)"
@@ -38,7 +39,7 @@ import { Icon } from './icon';
         </div>
       </div>
       <div class="hero-emblem" aria-hidden="true">
-        <span>✦</span><small>ZA NAMI PRZESZŁOŚĆ<br />PRZED NAMI HISTORIA</small>
+        <span>✦</span><small>@if (isUrsunalia()) {ZA NAMI PRZESZŁOŚĆ<br />PRZED NAMI HISTORIA} @else {ZGŁOSZENIA POSTACI}</small>
       </div>
     </section>
     <div class="info-strip">
@@ -77,12 +78,15 @@ import { Icon } from './icon';
               }}<u-icon name="next" />
             </button>
           </article>
+        } @empty {
+          <section class="paper empty-state"><h3>Brak opublikowanych formularzy</h3><p>Organizator udostępni formularz tego wydarzenia.</p></section>
         }
       </div>
     </section>
     <div class="event-bottom">
       <section class="paper">
         <span class="eyebrow">O WYDARZENIU</span>
+        @if (isUrsunalia()) {
         <h2>Witaj na Ziemiach Braci</h2>
         <p>
           Budzenie Niedźwiedzi gromadzi mieszkańców i przyjezdnych w Krywulce. Pod cieniem
@@ -93,23 +97,33 @@ import { Icon } from './icon';
           Wybierz pochodzenie i zajęcie. Nadaj postaci cel, relacje oraz zobowiązania. Odpowiedzi
           pomogą organizatorom przygotować Twoje wątki.
         </p>
+        } @else {
+          <h2>{{ currentEvent.name }}</h2>
+          <p>{{ currentEvent.description || 'Organizator nie podał jeszcze opisu wydarzenia.' }}</p>
+        }
       </section>
       <section class="paper">
         <span class="eyebrow">PRZED ZGŁOSZENIEM</span>
         <h3>Warto wiedzieć</h3>
         <ul class="plain-list">
-          <li><u-icon name="check" />Postacie należą do kultur Kisleva.</li>
+          @if (isUrsunalia()) { <li><u-icon name="check" />Postacie należą do kultur Kisleva.</li> }
           <li><u-icon name="check" />Szkic możesz zapisać i dokończyć później.</li>
           <li><u-icon name="check" />Zgłoszenie sprawdza organizator.</li>
-          <li><u-icon name="pin" />{{ currentEvent.locationNote }}</li>
+          @if (currentEvent.locationNote) { <li><u-icon name="pin" />{{ currentEvent.locationNote }}</li> }
         </ul>
         <details>
           <summary>Informacje organizatora</summary>
+          @if (isUrsunalia()) {
           <p>
             Termin: {{ currentEvent.date }}. Wypełnienie ankiety zgłasza postać do rozpatrzenia. Nie jest
             potwierdzeniem przyjęcia ani opłacenia udziału. Szczegółowy regulamin, adres i
             informacje o biletach organizator przekaże osobno.
           </p>
+          } @else {
+            @if (currentEvent.date) { <p>Termin: {{ currentEvent.date }}.</p> }
+            @if (currentEvent.location) { <p>Lokalizacja: {{ currentEvent.location }}.</p> }
+            <p>Wysłanie postaci kieruje ją do weryfikacji MG. Zapisany szkic możesz dokończyć później.</p>
+          }
         </details>
       </section>
     </div>
@@ -124,11 +138,13 @@ export class EventPage {
   readonly route = inject(ActivatedRoute);
   readonly params = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   readonly event = computed(() => {
-    const id = this.params().get('id') ?? this.store.seed()?.event.id;
+    const id = this.params().get('id') ?? this.store.selectedEvent()?.id;
     if (this.store.mode() === 'demo') return this.store.seed()?.event.id === id ? this.store.seed()!.event : null;
     return this.store.events().find(event => event.id === id) ?? null;
   });
+  readonly isUrsunalia = computed(() => this.event()?.id === 'ursunalia-2027');
   readonly forms = computed(() => this.store.forms().filter(form => form.eventId === this.event()?.id));
+  constructor() { effect(() => { const event = this.event(); if (event) this.store.selectEvent(event.id); }); }
   hasApplication(id: string) {
     return this.store.applications().some((a) => a.form.id === id && a.id !== 'demo-alena');
   }

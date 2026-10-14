@@ -25,6 +25,12 @@ export class PlatformStore {
   readonly applications = signal<Application[]>([]);
   readonly user = signal<User | null>(null);
   readonly events = signal<GameEvent[]>([]);
+  readonly selectedEventId = signal('');
+  readonly selectedEvent = computed(() => {
+    if (this.mode() === 'demo') return this.seed()?.event ?? null;
+    return this.events().find(e => e.id === this.selectedEventId())
+      ?? this.events().find(e => e.id === this.seed()?.event.id) ?? this.events()[0] ?? null;
+  });
   readonly eventGrants = signal<EventGrant[]>([]);
   readonly memberships = signal<EventMembership[]>([]);
   readonly characterForms = signal<CharacterForm[]>([]);
@@ -51,6 +57,9 @@ export class PlatformStore {
   readonly canAdminEvents = computed(() => this.user()?.role === 'organizer' || this.eventGrants().some(g => g.role === 'organizer'));
   canManageForm(eventId: string) {
     return this.mode() === 'demo' || this.eventGrants().some(g => g.eventId === eventId && g.role === 'organizer');
+  }
+  selectEvent(id: string) {
+    if (this.mode() === 'demo' ? this.seed()?.event.id === id : this.events().some(e => e.id === id)) this.selectedEventId.set(id);
   }
   isMember(eventId: string) {
     return this.mode() === 'demo' || this.memberships().some(m => m.eventId === eventId);
@@ -134,6 +143,7 @@ export class PlatformStore {
     if (!this.dirty()) {
       this.applications.set(all);
       this.activeId.set(all.some(a => a.id === this.activeId()) ? this.activeId() : all[0]?.id ?? '');
+      if (!this.selectedEventId() && this.active()) this.selectEvent(this.active()!.form.eventId);
     }
   }
   private restoreDemo(seed: Seed) {
@@ -250,6 +260,7 @@ export class PlatformStore {
   }
   open(id: string) {
     this.activeId.set(id);
+    if (this.active()) this.selectEvent(this.active()!.form.eventId);
     this.persistDemo();
   }
   start(form: FormDefinition): string | null {
@@ -365,6 +376,7 @@ export class PlatformStore {
     this.authEpoch++;
     await this.request('api/auth/logout', 'POST', {});
     this.user.set(null);
+    this.selectedEventId.set('');
     this.eventGrants.set([]);
     this.memberships.set([]);
     this.characterForms.set([]);

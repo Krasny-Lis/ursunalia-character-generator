@@ -64,7 +64,7 @@ try {
   await admin.getByLabel('Nazwa lub e-mail',{exact:true}).fill('mvp-gm');await admin.getByRole('button',{name:'Szukaj kont',exact:true}).click();
   await result(admin,()=>admin.getByRole('button',{name:'Nadaj MG',exact:true}).click(),'/grants/'+(await request(gm,'/api/bootstrap')).data.user.id,'PUT');
   await login(player,'mvp-player@example.test',true,'MVP gracz');
-  await player.getByRole('link',{name:'Etap 4 – Pierwszy',exact:true}).click();await player.getByRole('heading',{name:'Etap 4 – Pierwszy',exact:true}).waitFor();await player.getByRole('button',{name:'Dołącz i wypełnij',exact:false}).click();
+  await player.getByRole('link',{name:'Etap 4 – Pierwszy',exact:true}).click();await player.getByRole('heading',{name:'Etap 4 – Pierwszy',level:1,exact:true}).waitFor();await player.getByRole('button',{name:'Dołącz i wypełnij',exact:false}).click();
   await player.locator('#input-name').fill('Archiwalna Alena');let c=await save();assert.equal(c.status,'draft');
   await player.reload();await player.locator('#input-name').waitFor();assert.equal(await player.locator('#input-name').inputValue(),'Archiwalna Alena');
   const draftCheck=await request(gm,'/api/organizer/characters/'+c.id);assert.equal(draftCheck.status,404);

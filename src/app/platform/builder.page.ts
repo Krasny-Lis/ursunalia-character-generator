@@ -85,7 +85,10 @@ export class BuilderPage {
   readonly count = computed(() => this.form().sections.reduce((a, s) => a + s.fields.length, 0));
   readonly problems = computed(() => definitionIssues(this.form()));
   readonly listIds = computed(() => this.form().sections.map((s) => 'fields-' + s.id));
-  constructor() { this.store.builderDirty.set(this.dirty() && this.store.canManageForm(this.form().eventId)); }
+  constructor() {
+    this.store.builderDirty.set(this.dirty() && this.store.canManageForm(this.form().eventId));
+    if (this.store.canManageForm(this.form().eventId)) this.store.selectEvent(this.form().eventId);
+  }
   private restore(): FormDefinition {
     const id = this.route.snapshot.queryParamMap.get('id');
     const eventId = this.route.snapshot.queryParamMap.get('eventId') ?? this.store.seed()!.event.id;

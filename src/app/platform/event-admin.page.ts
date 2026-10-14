@@ -23,7 +23,10 @@ export class EventAdminPage {
   eventId = '';
   query = '';
   completed = false;
-  constructor() { this.eventId = this.managed()[0]?.id ?? ''; if (this.eventId) void this.load(); }
+  constructor() {
+    this.eventId = this.managed().find(e => e.id === this.store.selectedEvent()?.id)?.id ?? this.managed()[0]?.id ?? '';
+    if (this.eventId) void this.load();
+  }
   managed() { return this.store.events().filter(e => this.store.canManageForm(e.id)); }
   canCreate() { return this.store.mode() === 'server' && this.store.user()?.role === 'organizer'; }
   changed() { this.store.adminDirty.set(true); }
@@ -50,6 +53,7 @@ export class EventAdminPage {
     this.data.set(data); this.event = structuredClone(data.event); this.characters.set(characters);
     this.selected.set(new Set()); this.accounts.set([]); this.completed = false;
     this.store.events.update(all => [...all.filter(e => e.id !== data.event.id), data.event]);
+    this.store.selectEvent(data.event.id);
     this.store.adminDirty.set(false);
   }
   async save() {
