@@ -1,0 +1,186 @@
+<a routerLink="/moj-panel" class="my-character-back"><u-icon name="back"/> Mój panel</a>
+
+@if (!state.hasAccount()) {
+  <section class="paper my-character-empty" role="status">
+    <u-icon name="user"/>
+    <h1>Zaloguj się, aby zobaczyć swoją postać</h1>
+    <p>Postać jest powiązana z kontem uczestnika. Utwórz konto lub zaloguj się.</p>
+    <a routerLink="/konto" class="button primary">Przejdź do konta</a>
+  </section>
+} @else if (!state.hasCharacter()) {
+  <section class="paper my-character-empty" role="status">
+    <u-icon name="feather"/>
+    <h1>Nie masz jeszcze zgłoszonej postaci</h1>
+    <p>W panelu uczestnika znajdziesz informacje, jak rozpocząć zgłoszenie.</p>
+    <a routerLink="/moj-panel" class="button primary">Mój panel <u-icon name="next"/></a>
+  </section>
+} @else {
+  <header class="my-character-heading">
+    <div>
+      <span class="my-character-eyebrow">URSUNALIA 2027 · ZGŁOSZENIE POSTACI</span>
+      <h1>Moja postać</h1>
+      <p>{{ state.characterDetail() }}</p>
+    </div>
+    <div class="my-character-status">
+      <span>{{ state.statusLabel() }}</span>
+      @if (state.locked()) { <strong><u-icon name="shield"/> Karta zablokowana</strong> }
+    </div>
+  </header>
+
+  @if (state.simulated()) {
+    <div class="my-character-preview-note" role="note"><u-icon name="info"/>
+      <span>Status i blokada są symulowane przez pasek deweloperski. Odpowiedzi pochodzą z lokalnego szkicu lub rzeczywistego konta; symulacja nie zmienia uprawnień zapisu.</span>
+    </div>
+  }
+
+  @if (character(); as app) {
+    <div class="my-character-tabs" role="group" aria-label="Tryb oglądania postaci">
+      <button type="button" [class.active]="mode() === 'view'"
+        [attr.aria-pressed]="mode() === 'view'" (click)="backToView()">
+        <u-icon name="eye"/> Podgląd
+      </button>
+      <button type="button" [class.active]="mode() === 'edit'"
+        [attr.aria-pressed]="mode() === 'edit'" [disabled]="!canEdit()"
+        (click)="startEdit()"><u-icon name="edit"/> Edytuj</button>
+    </div>
+
+    @if (state.locked()) {
+      <div class="my-character-warning" role="status">
+        <u-icon name="shield"/>
+        <div><strong>Postać zablokowana</strong>
+          <p>Do czasu odblokowania przez organizatora nie można zapisać zmian ani wysłać zgłoszenia.</p>
+        </div>
+      </div>
+    }
+
+    @if (app.feedback) {
+      <div class="my-character-feedback" role="note">
+        <u-icon name="info"/>
+        <div><strong>Uwagi Mistrza Gry</strong><p>{{ app.feedback }}</p></div>
+      </div>
+    }
+
+    <div class="my-character-layout">
+      <div class="my-character-main">
+        <section class="paper my-character-summary" aria-label="Informacje o postaci">
+          <span class="eyebrow">{{ app.id === 'demo-alena' ? 'POSTAĆ DEMONSTRACYJNA' : 'TOŻSAMOŚĆ POSTACI' }}</span>
+          <h2>{{ app.answers['name'] || 'Nowa postać' }} {{ app.answers['surname'] || '' }}</h2>
+          <p>{{ app.answers['occupation'] || 'Zajęcie jeszcze nie zostało określone.' }}</p>
+        </section>
+        @if (mode() === 'view') {
+          @for (section of app.form.sections; track section.id) {
+            <section class="paper my-character-section" [attr.aria-labelledby]="'my-character-' + section.id">
+              <div class="my-character-section__heading">
+                <h2 [id]="'my-character-' + section.id">{{ section.title }}</h2>
+                @if (canEdit()) {
+                  <button type="button" class="my-character-section__edit" (click)="startEdit()"><u-icon name="edit"/> Edytuj</button>
+                }
+              </div>
+              @if (section.description) { <p class="my-character-section__intro">{{ section.description }}</p> }
+              <dl>
+                @for (field of section.fields; track field.id) {
+                  @if (field.type !== 'file' && field.type !== 'info') {
+                    <div>
+                      <dt>{{ field.label }}</dt>
+                      <dd [class.my-character-unfilled]="!app.answers[field.id]">{{ display(field, app) }}</dd>
+                    </div>
+                  }
+                }
+              </dl>
+            </section>
+          }
+        } @else {
+          <div class="my-character-edit-notice" role="note">
+            <u-icon name="info"/>
+            <span>Zmiany są zapisywane w istniejącym zgłoszeniu. Wysłanie postaci do MG wymaga potwierdzenia.</span>
+          </div>
+          @for (section of app.form.sections; track section.id) {
+            <section class="paper my-character-section" [attr.aria-labelledby]="'edit-character-' + section.id">
+              <h2 [id]="'edit-character-' + section.id">{{ section.title }}</h2>
+              @if (section.description) { <p class="my-character-section__intro">{{ section.description }}</p> }
+              <div class="my-character-fields">
+                @for (field of section.fields; track field.id) {
+                  <u-field [class.my-character-full]="['textarea','multi','single','file','info'].includes(field.type)"
+                    [field]="field" [value]="app.answers[field.id]"
+                    [error]="issues()[field.id] || ''"
+                    [disabled]="store.busy() || !canEdit()"
+                    (changed)="update(field, $event)" />
+                }
+              </div>
+            </section>
+          }
+          <div class="my-character-edit-actions">
+            <button type="button" class="button light" (click)="backToView()">Podgląd</button>
+            <button type="button" class="button outline"
+              [disabled]="store.busy() || !canEdit()" (click)="save()">
+              <u-icon name="save"/> Zapisz zmiany
+            </button>
+            @if (['draft','changes','rejected'].includes(app.status) || (app.status === 'submitted' && store.dirty())) {
+              <button type="button" class="button primary"
+                [disabled]="!canSubmit()" (click)="confirmOpen.set(true)">
+                <u-icon name="send"/> Wyślij do MG
+              </button>
+            }
+          </div>
+          @if (Object.keys(issues()).length) {
+            <p class="my-character-validation">Przed wysłaniem uzupełnij wymagane pola. Zapisanie szkicu pozostaje możliwe.</p>
+          }
+        }
+      </div>
+
+      <aside class="my-character-sidebar">
+        <section class="paper my-character-sidebar-card">
+          <span class="eyebrow">STATUS ZGŁOSZENIA</span>
+          <h2>{{ state.statusLabel() }}</h2>
+          <p>{{ state.characterDetail() }}</p>
+          @if (app.updatedAt) { <p class="my-character-updated">Ostatnia zmiana: {{ app.updatedAt | date:'dd.MM.yyyy, HH:mm' }}</p> }
+        </section>
+        <section class="paper my-character-sidebar-card">
+          <span class="eyebrow">HISTORIA DECYZJI MG</span>
+          <h2>Decyzje i komentarze</h2>
+          @for (entry of app.history ?? []; track entry.id) {
+            <div class="my-character-history">
+              <strong>{{ entry.actorName }}</strong>
+              <small>{{ entry.decidedAt | date:'dd.MM.yyyy, HH:mm' }}</small>
+              <p>{{ entry.action === 'unlock' ? 'Odblokowanie postaci' : statusText(entry.fromStatus) + ' → ' + statusText(entry.status) }}</p>
+              @if (entry.comment) { <p>{{ entry.comment }}</p> }
+            </div>
+          } @empty {
+            <p>Nie ma jeszcze decyzji MG.</p>
+          }
+          @if (app.editHistory?.length) {
+            <h3>Edycje MG</h3>
+            @for (entry of app.editHistory ?? []; track entry.id) {
+              <div class="my-character-history">
+                <strong>{{ entry.actorName }}</strong>
+                <small>{{ entry.editedAt | date:'dd.MM.yyyy, HH:mm' }}</small>
+                <p>Aktualizacja odpowiedzi · rewizja {{ entry.characterRevision }}</p>
+              </div>
+            }
+          }
+        </section>
+      </aside>
+    </div>
+    @if (confirmOpen()) {
+      <div class="my-character-modal-backdrop">
+        <section class="paper my-character-modal" role="dialog" aria-modal="true" aria-labelledby="character-send-title">
+          <h2 id="character-send-title">Potwierdź wysłanie zgłoszenia</h2>
+          <p>{{ store.mode() === 'demo'
+            ? 'Tryb demonstracyjny sprawdzi kompletność pól. Nie wyśle postaci do organizatora.'
+            : 'MG otrzyma zgłoszenie do rozpatrzenia. Zapis kolejnych zmian podczas weryfikacji może cofnąć je do szkicu.' }}</p>
+          <div class="my-character-modal-actions">
+            <button type="button" class="button light" (click)="confirmOpen.set(false)">Anuluj</button>
+            <button type="button" class="button primary" [disabled]="!canSubmit()" (click)="submit()">Potwierdź</button>
+          </div>
+        </section>
+      </div>
+    }
+  } @else {
+    <section class="paper my-character-empty" role="status">
+      <u-icon name="file"/>
+      <h2>Brak danych postaci w tej sesji</h2>
+      <p>Wybrano demonstracyjny status {{ state.statusLabel() }}, ale nie utworzono jeszcze zgłoszenia zawierającego odpowiedzi.</p>
+      <a routerLink="/moj-panel" class="button primary">Wróć do panelu</a>
+    </section>
+  }
+}
