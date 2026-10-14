@@ -1,0 +1,218 @@
+<header class="admin-heading">
+  <span class="admin-eyebrow">URSUNALIA 2027 · STREFA ORGANIZATORA</span>
+  <h1>Panel organizatora</h1>
+  <p>Zarządzanie uczestnikami, postaciami i organizacją gry w jednym miejscu.</p>
+</header>
+
+@if (!canAccess()) {
+  <section class="paper admin-denied" role="status">
+    <u-icon name="shield"/>
+    <h2>Dostęp tylko dla organizatorów</h2>
+    <p>To miejsce wymaga uprawnień organizatora wydarzenia. Zmiana roli w deweloperskim podglądzie nigdy nie daje uprawnień do API.</p>
+    <a routerLink="/konto" class="button primary">Moje konto</a>
+  </section>
+} @else {
+  @if (demo()) {
+    <div class="admin-demo-banner" role="note"><u-icon name="info"/>
+      <p><strong>Wersja demonstracyjna.</strong> Uczestnicy, statusy płatności, karty i edytor treści są makietą interfejsu. Nie tworzą danych w serwerze ani rzeczywistych dokumentów.</p>
+    </div>
+  }
+  <div class="admin-shell">
+    <nav class="admin-side paper" aria-label="Działy organizatora">
+      <span class="eyebrow">ZARZĄDZANIE</span>
+      @for (item of items; track item.id) {
+        <button type="button" [class.active]="tab() === item.id"
+          [attr.aria-current]="tab() === item.id ? 'page' : null"
+          (click)="select(item.id)">
+          <u-icon [name]="item.icon"/><span>{{ item.label }}</span><u-icon name="next"/>
+        </button>
+      }
+    </nav>
+    <main class="admin-main">
+      @switch (tab()) {
+        @case ('overview') {
+          <div class="admin-section-heading"><span class="eyebrow">PULPIT WYDARZENIA</span><h2>Ursunalia 2027</h2>
+            <p>Przegląd dostępnych informacji i skróty do głównych narzędzi.</p></div>
+          <div class="admin-metrics">
+            <div class="paper"><span>Uczestnicy</span><strong>{{ participants()?.participants?.length ?? '—' }}</strong><small>{{ demo() ? 'Przykładowy podgląd bez danych' : 'Zarejestrowani na wydarzenie' }}</small></div>
+            <div class="paper"><span>Zgłoszenia postaci</span><strong>{{ demo() ? '—' : store.applications().length }}</strong><small>Weryfikacja w panelu MG</small></div>
+            <div class="paper"><span>Składki</span><strong>—</strong><small>Integracja w przygotowaniu</small></div>
+            <div class="paper"><span>Karty Google Docs</span><strong>—</strong><small>Integracja w przygotowaniu</small></div>
+          </div>
+          <div class="admin-quick">
+            <a class="paper" routerLink="/mg"><u-icon name="feather"/><strong>Weryfikuj postacie</strong><span>Otwórz panel MG <u-icon name="next"/></span></a>
+            <button type="button" class="paper" (click)="select('participants')"><u-icon name="people"/><strong>Uczestnicy</strong><span>Zobacz osoby i dane kontaktowe <u-icon name="next"/></span></button>
+            <a class="paper" routerLink="/organizator/ankiety/edytor" [queryParams]="{id:'new',eventId:'ursunalia-2027'}"><u-icon name="list"/><strong>Kreator postaci</strong><span>Otwórz edytor zgłoszenia <u-icon name="next"/></span></a>
+            <a class="paper" routerLink="/organizator/wydarzenia"><u-icon name="shield"/><strong>Ustawienia</strong><span>Wydarzenie i uprawnienia <u-icon name="next"/></span></a>
+          </div>
+        }
+        @case ('participants') {
+          <div class="admin-section-heading"><span class="eyebrow">OBSŁUGA UCZESTNIKÓW</span><h2>Uczestnicy</h2>
+            <p>Dostępne tylko organizatorom dane osobowe i status konta w wydarzeniu.</p></div>
+          @if (store.mode() === 'server') {
+            <div class="admin-toolbar">
+              <label>Wyszukaj uczestnika<input type="search" [value]="query()" placeholder="Imię lub e-mail..."
+                (input)="query.set($any($event.target).value)"/></label>
+              <button type="button" class="button outline" [disabled]="loading()" (click)="refresh()">Odśwież</button>
+            </div>
+            @if (error()) { <p role="alert" class="error-banner">{{ error() }}</p> }
+            @if (loading()) { <p role="status">Wczytywanie uczestników…</p> }
+            <div class="admin-participants">
+              <div class="paper admin-participant-list">
+                <table><thead><tr><th>Uczestnik</th><th>Dołączył</th><th>Akcja</th></tr></thead>
+                  <tbody>
+                  @for (person of listed(); track person.id) {
+                    <tr><td><strong>{{ person.name }}</strong><small>{{ person.email }}</small></td>
+                      <td>{{ person.joinedAt | date:'dd.MM.yyyy' }}</td>
+                      <td><button type="button" class="admin-text-button" (click)="selectedParticipant.set(person.id)">Szczegóły</button></td></tr>
+                  } @empty { <tr><td colspan="3">Brak uczestników w tym widoku.</td></tr> }
+                  </tbody></table>
+              </div>
+              @if (selected(); as person) {
+                <aside class="paper admin-person-detail">
+                  <div class="admin-card-heading"><h3>Szczegóły uczestnika</h3>
+                    <button type="button" class="admin-close" aria-label="Zamknij szczegóły" (click)="selectedParticipant.set(null)"><u-icon name="close"/></button></div>
+                  <dl><dt>Imię / nazwa</dt><dd>{{ person.name }}</dd><dt>E-mail</dt><dd>{{ person.email }}</dd>
+                    <dt>Data dołączenia</dt><dd>{{ person.joinedAt | date:'dd.MM.yyyy, HH:mm' }}</dd>
+                    <dt>Telefon</dt><dd>Nieobsługiwany przez aktualne API</dd>
+                    <dt>Pseudonim</dt><dd>Nieobsługiwany przez aktualne API</dd></dl>
+                  <p>Powiązanie składki i dokumentu z kontem będzie dostępne po dodaniu właściwego API.</p>
+                </aside>
+              }
+            </div>
+          } @else {
+            <section class="paper admin-not-ready"><u-icon name="people"/><h3>Podgląd listy uczestników</h3>
+              <p>W trybie demo nie wczytujemy danych osób. Produkcyjne konto organizatora pobiera je z chronionego endpointu administracyjnego.</p></section>
+          }
+        }
+        @case ('characters') {
+          <div class="admin-section-heading"><span class="eyebrow">ZGŁOSZENIA I DECYZJE</span><h2>Postacie</h2>
+            <p>Weryfikuj tylko przesłane postacie. Niewysłane szkice graczy nie są udostępniane MG.</p></div>
+          <section class="paper admin-feature">
+            <u-icon name="feather"/>
+            <div><h3>Weryfikacja postaci</h3><p>Lista zgłoszeń, komentarze, decyzje, poprawki i zbiorcza akceptacja korzystają z istniejącego API.</p>
+              <a routerLink="/mg" class="button primary">Otwórz panel MG <u-icon name="next"/></a></div>
+          </section>
+          <section class="paper admin-feature"><u-icon name="shield"/>
+            <div><h3>Blokady postaci</h3><p>Blokada niezależna od statusu, dostępna organizatorowi wraz z zarządzaniem uprawnieniami i ustawieniami wydarzenia.</p>
+              <a routerLink="/organizator/wydarzenia" class="button light">Zarządzaj blokadami</a></div>
+          </section>
+        }
+        @case ('payments') {
+          <div class="admin-section-heading"><span class="eyebrow">ROZLICZENIA UCZESTNIKÓW</span><h2>Składki</h2>
+            <p>Przelewy potwierdza organizator. Bez bramki płatniczej i bez „Zgłoś wpłatę” po stronie gracza.</p></div>
+          <div class="paper admin-integrations-note" role="note"><u-icon name="info"/>
+            <div><strong>Backend składek nie jest jeszcze dostępny.</strong>
+              <p>Kwota, rachunek, tytuł i termin globalny oraz indywidualne nadpisania będą przechowywane przez API. Nie zapisujemy ich w pamięci przeglądarki jako rzeczywistych danych.</p></div>
+          </div>
+          @if (demo()) {
+            <section class="paper admin-demo-form" aria-label="Podgląd obsługi składki">
+              <span class="eyebrow">SYMULACJA DLA PROJEKTANTA</span>
+              <h3>Przykładowy uczestnik · postać zaakceptowana</h3>
+              <p>Kwota: do ogłoszenia · numer konta: nieustalony · termin: do ogłoszenia</p>
+              <div class="admin-card-heading"><strong>{{ demoPaid() ? 'Opłacona (symulacja)' : 'Nieopłacona (symulacja)' }}</strong>
+                <button type="button" class="button light" (click)="demoPaid.set(!demoPaid())">
+                  {{ demoPaid() ? 'Cofnij potwierdzenie (demo)' : 'Potwierdź wpłatę (demo)' }}
+                </button>
+              </div>
+              <p>Zmiana statusu istnieje tylko w tej makiecie. Nie tworzy operacji bankowej ani rekordu płatności.</p>
+            </section>
+          } @else {
+            <section class="paper admin-not-ready"><h3>Lista wpłat pojawi się po integracji</h3>
+              <p>Nie można potwierdzać składek, dopóki nie będą zapisywane i odczytywane z prawdziwego serwera.</p></section>
+          }
+        }
+        @case ('documents') {
+          <div class="admin-section-heading"><span class="eyebrow">DOKUMENTY FABULARNE</span><h2>Karty postaci</h2>
+            <p>Docelowo organizator przypisuje do postaci link Google Docs i status dokumentu.</p></div>
+          <div class="paper admin-integrations-note" role="note"><u-icon name="info"/>
+            <div><strong>Brak integracji kart Google Docs.</strong><p>Link będzie widoczny graczowi wyłącznie po potwierdzeniu składki i gdy dokument ma status „Do sprawdzenia” lub „Gotowa”. Uprawnienia w samym Google Docs wymagają osobnej konfiguracji.</p></div>
+          </div>
+          @if (demo()) {
+            <section class="paper admin-demo-form" aria-label="Podgląd dokumentu">
+              <span class="eyebrow">SYMULACJA DOKUMENTU</span>
+              <h3>Przykładowa postać</h3>
+              <label>Status karty
+                <select [value]="demoCard()" (change)="demoCard.set($any($event.target).value)">
+                  <option value="preparing">W przygotowaniu</option>
+                  <option value="review">Do sprawdzenia</option>
+                  <option value="ready">Gotowa</option>
+                </select>
+              </label>
+              <label class="admin-demo-check"><input type="checkbox" [checked]="demoHasLink()"
+                (change)="demoHasLink.set($any($event.target).checked)"/> Symuluj przypisanie linku</label>
+              <p>{{ demoPaid() && demoHasLink() && demoCard() !== 'preparing'
+                ? 'Warunki udostępnienia spełnione w symulacji — bez prawdziwego linku.'
+                : 'Karta niedostępna dla gracza w tym stanie.' }}</p>
+            </section>
+          } @else {
+            <section class="paper admin-not-ready"><h3>Karty oczekują na integrację</h3>
+              <p>Dodanie statusów i linków wymaga bezpiecznego API powiązanego z zaakceptowaną postacią i wpłatą.</p></section>
+          }
+        }
+        @case ('content') {
+          <div class="admin-section-heading"><span class="eyebrow">PUBLIKACJE SERWISU</span><h2>Treści strony</h2>
+            <p>Artykuły Świata gry i Aktualności. Grafika jest opcjonalna; na listach wpisów nie używamy miniaturek.</p></div>
+          <div class="paper admin-integrations-note" role="note"><u-icon name="info"/>
+            <div><strong>Edytor i podgląd — bez publikacji.</strong><p>Zapis treści i reguły „Wszyscy / Organizator” muszą być egzekwowane przez CMS na serwerze. Tekst wpisany w podgląd nie zostaje opublikowany.</p></div>
+          </div>
+          @if (demo()) {
+            <div class="admin-cms">
+              <section class="paper admin-cms-form">
+                <span class="eyebrow">ROBOCZY KREATOR TREŚCI</span>
+                <label>Rodzaj
+                  <select [value]="cmsKind()" (change)="changeKind($any($event.target).value)">
+                    <option value="world">Artykuł Świata gry</option><option value="news">Aktualność</option>
+                  </select></label>
+                <label>Widoczność
+                  <select [value]="cmsVisibility()" (change)="changeVisibility($any($event.target).value)">
+                    <option value="organizer">Organizator (domyślnie)</option>
+                    <option value="everyone">Wszyscy</option>
+                  </select></label>
+                <label>Tytuł<input type="text" maxlength="160" [value]="cmsTitle()"
+                  (input)="cmsTitle.set($any($event.target).value)" placeholder="Wpisz tytuł…"/></label>
+                <label>Krótki opis<textarea rows="3" maxlength="500" [value]="cmsSummary()"
+                  (input)="cmsSummary.set($any($event.target).value)"></textarea></label>
+                <label>Treść<textarea rows="10" maxlength="12000" [value]="cmsBody()"
+                  (input)="cmsBody.set($any($event.target).value)" placeholder="Akapity oddziel pustą linią…"></textarea></label>
+                <p>Grafika w artykule: obsługa plików zostanie dodana z CMS.</p>
+                <button type="button" class="button light" (click)="cmsTitle.set(''); cmsSummary.set(''); cmsBody.set(''); cmsVisibility.set('organizer')">Wyczyść szkic makiety</button>
+              </section>
+              <article class="paper admin-cms-preview">
+                <span class="eyebrow">PODGLĄD · NIEOPUBLIKOWANE</span>
+                <small>{{ cmsKind() === 'news' ? 'Aktualność' : 'Świat gry' }} · {{ cmsVisibility() === 'organizer' ? 'Organizator' : 'Wszyscy' }}</small>
+                <h3>{{ cmsTitle() || 'Tytuł artykułu' }}</h3>
+                <p class="admin-cms-preview__summary">{{ cmsSummary() || 'Krótki opis treści pojawi się tutaj.' }}</p>
+                @for (paragraph of cmsPreview(); track $index) { <p>{{ paragraph }}</p> }
+                @if (!cmsPreview().length) { <p class="admin-muted">Wpisz treść, aby sprawdzić wygląd czytnika.</p> }
+              </article>
+            </div>
+          } @else {
+            <section class="paper admin-not-ready"><u-icon name="book"/><h3>Publikacje wymagają CMS</h3>
+              <p>Nie pokazujemy fikcyjnych artykułów jako opublikowanych, ani nie zapisujemy szkiców tylko w przeglądarce jako oficjalnych treści.</p></section>
+          }
+        }
+        @case ('builder') {
+          <div class="admin-section-heading"><span class="eyebrow">SCHEMAT ZGŁOSZENIA</span><h2>Kreator postaci</h2>
+            <p>Jeden edytor zgłoszenia postaci dla Ursunaliów. Dodatkowe ankiety nie są częścią MVP.</p></div>
+          <section class="paper admin-feature"><u-icon name="list"/>
+            <div><h3>Edytuj formularz zgłoszenia</h3><p>Istniejący kreator obsługuje pytania, sekcje, podgląd uczestnika i analizę zmian schematu. Dla konta organizatora zapisuje dane przez obecne API.</p>
+              <a routerLink="/organizator/ankiety/edytor" [queryParams]="{id:'new',eventId:'ursunalia-2027'}"
+                class="button primary">Otwórz kreator <u-icon name="next"/></a></div>
+          </section>
+        }
+        @case ('settings') {
+          <div class="admin-section-heading"><span class="eyebrow">KONFIGURACJA WYDARZENIA</span><h2>Ustawienia Ursunaliów</h2>
+            <p>Ogólne dane wydarzenia, zapisy postaci, zespół oraz operacje administracyjne.</p></div>
+          <div class="admin-setting-grid">
+            <section class="paper"><h3>Ogólne</h3><p>Nazwa, data, publikacja wydarzenia i otwieranie zgłoszeń.</p></section>
+            <section class="paper"><h3>Zgłoszenia postaci</h3><p>Kreator formularza oraz blokowanie i odblokowanie kart.</p></section>
+            <section class="paper"><h3>Zespół i uprawnienia</h3><p>Nadawanie i odbieranie dostępu MG oraz organizatorom.</p></section>
+            <section class="paper"><h3>Operacje administracyjne</h3><p>Bez archiwizacji w aktualnym MVP. Nie zmieniamy backendowych mechanizmów.</p></section>
+          </div>
+          <a routerLink="/organizator/wydarzenia" class="button primary">Otwórz ustawienia wydarzenia <u-icon name="next"/></a>
+        }
+      }
+    </main>
+  </div>
+}
