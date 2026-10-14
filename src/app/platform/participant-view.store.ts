@@ -82,7 +82,7 @@ export class ParticipantViewStore {
    * Even when the preview says "unlocked", actual locked records stay locked.
    */
   canEditRecord(app: Application | null): boolean {
-    return !!app && this.hasCharacter() && !this.locked() &&
+    return !!app && this.hasCharacter() && !this.locked() && this.status() !== 'accepted' &&
       this.store.canEdit(app) && this.hasAccount();
   }
 }
