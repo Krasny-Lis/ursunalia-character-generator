@@ -1,0 +1,111 @@
+<header class="participant-heading">
+  <span class="participant-eyebrow">URSUNALIA 2027 · STREFA UCZESTNIKA</span>
+  <h1>Mój panel</h1>
+  <p>Śledź swoje przygotowania, decyzje MG, składkę oraz dostępność karty postaci.</p>
+</header>
+
+@if (!state.hasAccount()) {
+  <section class="paper participant-login" role="status">
+    <u-icon name="user" />
+    <div>
+      <h2>Twoja historia zaczyna się od konta</h2>
+      <p>Zaloguj się lub załóż konto, żeby utworzyć postać i zobaczyć status zgłoszenia.</p>
+      <a routerLink="/konto" class="button primary">Zaloguj się lub utwórz konto <u-icon name="next"/></a>
+    </div>
+  </section>
+} @else {
+  @if (state.simulated()) {
+    <div class="participant-preview-note" role="note">
+      <u-icon name="info" />
+      <span><strong>Podgląd deweloperski.</strong> Etapy, składka i karta poniżej są symulacją.
+        Nie zmieniają prawdziwych danych, uprawnień ani płatności.</span>
+    </div>
+  }
+  <section class="participant-process" aria-labelledby="participant-process-heading">
+    <div class="participant-section-heading">
+      <div>
+        <span class="participant-eyebrow">TWOJA DROGA NA WYDARZENIE</span>
+        <h2 id="participant-process-heading">Etapy uczestnictwa</h2>
+      </div>
+      <a routerLink="/dla-gracza" class="participant-text-link">Jak wziąć udział? <u-icon name="next"/></a>
+    </div>
+    <ol class="participant-process-grid">
+      <li class="paper participant-step participant-step--complete">
+        <span class="participant-step__number">01</span>
+        <span class="participant-step__label">Konto</span>
+        <strong>Gotowe</strong>
+        <p>{{ state.simulated() ? 'Konto demonstracyjne' : 'Konto zalogowane' }}</p>
+        <a routerLink="/konto">Moje konto <u-icon name="next"/></a>
+      </li>
+      <li class="paper participant-step" [class.participant-step--complete]="state.accepted()">
+        <span class="participant-step__number">02</span>
+        <span class="participant-step__label">Postać</span>
+        <strong>{{ state.statusLabel() }}</strong>
+        <p>{{ state.characterDetail() }}</p>
+        @if (state.hasCharacter()) {
+          <a routerLink="/moja-postac">Moja postać <u-icon name="next"/></a>
+        } @else {
+          <a routerLink="/dla-gracza" fragment="postac">Jak stworzyć postać? <u-icon name="next"/></a>
+        }
+      </li>
+      <li class="paper participant-step" [class.participant-step--complete]="state.simulated() && state.accepted() && state.preview.payment() === 'paid'">
+        <span class="participant-step__number">03</span>
+        <span class="participant-step__label">Składka</span>
+        <strong>{{ state.payment().title }}</strong>
+        <p>{{ state.payment().detail }}</p>
+      </li>
+      <li class="paper participant-step" [class.participant-step--complete]="state.simulated() && state.preview.canViewCard()">
+        <span class="participant-step__number">04</span>
+        <span class="participant-step__label">Karta</span>
+        <strong>{{ state.card().title }}</strong>
+        <p>{{ state.card().detail }}</p>
+      </li>
+    </ol>
+  </section>
+
+  <div class="participant-panels">
+    <section class="paper participant-character" aria-labelledby="participant-character-heading">
+      <span class="eyebrow">MOJA POSTAĆ</span>
+      @if (state.hasCharacter()) {
+        <h2 id="participant-character-heading">
+          @if (state.character(); as character) {
+            {{ character.answers['name'] || 'Nowa postać' }} {{ character.answers['surname'] || '' }}
+          } @else { Podgląd zgłoszenia }
+        </h2>
+        <div class="participant-badges">
+          <span>{{ state.statusLabel() }}</span>
+          @if (state.locked()) { <span><u-icon name="shield"/> Zablokowana</span> }
+        </div>
+        <p>{{ state.characterDetail() }}</p>
+        @if (state.character()?.feedback) { <p class="participant-feedback"><strong>Ostatnie uwagi MG:</strong> {{ state.character()?.feedback }}</p> }
+        @if (state.character()) {
+          <a routerLink="/moja-postac" class="button primary">Otwórz postać <u-icon name="next"/></a>
+        } @else {
+          <p class="participant-hint">Wybrano przykładowy status, ale w tej sesji nie ma jeszcze danych postaci.</p>
+          @if (state.canStart()) { <button type="button" class="button primary" [disabled]="store.busy()" (click)="start()">Utwórz szkic <u-icon name="next"/></button> }
+        }
+      } @else {
+        <h2 id="participant-character-heading">Jeszcze nie masz postaci</h2>
+        <p>Utwórz jedną aktywną postać na Ursunalia 2027. Możesz wrócić do szkicu, zanim wyślesz go do Mistrza Gry.</p>
+        @if (state.canStart()) {
+          <button type="button" class="button primary" [disabled]="store.busy()" (click)="start()">
+            Rozpocznij zgłoszenie <u-icon name="next"/>
+          </button>
+        } @else {
+          <p class="participant-hint">Tworzenie nowych zgłoszeń nie jest obecnie dostępne.</p>
+          <a routerLink="/aktualnosci" class="button light">Sprawdź aktualności</a>
+        }
+      }
+    </section>
+    <aside class="paper participant-next" aria-labelledby="participant-next-heading">
+      <span class="eyebrow">CO DALEJ?</span>
+      <h2 id="participant-next-heading">Przygotuj się do gry</h2>
+      <p>Podczas oczekiwania na decyzję MG możesz poznawać świat Ursunaliów oraz kompletować wyposażenie.</p>
+      <div class="participant-next__links">
+        <a routerLink="/swiat-gry"><u-icon name="book"/> Świat gry <u-icon name="next"/></a>
+        <a routerLink="/dla-gracza" fragment="stroje"><u-icon name="shield"/> Stroje i wyposażenie <u-icon name="next"/></a>
+        <a routerLink="/aktualnosci"><u-icon name="feather"/> Aktualności <u-icon name="next"/></a>
+      </div>
+    </aside>
+  </div>
+}

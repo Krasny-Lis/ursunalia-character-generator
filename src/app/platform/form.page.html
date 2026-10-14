@@ -1,8 +1,8 @@
-<a class="back-link" routerLink="/"><u-icon name="back" />Ankiety organizatora</a>
+<a class="back-link" routerLink="/moj-panel"><u-icon name="back" />Mój panel</a>
 @if (store.active(); as app) {
   <section class="page-heading">
     <div>
-      <div class="eyebrow">ANKIETA ZGŁOSZENIOWA · WERSJA {{ app.form.revision }}</div>
+      <div class="eyebrow">ZGŁOSZENIE POSTACI · WERSJA {{ app.form.revision }}</div>
       <h1>{{ app.form.title }}</h1>
       <p>{{ app.form.description }}</p>
     </div>
@@ -50,7 +50,7 @@
     <div class="form-sections">
       @if (attempted() && completed() < app.form.sections.length) {
         <div class="error-banner" role="alert">
-          Ankieta wymaga uzupełnienia. Błędy zaznaczono pod polami.
+          Zgłoszenie wymaga uzupełnienia. Błędy zaznaczono pod polami.
         </div>
       }
       @for (section of app.form.sections; track section.id) {
@@ -124,7 +124,7 @@
           <u-icon name="info" />
           <div>
             <strong>Wskazówka</strong>
-            <p>Możesz w każdej chwili zapisać szkic ankiety i wrócić do niej później.</p>
+            <p>Możesz w każdej chwili zapisać szkic postaci i wrócić do niej później.</p>
           </div>
         </div>
         <div class="sidebar-engraving" aria-hidden="true">
@@ -154,7 +154,7 @@
   <section class="paper empty-state">
     <u-icon name="feather" />
     <h1>Zacznij swoją historię</h1>
-    <p>Wybierz ankietę na stronie wydarzenia, aby utworzyć postać.</p>
+    <p>Rozpocznij zgłoszenie w panelu uczestnika, aby utworzyć postać.</p>
     <a class="button primary" routerLink="/">Przejdź do wydarzenia<u-icon name="next" /></a>
   </section>
 }

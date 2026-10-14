@@ -12,7 +12,8 @@
           [routerLinkActiveOptions]="{ exact: true }" (click)="menu.set(false)">{{ item.label }}</a>
       }
       @if (shellRole() === 'player') {
-        <a routerLink="/moje-postacie" routerLinkActive="active" (click)="menu.set(false)">Moja postać</a>
+        <a routerLink="/moj-panel" routerLinkActive="active" (click)="menu.set(false)">Mój panel</a>
+        <a routerLink="/moja-postac" routerLinkActive="active" (click)="menu.set(false)">Moja postać</a>
       } @else if (shellRole() === 'gm') {
         <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel MG</a>
       } @else if (shellRole() === 'organizer') {
