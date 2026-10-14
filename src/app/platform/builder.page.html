@@ -29,7 +29,7 @@
         (click)="mode.set('preview')"
       >
         <u-icon name="eye" />Podgląd</button
-      ><button class="button primary" (click)="export()">
+      ><button class="button primary" [disabled]="exporting() || publishing()" (click)="export()">
         <u-icon name="download" />Eksport JSON
       </button>
     </div>
@@ -37,15 +37,18 @@
   <div class="info-strip">
     <u-icon name="info" /><span>{{
       mode() === 'edit'
-        ? 'Szkic roboczy – zapis tylko w tej przeglądarce. Opublikuj, aby udostępnić ankietę.'
+        ? dirty() ? 'Masz niezapisane zmiany. Zapis całego formularza obejmie wszystkie postacie wydarzenia.'
+          : 'Formularz jest zapisany. Obowiązuje wszystkie postacie wydarzenia.'
         : 'Podgląd uczestnika. Odpowiedzi testowe nie są zapisywane ani wysyłane.'
     }}</span
     ><span>{{ form().sections.length }} sekcji · {{ count() }} elementów</span>
   </div>
   @if (error()) {
     <div class="error-banner" role="alert">{{ error() }}</div>
+    <button class="button light" (click)="exportDraft()">Pobierz niezapisany formularz JSON</button>
+    <button class="button light" [disabled]="publishing()" (click)="reloadSchema()">Wczytaj aktualny formularz</button>
   }
-  <div class="content-layout builder-layout">
+  <div class="content-layout builder-layout" [attr.inert]="publishing() ? '' : null">
     <div>
       <section class="paper form-title-card">
         <span class="eyebrow">TYTUŁ FORMULARZA</span>
@@ -464,16 +467,16 @@
         </section>
         <section class="paper publish-card">
           <span class="eyebrow">UDOSTĘPNIJ UCZESTNIKOM</span>
-          <p>Zmiany w szkicu nie wpływają na ankiety już rozpoczęte.</p>
+          <p>{{ dirty() ? 'Masz niezapisane zmiany.' : 'Formularz jest zapisany.' }} Zapis obejmie również istniejące postacie, bez zmiany ich statusów.</p>
           @if (problems().length) {
             <p class="field-error">{{ problems()[0] }}</p>
           }
           <button
             class="button primary"
-            [disabled]="problems().length > 0 || publishing()"
+            [disabled]="problems().length > 0 || publishing() || !dirty()"
             (click)="publish()"
           >
-            <u-icon name="send" />{{ publishing() ? 'Publikowanie…' : 'Opublikuj ankietę' }}</button
+            <u-icon name="save" />{{ publishing() ? 'Zapisywanie…' : 'Zapisz formularz' }}</button
           ><label class="button light import-button"
             ><u-icon name="file" />Import JSON<input
               type="file"
@@ -490,11 +493,27 @@
         <u-icon name="plus" />Dodaj element</button
       ><button
         class="button primary"
-        [disabled]="problems().length > 0 || publishing()"
+        [disabled]="problems().length > 0 || publishing() || !dirty()"
         (click)="publish()"
       >
-        Opublikuj<u-icon name="send" />
+        Zapisz formularz<u-icon name="save" />
       </button>
+    </div>
+  }
+  @if (impact(); as preview) {
+    <div class="modal-backdrop">
+      <section class="paper modal" role="dialog" aria-modal="true" aria-labelledby="schema-impact-title"
+        cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+        <h2 id="schema-impact-title">Zmiana może usunąć odpowiedzi</h2>
+        <p>Dotknięte postacie: {{ preview.affectedCharacters }} aktywnych oraz {{ preview.affectedDeletedCharacters }} usuniętych. Pola z utratą odpowiedzi: {{ preview.affectedAnswers }}.</p>
+        <p>Usuwanie sekcji, pól i opcji oraz zmiany typów wymagają potwierdzenia. Statusy postaci pozostaną bez zmian.</p>
+        <div class="actions"><button class="button outline" [disabled]="publishing() || exporting()" (click)="export()">Pobierz pełną kopię JSON</button></div>
+        <label class="checkbox-label"><input type="checkbox" [ngModel]="confirmLoss()" (ngModelChange)="confirmLoss.set($event)" />Potwierdzam utratę wskazanych odpowiedzi.</label>
+        <div class="actions">
+          <button class="button light" [disabled]="publishing()" (click)="impact.set(null)">Wróć do edycji</button>
+          <button class="button primary" [disabled]="!confirmLoss() || publishing() || exporting()" (click)="confirmSave()">Potwierdź i zapisz</button>
+        </div>
+      </section>
     </div>
   }
 }

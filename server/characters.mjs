@@ -30,8 +30,8 @@ export function characterOperations(db, events) {
     if (value.revision !== expected) fail(409, 'Postać zmieniła się na serwerze. Zachowaj swoją kopię i odśwież dane przed ponownym zapisem.');
   }
   function definition(value) {
-    return JSON.parse(db.prepare('SELECT definition FROM forms WHERE id=? AND revision=?')
-      .get(value.form_id, value.form_revision).definition);
+    return JSON.parse(db.prepare('SELECT definition FROM character_schemas WHERE event_id=?')
+      .get(value.event_id).definition);
   }
   function dto(value, reviewer = false) {
     const character = {
@@ -39,6 +39,7 @@ export function characterOperations(db, events) {
       form: definition(value), answers: JSON.parse(value.answers), status: value.status,
       updatedAt: value.updated_at, submittedAt: value.submitted_at ?? undefined, feedback: value.feedback,
       migrated: value.legacy_application_id !== null,
+      deletedAt: value.deleted_at ?? undefined,
       history: db.prepare(`SELECT id,actor_id actorId,actor_name actorName,decided_at decidedAt,
         action,from_status fromStatus,status,comment,character_revision characterRevision
         FROM character_decisions WHERE character_id=? ORDER BY character_revision`).all(value.id),
@@ -85,7 +86,7 @@ export function characterOperations(db, events) {
     return row(value.id);
   }
   function mappings() {
-    return db.prepare('SELECT event_id eventId,form_id formId,form_revision formRevision FROM event_character_forms').all();
+    return db.prepare('SELECT event_id eventId,form_id formId,revision formRevision FROM character_schemas').all();
   }
   return {
     mappings,
@@ -99,6 +100,12 @@ export function characterOperations(db, events) {
         events.requireGrant(user, eventId, true);
         if (typeof body.formId !== 'string' || !Number.isSafeInteger(body.formRevision) || body.formRevision < 1)
           fail(400, 'Podaj identyfikator i rewizję formularza.');
+        const live = db.prepare('SELECT * FROM character_schemas WHERE event_id=?').get(eventId);
+        if (live) {
+          if (live.form_id !== body.formId || live.revision !== body.formRevision)
+            fail(409, 'Wydarzenie ma już żywy formularz. Zapisz jego zmiany z analizą skutków.');
+          return mappings().find(m => m.eventId === eventId);
+        }
         const found = db.prepare('SELECT definition FROM forms WHERE id=? AND revision=?').get(body.formId, body.formRevision);
         if (!found) fail(400, 'Nieznany formularz postaci.');
         const form = JSON.parse(found.definition);
@@ -113,11 +120,15 @@ export function characterOperations(db, events) {
         if (latest !== body.formRevision) fail(409, 'Wybierz najnowszą opublikowaną rewizję formularza.');
         db.prepare(`INSERT INTO event_character_forms VALUES(?,?,?) ON CONFLICT(event_id)
           DO UPDATE SET form_id=excluded.form_id,form_revision=excluded.form_revision`).run(eventId, body.formId, body.formRevision);
+        db.prepare('INSERT INTO character_schemas VALUES(?,?,?,?)').run(eventId, form.id, form.revision, JSON.stringify(form));
         return mappings().find(m => m.eventId === eventId);
       });
     },
     ownList(user) {
       return user ? db.prepare('SELECT * FROM characters WHERE user_id=? AND deleted_at IS NULL ORDER BY updated_at DESC').all(user.id).map(r => dto(r)) : [];
+    },
+    forExport(eventId) {
+      return db.prepare('SELECT * FROM characters WHERE event_id=? ORDER BY id').all(eventId).map(r => dto(r, true));
     },
     get(user, id, reviewer = false) {
       const value = reviewer ? row(id) : owned(user, id);
@@ -134,24 +145,26 @@ export function characterOperations(db, events) {
           value = owned(user, body.id);
           revision(value, body.expectedRevision);
           if (value.status === 'accepted') fail(409, 'Zaakceptowaną postać może odblokować MG.');
-          if (body.form.id !== value.form_id || body.form.revision !== value.form_revision) fail(409, 'Wersja formularza nie zgadza się z postacią.');
+          const form = definition(value);
+          if (body.form.id !== form.id || body.form.revision !== form.revision) fail(409, 'Rewizja aktualnego formularza nie zgadza się z postacią.');
           return dto(edit(value, updatedAnswers(value, body.answers), true));
         }
         if (!/^application-[a-f0-9-]{36}$/.test(body.id) || body.expectedRevision !== 0) fail(400, 'Nieprawidłowa nowa postać lub rewizja.');
         if (db.prepare('SELECT id FROM characters WHERE id=?').get(body.id)) fail(409, 'Identyfikator postaci jest już zajęty.');
         // Never shadow a historical survey/application with a forged matching ID.
         if (db.prepare('SELECT id FROM applications WHERE id=?').get(body.id)) fail(409, 'Identyfikator należy do historycznego zgłoszenia.');
-        const found = db.prepare('SELECT definition FROM forms WHERE id=? AND revision=?').get(body.form.id, body.form.revision);
+        const found = db.prepare('SELECT definition FROM character_schemas WHERE form_id=?').get(body.form.id);
         if (!found) fail(400, 'Nieznany formularz postaci.');
         const form = JSON.parse(found.definition);
         events.requireMembership(user, form.eventId);
+        if (form.revision !== body.form.revision) fail(409, 'Schemat zmienił się od rozpoczęcia szkicu. Zachowaj swoją kopię i wczytaj aktualny formularz.');
         const mapping = db.prepare('SELECT * FROM event_character_forms WHERE event_id=?').get(form.eventId);
-        if (!mapping || mapping.form_id !== form.id || mapping.form_revision !== form.revision) fail(409, 'Wybierz obowiązujący formularz postaci wydarzenia.');
+        if (!mapping || mapping.form_id !== form.id) fail(409, 'Wybierz obowiązujący formularz postaci wydarzenia.');
         if (db.prepare('SELECT id FROM characters WHERE event_id=? AND user_id=? AND deleted_at IS NULL').get(form.eventId, user.id)) fail(409, 'Masz już aktywną postać na to wydarzenie. Odśwież listę swoich postaci.');
         const answers = cleanAnswers(form, body.answers);
         validate(form, answers);
         db.prepare(`INSERT INTO characters(id,event_id,user_id,form_id,form_revision,answers,status,updated_at)
-          VALUES(?,?,?,?,?,?,'draft',?)`).run(body.id, form.eventId, user.id, form.id, form.revision, JSON.stringify(answers), now());
+          VALUES(?,?,?,?,?,?,'draft',?)`).run(body.id, form.eventId, user.id, mapping.form_id, mapping.form_revision, JSON.stringify(answers), now());
         return dto(row(body.id));
       });
     },
@@ -186,6 +199,7 @@ export function characterOperations(db, events) {
         const value = row(id);
         events.requireGrant(user, value.event_id);
         revision(value, body.expectedRevision);
+        if (body.expectedSchemaRevision !== definition(value).revision) fail(409, 'Schemat zmienił się podczas edycji. Zachowaj lokalną pracę i odśwież postać.');
         const edited = edit(value, updatedAnswers(value, body.answers), false);
         if (edited.revision !== value.revision)
           db.prepare('INSERT INTO character_edits VALUES(?,?,?,?,?)')

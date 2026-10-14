@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { PlatformStore, downloadJson } from './platform.store';
-import { Application, Answers, CharacterForm, Field, statusLabel } from './models';
+import { Application, Answers, Field, statusLabel } from './models';
 import { Icon } from './icon';
 import { FieldControl } from './field.control';
 import { CharacterHistory } from './character-history';
@@ -22,8 +22,8 @@ import { CharacterHistory } from './character-history';
         <a
           class="button primary"
           routerLink="/organizator/ankiety/edytor"
-          [queryParams]="{ id: 'new' }"
-          ><u-icon name="plus" />Nowa ankieta</a
+          [queryParams]="{ id: 'new', eventId: store.seed()!.event.id }"
+          ><u-icon name="edit" />Formularz postaci</a
         >
       }
     </section>
@@ -40,7 +40,7 @@ import { CharacterHistory } from './character-history';
             <span class="eyebrow">OPUBLIKOWANA · WERSJA {{ form.revision }}</span>
             <h2>{{ form.title }}</h2>
             <p>{{ form.sections.length }} sekcji · {{ count(form) }} pytań</p>
-            @if (store.canManageForm(form.eventId)) {
+            @if (store.canManageForm(form.eventId) && store.isCharacter(form)) {
             <div class="actions">
               <a
                 class="button light"
@@ -48,9 +48,6 @@ import { CharacterHistory } from './character-history';
                 [queryParams]="{ id: form.id }"
                 ><u-icon name="edit" />Edytuj formularz</a
               >
-              @if (store.mode() === 'server' && !store.isCharacter(form)) {
-                <button class="button light" [disabled]="busy()" (click)="configureCharacter(form.id, form.eventId, form.revision)">Ustaw jako formularz postaci</button>
-              }
             </div>
             }
           </article>
@@ -250,7 +247,7 @@ export class OrganizerPage {
     this.busy.set(true);
     try {
       this.updated(await this.store.request<Application>('api/organizer/characters/' + app.id, 'PATCH',
-        { expectedRevision: app.revision, answers: this.editAnswers() }));
+        { expectedRevision: app.revision, expectedSchemaRevision: app.form.revision, answers: this.editAnswers() }));
       this.editing.set(false);
       this.store.notice.set('Zapisano odpowiedzi. Status postaci pozostał bez zmian.');
     } catch (e) { this.error.set(this.store.message(e)); }
@@ -299,16 +296,5 @@ export class OrganizerPage {
   }
   export(app: Application) {
     downloadJson('ursunalia-' + app.id + '.json', app);
-  }
-  async configureCharacter(formId: string, eventId: string, formRevision: number) {
-    if (this.busy()) return;
-    this.busy.set(true);
-    try {
-      const mapping = await this.store.request<CharacterForm>(`api/events/${eventId}/character-form`, 'PUT', { formId, formRevision });
-      this.store.characterForms.update(all => [...all.filter(m => m.eventId !== eventId), mapping]);
-      this.error.set('');
-      this.store.notice.set('Przypisano formularz postaci. Pozostałe ankiety i ich dane pozostają zachowane.');
-    } catch (e) { this.error.set(this.store.message(e)); }
-    finally { this.busy.set(false); }
   }
 }

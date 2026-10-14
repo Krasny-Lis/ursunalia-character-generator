@@ -43,7 +43,9 @@ Wydarzenia, uczestnictwo i uprawnienia MG/organizatora są teraz trwałe i przyp
 
 Przepływ postaci: **W edycji → Do weryfikacji → Zaakceptowana / Do poprawy / Odrzucona**. Jeden uczestnik ma jedną aktywną postać na wydarzenie. Gracz poprawia także odrzuconą postać; faktycznie zmieniony zapis podczas weryfikacji cofa ją do szkicu, zapis bez zmian zachowuje status. Zaakceptowaną postać może odblokować MG. Panel MG umożliwia edycję bez zmiany statusu, opcjonalne komentarze i historię decyzji. Zapis chronią rewizje; konflikty nie nadpisują lokalnej pracy. Bezstratna migracja, API, granice przypiętych schematów oraz test przepływu: [docs/CHARACTERS-AND-REVIEW.md](docs/CHARACTERS-AND-REVIEW.md).
 
-Dodatkowe ankiety i oryginalne zgłoszenia pozostają zachowane. Nowe rewizje formularza nie zmieniają postaci już rozpoczętych — żywy schemat jest kolejnym etapem. Portret jest opcjonalny, JPG/PNG/WebP do 750 KB; całe żądanie ma limit 2 MB. Szkice zapisuje przycisk „Zapisz szkic”. Przeglądarka ostrzega o niezapisanych zmianach; panel MG ostrzega również przy opuszczaniu widoku.
+Dodatkowe ankiety i oryginalne zgłoszenia pozostają zachowane. Formularz postaci jest teraz jednym żywym schematem na wydarzenie: ręczny zapis obejmuje wszystkie istniejące i nowe postacie, bez zmiany ich statusów. Destrukcja odpowiedzi wymaga aktualnej analizy i jawnego potwierdzenia; dostępny jest pełny eksport JSON. Kreator nie utrzymuje trwałego lokalnego szkicu i ostrzega przed opuszczeniem. Raport migracji, API i test przepływu: [docs/LIVE-CHARACTER-SCHEMA.md](docs/LIVE-CHARACTER-SCHEMA.md).
+
+Portret jest opcjonalny, JPG/PNG/WebP do 750 KB; całe żądanie ma limit 2 MB. Szkice postaci zapisuje przycisk „Zapisz szkic”. Przeglądarka ostrzega o niezapisanych zmianach; panel MG ostrzega również przy opuszczaniu widoku.
 
 ### Produkcja
 
@@ -61,7 +63,7 @@ Istniejący workflow na `main` nadal buduje statyczną **wersję demonstracyjną
 
 Obsługuje krótki i długi tekst, jeden i wiele wyborów, listę rozwijaną, skalę, datę, portret oraz blok informacyjny. Sekcje, pytania i odpowiedzi można przeciągać. Dla sekcji i pytań są również przyciski zmiany kolejności. Ankietę można zduplikować przez eksport/import, a pojedyncze pytania i sekcje przez ich przyciski. Panel dodawania na telefonie wysuwa się od dołu.
 
-Szkic edytora zapisuje się lokalnie, publikacja jest osobną czynnością. Na serwerze publikować może wyłącznie organizator. W demonstracji publikacja dotyczy tej przeglądarki.
+Robocze zmiany edytora pozostają w pamięci; „Zapisz formularz” zapisuje całą definicję z kontrolą rewizji. Na serwerze zarządzać schematem i eksportować pełną kopię może wyłącznie organizator danego wydarzenia. W demonstracji zatwierdzony zapis dotyczy tej przeglądarki.
 
 ## Weryfikacja
 
@@ -76,7 +78,7 @@ Etap postaci sprawdzono w Chromium z rzeczywistym API/SQLite oraz na szerokości
 
 ## Dane i migracja
 
-Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje wersjonowane migracje 1–4 bez aktualizacji oryginalnych kont, sesji, formularzy i zgłoszeń. Postacie otrzymują osobne rekordy; edycje MG — odrębny rejestr metadanych bez kopii odpowiedzi, imion i e-maili. Kolejka MG pomija szkice, także cofnięte po zmianach gracza. Nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
+Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje migracje 1–5. Migracja 5 zachowuje oryginały postaci w osobnej tabeli źródeł oraz konta, sesje i dawne formularze/zgłoszenia; nie rozstrzyga utraty odpowiedzi lub konfliktów mapowania. Postacie otrzymują jeden aktualny schemat; edycje MG — odrębny rejestr metadanych. Kolejka MG pomija szkice, także cofnięte po zmianach gracza. Nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
 
 - `public/data/platform.json` — wydarzenie, startowe ankiety i fikcyjny przykład. Katalogi z poprzedniej wersji pozostają w `public/data/`.
 - `shared/validation.mjs` — wspólna walidacja przeglądarki i serwera.

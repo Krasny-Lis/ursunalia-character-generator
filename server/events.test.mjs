@@ -228,7 +228,7 @@ test('legacy and version-1 upgrade preserve all records and sessions, with one i
     const before = originalRows(db);
     const firstLog = versioned ? db.prepare('SELECT * FROM schema_migrations WHERE version=1').get() : null;
     const upgraded = migrateDatabase(db);
-    assert.equal(upgraded.currentVersion, 4);
+    assert.equal(upgraded.currentVersion, 5);
     assert.deepEqual(originalRows(db), before);
     if (firstLog) assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version=1').get(), firstLog);
     assert.deepEqual(db.prepare('SELECT event_id,user_id,source,status FROM event_memberships').all().map(r => ({ ...r })),

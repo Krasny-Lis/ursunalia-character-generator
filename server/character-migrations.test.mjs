@@ -24,13 +24,13 @@ test('version-4 upgrade preserves version-3 data/decisions and registry, creates
       'event_character_forms','characters','character_decisions'];
     const capture = () => Object.fromEntries(tables.map(name => [name, db.prepare(`SELECT * FROM ${name} ORDER BY rowid`).all()]));
     const before = capture(), log = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();
-    assert.deepEqual(preflightDatabase(db).pendingVersions, [4]);
-    assert.deepEqual(migrateDatabase(db).appliedVersions, [4]);
+    assert.deepEqual(preflightDatabase(db, { migrations: MIGRATIONS.slice(0, 4) }).pendingVersions, [4]);
+    assert.deepEqual(migrateDatabase(db, { migrations: MIGRATIONS.slice(0, 4) }).appliedVersions, [4]);
     assert.deepEqual(capture(), before);
     assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<4 ORDER BY version').all(), log);
     assert.equal(db.prepare('SELECT COUNT(*) n FROM character_edits').get().n, 0);
     const afterLog = db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();
-    assert.deepEqual(migrateDatabase(db).appliedVersions, []);
+    assert.deepEqual(migrateDatabase(db, { migrations: MIGRATIONS.slice(0, 4) }).appliedVersions, []);
     assert.deepEqual(capture(), before);
     assert.deepEqual(db.prepare('SELECT * FROM schema_migrations ORDER BY version').all(), afterLog);
     assert.equal(preflightDatabase(db).counts.character_edits, 0);
@@ -50,7 +50,7 @@ test('a failed version-4 migration rolls back only the new table/registry and le
     assert.deepEqual(db.prepare('SELECT * FROM schema_migrations ORDER BY version').all(), log);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name='character_edits'").get().n, 0);
     assert.equal(preflightDatabase(db, { migrations: MIGRATIONS.slice(0, 3) }).ok, true);
-    assert.deepEqual(migrateDatabase(db).appliedVersions, [4]);
+    assert.deepEqual(migrateDatabase(db, { migrations: MIGRATIONS.slice(0, 4) }).appliedVersions, [4]);
   } finally { db.close(); }
 });
 
@@ -59,7 +59,7 @@ test('preflight rejects an edit revision newer than its character without modify
   try {
     legacy(db); migrateDatabase(db);
     const id = db.prepare('SELECT id FROM characters').get().id;
-    db.prepare('INSERT INTO character_edits VALUES(?,?,?,?,?)').run('invalid-edit', id, 'gm', '2026-10-14T00:00:00.000Z', 2);
+    db.prepare('INSERT INTO character_edits VALUES(?,?,?,?,?)').run('invalid-edit', id, 'gm', '2026-10-14T00:00:00.000Z', 3);
     const before = db.prepare('SELECT * FROM character_edits').all();
     assert.ok(preflightDatabase(db).issues.some(i => i.code === 'INVALID_CHARACTER_EDIT_REVISION'));
     assert.throws(() => migrateDatabase(db), MigrationError);
@@ -74,7 +74,7 @@ function legacy(db) {
   db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(createHash('sha256').update('gm-session').digest('hex'), 'gm', Date.now() + 86400000);
   for (const form of seed.forms) db.prepare('INSERT INTO forms VALUES(?,?,?)').run(form.id, form.revision, JSON.stringify(form, null, 2));
   const revised = { ...structuredClone(seed.forms[0]), revision: 2 };
-  revised.sections[0].fields[0].type = 'textarea';
+  revised.sections[0].fields[0].label = 'Preserved revised name label';
   db.prepare('INSERT INTO forms VALUES(?,?,?)').run(revised.id, revised.revision, JSON.stringify(revised));
   db.prepare('INSERT INTO applications VALUES(?,?,?,?,?,?,?,?,?)').run('application-00000000-0000-0000-0000-000000000001', 'player', seed.forms[0].id, 1,
     JSON.stringify({ name: 123, removedAnswer: 'sensitive-preserved-answer', traits: ['old-option'] }, null, 2),
@@ -100,7 +100,7 @@ test('fresh schema and legacy/version-2 backfill preserve exact original JSON, s
         assert.ok(report.characterMapping.preservedAnswerWarnings[0].invalidFieldIds.includes('traits'));
         assert.equal(JSON.stringify(report).includes('sensitive-preserved-answer'), false);
       }
-      assert.equal(migrateDatabase(db).currentVersion, 4);
+      assert.equal(migrateDatabase(db).currentVersion, 5);
       if (before) {
         assert.deepEqual(snapshot(db), before);
         const original = before.applications[0], migrated = db.prepare('SELECT * FROM characters').get();
@@ -108,7 +108,7 @@ test('fresh schema and legacy/version-2 backfill preserve exact original JSON, s
           assert.equal(migrated[key], original[key]);
         assert.equal(migrated.event_id, seed.event.id);
         assert.equal(migrated.legacy_application_id, original.id);
-        assert.equal(migrated.revision, 1);
+        assert.equal(migrated.revision, 2);
         assert.equal(db.prepare('SELECT COUNT(*) n FROM character_decisions').get().n, 0);
         assert.equal(db.prepare('SELECT COUNT(*) n FROM applications').get().n, 2);
       }
@@ -159,7 +159,7 @@ test('failed version-3 data backfill rolls back all new tables and registry, ret
     assert.deepEqual(db.prepare('SELECT * FROM schema_migrations').all(), log);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name IN ('characters','character_decisions','event_character_forms')").get().n, 0);
     assert.equal(db.isTransaction, false);
-    assert.equal(migrateDatabase(db).currentVersion, 4);
+    assert.equal(migrateDatabase(db).currentVersion, 5);
   } finally { db.close(); }
 });
 
@@ -181,19 +181,19 @@ test('migrated accepted state is not newly validated or assigned fabricated hist
   assert.equal(state.characters[0].status, 'accepted');
   assert.equal(state.characters[0].migrated, true);
   assert.deepEqual(state.characters[0].history, []);
-  assert.equal(state.characters[0].form.revision, 1);
+  assert.equal(state.characters[0].form.revision, 2);
   assert.equal(state.applications[0].id, 'old-logistics');
-  assert.equal((await request('/api/characters', 'POST', { ...state.characters[0], expectedRevision: 1 })).status, 409);
+  assert.equal((await request('/api/characters', 'POST', { ...state.characters[0], expectedRevision: 2 })).status, 409);
   assert.equal((await request('/api/applications/application-00000000-0000-0000-0000-000000000001/submit', 'POST', {})).status, 409);
-  const attempt = { id: 'application-00000000-0000-0000-0000-000000000001', form: seed.forms[0], answers: {} };
+  const attempt = { id: 'application-00000000-0000-0000-0000-000000000001', form: state.characters[0].form, answers: {} };
   assert.equal((await request('/api/applications', 'POST', attempt)).status, 409);
   assert.equal((await request('/api/organizer/applications/' + attempt.id, 'PATCH', { status: 'accepted', feedback: '' }, 'gm-session')).status, 409);
-  assert.equal((await request('/api/organizer/characters/' + attempt.id + '/decision', 'POST', { expectedRevision: 1, status: 'accepted' }, 'gm-session')).status, 422);
+  assert.equal((await request('/api/organizer/characters/' + attempt.id + '/decision', 'POST', { expectedRevision: 2, status: 'accepted' }, 'gm-session')).status, 422);
   assert.deepEqual(snapshot(app.db), before);
   // Unknown historical answers survive a permitted new edit; they are never passed through destructive cleanAnswers.
-  const unlocked = await request('/api/organizer/characters/' + attempt.id + '/unlock', 'POST', { expectedRevision: 1 }, 'gm-session');
+  const unlocked = await request('/api/organizer/characters/' + attempt.id + '/unlock', 'POST', { expectedRevision: 2 }, 'gm-session');
   assert.equal(unlocked.status, 200);
-  const edited = await request('/api/characters', 'POST', { ...state.characters[0], answers: seed.example, expectedRevision: 2 });
+  const edited = await request('/api/characters', 'POST', { ...state.characters[0], answers: seed.example, expectedRevision: 3 });
   assert.equal(edited.status, 200);
   assert.equal(edited.data.answers.removedAnswer, 'sensitive-preserved-answer');
   assert.deepEqual(snapshot(app.db), before);

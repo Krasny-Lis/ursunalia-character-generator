@@ -19,6 +19,7 @@ export const routes: Routes = [
   },
   {
     path: 'organizator/ankiety/edytor',
+    canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
     loadComponent: () => import('./platform/builder.page').then((m) => m.BuilderPage),
   },
   { path: 'organizator/ankiety/podglad', redirectTo: 'zgloszenie-postaci', pathMatch: 'full' },
