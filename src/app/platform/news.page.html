@@ -1,0 +1,89 @@
+<header class="news-heading">
+  <span class="news-eyebrow">URSUNALIA 2027 · TABLICA OGŁOSZEŃ</span>
+  <h1>Aktualności</h1>
+  <p>Komunikaty organizatorów, ważne informacje dla uczestników i wieści ze świata gry. Najważniejsze ogłoszenia będą przypinane na początku listy.</p>
+</header>
+
+<section class="paper news-board" aria-labelledby="news-board-title">
+  <div class="news-board__header">
+    <div>
+      <span class="eyebrow">NAJNOWSZE WIADOMOŚCI</span>
+      <h2 id="news-board-title">Ogłoszenia i komunikaty</h2>
+    </div>
+    @if (entries().length) {
+      <label class="news-search">Szukaj wpisów
+        <span>
+          <u-icon name="search"/>
+          <input type="search" [value]="search()" placeholder="Wpisz słowo…"
+            (input)="search.set($any($event.target).value)" />
+        </span>
+      </label>
+    }
+  </div>
+
+  @if (preview.enabled) {
+    <div class="news-demo-banner" role="note">
+      <u-icon name="info" />
+      <span><strong>Podgląd deweloperski.</strong> Wpisy poniżej są przykładowe,
+        nie są oficjalnymi ogłoszeniami wydarzenia. Przełącz rolę na Organizatora,
+        aby sprawdzić widoczność wpisu redakcyjnego.</span>
+    </div>
+  }
+
+  @if (entries().length) {
+    <div class="news-filters" role="group" aria-label="Filtruj aktualności">
+      <button type="button" [attr.aria-pressed]="category() === 'all'"
+        [class.active]="category() === 'all'" (click)="category.set('all')">Wszystkie</button>
+      <button type="button" [attr.aria-pressed]="category() === 'organizacyjne'"
+        [class.active]="category() === 'organizacyjne'" (click)="category.set('organizacyjne')">Organizacyjne</button>
+      <button type="button" [attr.aria-pressed]="category() === 'fabularne'"
+        [class.active]="category() === 'fabularne'" (click)="category.set('fabularne')">Fabularne</button>
+    </div>
+    <div class="news-list">
+      @for (item of visible(); track item.slug) {
+        <article class="news-item" [class.news-item--pinned]="item.pinned">
+          <div class="news-item__main">
+            <div class="news-item__meta">
+              <span>{{ categoryLabel(item.category) }}</span>
+              @if (item.pinned) { <strong><u-icon name="star" /> Przypięty wpis</strong> }
+              @if (item.visibility === 'organizer') {
+                <strong><u-icon name="shield" /> Organizator · próbka</strong>
+              }
+            </div>
+            <h3><a [routerLink]="['/aktualnosci', item.slug]">{{ item.title }}</a></h3>
+            <p>{{ item.excerpt }}</p>
+          </div>
+          <a class="news-read-more" [routerLink]="['/aktualnosci', item.slug]"
+            [attr.aria-label]="'Czytaj: ' + item.title">
+            Czytaj więcej <u-icon name="next" />
+          </a>
+        </article>
+      } @empty {
+        <div class="news-empty" role="status">
+          <u-icon name="search"/>
+          <h3>Nie znaleziono wpisów</h3>
+          <p>Spróbuj innej frazy lub wybierz wszystkie kategorie.</p>
+          <button class="button light" type="button" (click)="clearFilters()">Wyczyść filtry</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="news-empty" role="status">
+      <u-icon name="feather" />
+      <h3>Wkrótce pierwsze komunikaty</h3>
+      <p>Organizatorzy nie opublikowali jeszcze wiadomości w serwisie. Sprawdzaj tę stronę przed wydarzeniem.</p>
+      <a class="button light" routerLink="/o-wydarzeniu">Informacje o wydarzeniu</a>
+    </div>
+  }
+</section>
+
+<section class="news-bottom">
+  <div>
+    <h2>Przygotowujesz się do Ursunaliów?</h2>
+    <p>Poradnik uczestnika i biblioteka świata gry pomogą Ci stworzyć postać oraz przygotować się do wyjazdu.</p>
+  </div>
+  <div class="news-bottom__links">
+    <a routerLink="/dla-gracza" class="button outline">Dla gracza</a>
+    <a routerLink="/swiat-gry" class="button outline">Świat gry</a>
+  </div>
+</section>
