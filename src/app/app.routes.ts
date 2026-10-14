@@ -20,6 +20,8 @@ export const routes: Routes = [
   { path: 'moj-panel', loadComponent: () => import('./platform/participant-dashboard.page').then(m => m.ParticipantDashboardPage) },
   { path: 'moja-postac', loadComponent: () => import('./platform/my-character.page').then(m => m.MyCharacterPage) },
   { path: 'moje-postacie', redirectTo: 'moj-panel', pathMatch: 'full' },
+  { path: 'organizator', loadComponent: () => import('./platform/organizer-hub.page').then(m => m.OrganizerHubPage) },
+  { path: 'mg', loadComponent: () => import('./platform/organizer.page').then(m => m.OrganizerPage) },
   { path: 'organizator/ankiety/edytor',
     canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
     loadComponent: () => import('./platform/builder.page').then((m) => m.BuilderPage) },
