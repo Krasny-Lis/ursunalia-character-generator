@@ -1,72 +1,37 @@
 <a class="skip-link" href="#main">Przejdź do treści</a>
+<app-dev-role-bar />
 <header class="site-header">
   <div class="header-inner">
-    <a class="platform-brand" routerLink="/" aria-label="Ursunalia – wydarzenia"
-      ><span class="brand-mark">✦</span
-      ><span><strong>URSUNALIA</strong><small>NOWE POCZĄTKI I STARE DŁUGI · 2027</small></span></a
-    >
+    <a class="platform-brand" routerLink="/" aria-label="Ursunalia 2027 – strona główna">
+      <span class="brand-mark" aria-hidden="true">✦</span>
+      <span><strong>URSUNALIA</strong><small>NOWE POCZĄTKI, STARE DŁUGI · 2027</small></span>
+    </a>
     <nav [class.open]="menu()" id="navigation" aria-label="Menu główne">
-      <a
-        routerLink="/"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-        (click)="menu.set(false)"
-        >Wydarzenie</a
-      >
-      <a [routerLink]="store.selectedEvent() ? ['/wydarzenie', store.selectedEvent()!.id] : ['/']"
-        fragment="ankiety" routerLinkActive="active" (click)="menu.set(false)">Ankiety</a>
-      @if (store.canOrganize()) {
-        <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
+      @for (item of publicLinks; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }" (click)="menu.set(false)">{{ item.label }}</a>
       }
-      @if (store.user()) {
-        <a routerLink="/powiadomienia" routerLinkActive="active" (click)="menu.set(false)">Powiadomienia@if (store.unreadCount()) { · {{ store.unreadCount() }} }</a>
+      @if (shellRole() === 'player') {
+        <a routerLink="/moje-postacie" routerLinkActive="active" (click)="menu.set(false)">Moja postać</a>
+      } @else if (shellRole() === 'gm') {
+        <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel MG</a>
+      } @else if (shellRole() === 'organizer') {
+        <a routerLink="/organizator/wydarzenia" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
       }
     </nav>
     <div class="header-tools">
-      <button
-        class="icon-button"
-        aria-label="Szukaj ankiet"
-        [attr.aria-expanded]="search()"
-        (click)="search.set(!search())"
-      >
-        <u-icon name="search" />
-      </button>
-      <a class="icon-button notification" routerLink="/moje-postacie" aria-label="Moje zgłoszenia"
-        ><u-icon name="file"
-      /></a>
-      <a class="avatar" routerLink="/konto" aria-label="Moje konto">{{
-        store.user() ? store.user()!.name.slice(0, 2).toUpperCase() : 'AK'
-      }}</a>
-      <button
-        class="icon-button menu-toggle"
-        [attr.aria-expanded]="menu()"
-        aria-controls="navigation"
-        aria-label="Menu"
-        (click)="menu.set(!menu())"
-      >
-        <u-icon [name]="menu() ? 'close' : 'menu'" />
+      <a class="header-account-link" routerLink="/konto" (click)="menu.set(false)">
+        <u-icon name="user"/>
+        <span>{{ shellRole() === 'guest' ? 'Zaloguj się' : 'Moje konto' }}</span>
+      </a>
+      <button type="button" class="icon-button menu-toggle"
+        [attr.aria-expanded]="menu()" aria-controls="navigation"
+        [attr.aria-label]="menu() ? 'Zamknij menu' : 'Otwórz menu'"
+        (click)="menu.set(!menu())">
+        <u-icon [name]="menu() ? 'close' : 'menu'"/>
       </button>
     </div>
   </div>
-  @if (search()) {
-    <div class="search-panel">
-      <label for="global-search">Znajdź ankietę</label
-      ><input
-        id="global-search"
-        type="search"
-        [value]="query()"
-        (input)="query.set($any($event.target).value)"
-        placeholder="Nazwa ankiety…"
-      />
-      @for (form of store.forms(); track form.id) {
-        @if (form.title.toLowerCase().includes(query().toLowerCase())) {
-          <a [routerLink]="['/wydarzenie', form.eventId]" (click)="search.set(false)"
-            >{{ form.title }} <u-icon name="next"
-          /></a>
-        }
-      }
-    </div>
-  }
 </header>
 <main id="main" class="page" tabindex="-1">
   @if (store.error()) {
@@ -85,18 +50,17 @@
   }
 </main>
 <footer class="site-footer">
-  <span>✦ URSUNALIA 2027</span><span>Nowe początki. Stare długi.</span
-  ><span>{{
-    store.mode() === 'server' ? 'System zgłoszeń' : 'Wersja demonstracyjna · zapis lokalny'
-  }}</span>
+  <span>✦ URSUNALIA 2027</span>
+  <span>Nowe początki. Stare długi.</span>
+  <span>{{ store.mode() === 'server' ? 'Strona wydarzenia' : 'Wersja demonstracyjna' }}</span>
 </footer>
 @if (store.notice()) {
   <div class="toast" role="status" tabindex="0" aria-label="Kliknij, aby zamknąć komunikat"
     (click)="store.notice.set('')" (keydown.enter)="store.notice.set('')"
     (keydown.space)="$event.preventDefault(); store.notice.set('')">
-    <u-icon name="info" /><span>{{ store.notice() }}</span
-    ><button class="icon-button" aria-label="Zamknij komunikat" (click)="store.notice.set('')">
-      <u-icon name="close" />
+    <u-icon name="info"/><span>{{ store.notice() }}</span>
+    <button type="button" class="icon-button" aria-label="Zamknij komunikat" (click)="store.notice.set('')">
+      <u-icon name="close"/>
     </button>
   </div>
 }
