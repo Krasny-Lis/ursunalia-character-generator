@@ -32,7 +32,7 @@ export const routes: Routes = [
     canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
     loadComponent: () => import('./platform/organizer.page').then((m) => m.OrganizerPage) },
   { path: 'konto', loadComponent: () => import('./platform/account.page').then((m) => m.AccountPage) },
-  { path: 'powiadomienia', loadComponent: () => import('./platform/notifications.page').then(m => m.NotificationsPage) },
+  { path: 'powiadomienia', redirectTo: 'moj-panel', pathMatch: 'full' },
   { path: 'organizator/wydarzenia',
     canDeactivate: [(component: { canLeave: () => boolean }) => component.canLeave()],
     loadComponent: () => import('./platform/event-admin.page').then(m => m.EventAdminPage) },
