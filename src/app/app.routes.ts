@@ -19,6 +19,8 @@ export const routes: Routes = [
   { path: 'karta-postaci', loadComponent: () => import('./platform/summary.page').then((m) => m.SummaryPage) },
   { path: 'moj-panel', loadComponent: () => import('./platform/participant-dashboard.page').then(m => m.ParticipantDashboardPage) },
   { path: 'moja-postac', loadComponent: () => import('./platform/my-character.page').then(m => m.MyCharacterPage) },
+  { path: 'skladka', loadComponent: () => import('./platform/payment.page').then(m => m.PaymentPage) },
+  { path: 'dokument-postaci', loadComponent: () => import('./platform/character-document.page').then(m => m.CharacterDocumentPage) },
   { path: 'moje-postacie', redirectTo: 'moj-panel', pathMatch: 'full' },
   { path: 'organizator', loadComponent: () => import('./platform/organizer-hub.page').then(m => m.OrganizerHubPage) },
   { path: 'mg', loadComponent: () => import('./platform/organizer.page').then(m => m.OrganizerPage) },
