@@ -1,0 +1,29 @@
+<a routerLink="/aktualnosci" class="news-detail-back"><u-icon name="back"/> Wróć do aktualności</a>
+@if (article(); as item) {
+  <div class="news-detail-heading">
+    <span class="news-detail-eyebrow">{{ categoryLabel(item.category) }} · Wpis demonstracyjny</span>
+    <h1>{{ item.title }}</h1>
+    <div class="news-detail-meta">
+      @if (item.pinned) { <span><u-icon name="star"/> Przypięty wpis</span> }
+      @if (item.visibility === 'organizer') { <span><u-icon name="shield"/> Widoczność: Organizator · próbka</span> }
+    </div>
+  </div>
+  <article class="paper news-detail-paper">
+    <div class="news-detail-demo" role="note"><u-icon name="info"/>
+      <span>To demonstracyjny tekst do oceny UI. Nie jest oficjalnym ogłoszeniem ani materiałem opublikowanym przez organizatorów.</span>
+    </div>
+    <p class="news-detail-lead">{{ item.excerpt }}</p>
+    @for (paragraph of item.paragraphs; track $index) { <p>{{ paragraph }}</p> }
+    <div class="news-detail-bottom">
+      <a class="button light" routerLink="/aktualnosci"><u-icon name="back"/> Wszystkie aktualności</a>
+      <a class="news-detail-help" routerLink="/dla-gracza">Poradnik uczestnika <u-icon name="next"/></a>
+    </div>
+  </article>
+} @else {
+  <section class="paper news-detail-empty" role="status">
+    <u-icon name="feather"/>
+    <h1>Wpis niedostępny</h1>
+    <p>Wiadomość może nie istnieć, być nieopublikowana lub wymagać dostępu. Udostępnianie prawdziwych wpisów zostanie podłączone wraz z CMS.</p>
+    <a class="button light" routerLink="/aktualnosci">Wróć do aktualności</a>
+  </section>
+}
