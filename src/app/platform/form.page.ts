@@ -3,10 +3,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlatformStore, downloadJson } from './platform.store';
 import { FieldControl } from './field.control';
 import { Icon } from './icon';
+import { CharacterHistory } from './character-history';
 import { answerIssues } from '../../../shared/validation.mjs';
 @Component({
   standalone: true,
-  imports: [RouterLink, FieldControl, Icon],
+  imports: [RouterLink, FieldControl, Icon, CharacterHistory],
   templateUrl: './form.page.html',
 })
 export class FormPage {

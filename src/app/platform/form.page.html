@@ -10,7 +10,7 @@
       <button
         class="button outline"
         (click)="store.save()"
-        [disabled]="store.busy() || app.status === 'submitted' || app.status === 'accepted'"
+        [disabled]="store.busy() || !store.canEdit(app)"
       >
         <u-icon name="edit" />Zapisz szkic</button
       ><a class="button dark" routerLink="/karta-postaci"><u-icon name="eye" />Podgląd</a
@@ -23,8 +23,8 @@
     <div class="info-strip">
       <u-icon name="check" />{{
         app.status === 'accepted'
-          ? 'Twoja postać została zaakceptowana.'
-          : 'Zgłoszenie wysłane. Oczekuje na sprawdzenie organizatora.'
+          ? 'Twoja postać została zaakceptowana. Edycję może odblokować MG.'
+          : 'Zgłoszenie oczekuje na weryfikację. Zapis zmienionych odpowiedzi postaci cofnie je do szkicu.'
       }}
     </div>
   }
@@ -78,7 +78,7 @@
                   [field]="field"
                   [value]="app.answers[field.id]"
                   [error]="attempted() ? issues()[field.id] || '' : ''"
-                  [disabled]="store.busy() || !['draft', 'changes'].includes(app.status)"
+                  [disabled]="store.busy() || !store.canEdit(app)"
                   (changed)="store.update(field.id, $event)"
                 />
               }
@@ -143,8 +143,9 @@
       </div>
     </aside>
   </div>
+  <u-character-history [app]="app" />
   <div class="mobile-actions">
-    <button class="button dark" (click)="store.save()" [disabled]="store.busy()">
+    <button class="button dark" (click)="store.save()" [disabled]="store.busy() || !store.canEdit(app)">
       <u-icon name="save" />Zapisz szkic</button
     ><button class="button primary" (click)="next()">Dalej<u-icon name="next" /></button>
   </div>

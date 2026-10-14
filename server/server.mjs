@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { definitionIssues, answerIssues, cleanAnswers } from '../shared/validation.mjs';
 import { migrateDatabase } from './migrations.mjs';
 import { eventOperations } from './events.mjs';
+import { characterOperations } from './characters.mjs';
 const derive = promisify(scrypt);
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -50,6 +51,8 @@ export async function createAppServer({
       form.revision,
       JSON.stringify(form),
     );
+  const characters = characterOperations(db, events);
+  characters.ensureSeedMapping();
   if (adminEmail && adminPassword) {
     if (adminPassword.length < 12 || adminPassword.length > 128)
       throw new Error('ADMIN_PASSWORD musi mieć od 12 do 128 znaków.');
@@ -127,6 +130,7 @@ export async function createAppServer({
       .get(row.form_id, row.form_revision);
     const app = {
       id: row.id,
+      kind: 'survey',
       form: JSON.parse(form.definition),
       answers: JSON.parse(row.answers),
       status: row.status,
@@ -194,13 +198,16 @@ export async function createAppServer({
           events: events.list(user),
           memberships: events.memberships(user),
           eventGrants: events.grants(user),
+          characterForms: characters.mappings().filter(m => events.visible(user, m.eventId)),
           user: publicUser(user),
           applications: user
             ? db
-                .prepare('SELECT * FROM applications WHERE user_id=? ORDER BY updated_at DESC')
+                .prepare(`SELECT * FROM applications WHERE user_id=? AND id NOT IN
+                  (SELECT legacy_application_id FROM characters WHERE legacy_application_id IS NOT NULL) ORDER BY updated_at DESC`)
                 .all(user.id)
                 .map((r) => application(r))
             : [],
+          characters: characters.ownList(user),
         });
       }
       if (path === '/api/events' && req.method === 'GET') return json(events.list(session(req)));
@@ -219,6 +226,25 @@ export async function createAppServer({
         const body = await readJson(req);
         return json(events.join(requireUser(req), join[1], body));
       }
+      const characterForm = path.match(/^\/api\/events\/([^/]+)\/character-form$/);
+      if (characterForm && req.method === 'PUT')
+        return json(characters.configure(requireUser(req), characterForm[1], await readJson(req)));
+      if (path === '/api/characters' && req.method === 'POST')
+        return json(characters.save(requireUser(req), await readJson(req)));
+      const character = path.match(/^\/api\/characters\/([^/]+)$/);
+      if (character && req.method === 'GET') return json(characters.get(requireUser(req), character[1]));
+      const sendCharacter = path.match(/^\/api\/characters\/([^/]+)\/submit$/);
+      if (sendCharacter && req.method === 'POST')
+        return json(characters.submit(requireUser(req), sendCharacter[1], await readJson(req)));
+      if (path === '/api/organizer/characters' && req.method === 'GET')
+        return json(characters.list(requireUser(req), requestUrl.searchParams));
+      const gmCharacter = path.match(/^\/api\/organizer\/characters\/([^/]+)$/);
+      if (gmCharacter && req.method === 'GET') return json(characters.get(requireUser(req), gmCharacter[1], true));
+      if (gmCharacter && req.method === 'PATCH')
+        return json(characters.editByGM(requireUser(req), gmCharacter[1], await readJson(req)));
+      const decision = path.match(/^\/api\/organizer\/characters\/([^/]+)\/(decision|unlock)$/);
+      if (decision && req.method === 'POST')
+        return json(characters.decide(requireUser(req), decision[1], await readJson(req), decision[2] === 'unlock'));
       const grant = path.match(/^\/api\/events\/([^/]+)\/grants\/([^/]+)$/);
       if (grant && ['PUT', 'DELETE'].includes(req.method)) {
         const body = await readJson(req);
@@ -306,6 +332,9 @@ export async function createAppServer({
           const last = db.prepare('SELECT MAX(revision) AS revision FROM forms WHERE id=?').get(body.id);
           const form = { ...body, status: 'published', revision: (last.revision ?? 0) + 1 };
           db.prepare('INSERT INTO forms VALUES(?,?,?)').run(form.id, form.revision, JSON.stringify(form));
+          // New characters use the new snapshot; existing characters retain their pinned schema in this stage.
+          db.prepare('UPDATE event_character_forms SET form_revision=? WHERE event_id=? AND form_id=?')
+            .run(form.revision, form.eventId, form.id);
           return form;
         });
         return json(published, 201);
@@ -327,6 +356,8 @@ export async function createAppServer({
         const existing = db.prepare('SELECT * FROM applications WHERE id=?').get(body.id);
         if (existing && existing.user_id !== user.id)
           throw httpError(404, 'Nie znaleziono zgłoszenia.');
+        if (db.prepare('SELECT id FROM characters WHERE legacy_application_id=?').get(body.id))
+          throw httpError(409, 'Historyczny rekord jest zachowany. Korzystaj z API postaci i jej rewizji.');
         if (existing && !['draft', 'changes'].includes(existing.status))
           throw httpError(409, 'Wysłane zgłoszenie nie może być edytowane.');
         if (
@@ -340,6 +371,8 @@ export async function createAppServer({
         if (!definition) throw httpError(400, 'Nieznana wersja ankiety.');
         const form = JSON.parse(definition.definition);
         events.requireMembership(user, form.eventId);
+        if (db.prepare('SELECT event_id FROM event_character_forms WHERE form_id=?').get(form.id))
+          throw httpError(409, 'Formularz postaci korzysta z API /api/characters.');
         const answers = cleanAnswers(form, body.answers);
         // Drafts may be incomplete; supplied values must still satisfy type/length/option limits.
         const draftForm = {
@@ -382,6 +415,8 @@ export async function createAppServer({
       if (submit && req.method === 'POST') {
         await readJson(req);
         const row = owned(req, submit[1]);
+        if (db.prepare('SELECT id FROM characters WHERE legacy_application_id=?').get(row.id))
+          throw httpError(409, 'Historyczny rekord jest zachowany. Korzystaj z API postaci.');
         if (!['draft', 'changes'].includes(row.status))
           throw httpError(409, 'Zgłoszenie zostało już wysłane.');
         const app = application(row);
@@ -403,7 +438,9 @@ export async function createAppServer({
           db
             .prepare(`SELECT a.* FROM applications a JOIN forms f ON f.id=a.form_id AND f.revision=a.form_revision
               JOIN event_grants g ON g.event_id=json_extract(f.definition,'$.eventId') AND g.user_id=?
-              WHERE g.role IN ('organizer','gm') AND a.status!='draft' AND (? IS NULL OR g.event_id=?) ORDER BY a.submitted_at DESC`)
+              WHERE g.role IN ('organizer','gm') AND a.status!='draft' AND a.id NOT IN
+              (SELECT legacy_application_id FROM characters WHERE legacy_application_id IS NOT NULL)
+              AND (? IS NULL OR g.event_id=?) ORDER BY a.submitted_at DESC`)
             .all(user.id, eventId, eventId)
             .map((r) => application(r, true)),
         );
@@ -423,6 +460,8 @@ export async function createAppServer({
           .prepare("SELECT * FROM applications WHERE id=? AND status!='draft'")
           .get(review[1]);
         if (!row) throw httpError(404, 'Nie znaleziono wysłanego zgłoszenia.');
+        if (db.prepare('SELECT id FROM characters WHERE legacy_application_id=?').get(row.id))
+          throw httpError(409, 'Historyczny rekord jest zachowany. Decyzję zapisz w API postaci.');
         const updated = events.withGrant(user, application(row).form.eventId, false, () => {
           db.prepare('UPDATE applications SET status=?,feedback=?,updated_at=? WHERE id=?')
             .run(body.status, body.feedback, now(), row.id);
@@ -468,7 +507,7 @@ export async function createAppServer({
         return;
       }
       json(
-        { error: error.status ? error.message : 'Wewnętrzny błąd serwera.' },
+        { error: error.status ? error.message : 'Wewnętrzny błąd serwera.', ...(error.status && error.issues ? { issues: error.issues } : {}) },
         error.status ?? 500,
       );
       if (!error.status) console.error('Request failed:', error.code ?? error.name);

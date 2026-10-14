@@ -117,9 +117,9 @@ test('adopted users, original sessions, submitted records and hashes still work 
       assert.equal(res.status, 200);
       const body = await res.json();
       assert.equal(body.user.id, 'user-0');
-      assert.equal(body.applications.length, 1);
-      assert.equal(body.applications[0].answers.name, 'Fixture 0');
-      assert.equal(body.applications[0].form.revision, 1);
+      assert.equal(body.characters.length, 1);
+      assert.equal(body.characters[0].answers.name, 'Fixture 0');
+      assert.equal(body.characters[0].form.revision, 1);
       const forbidden = await fetch(base + '/api/organizer/applications', { headers: { Cookie: `ursunalia_session=${fixtureToken}` } });
       assert.equal(forbidden.status, 403);
       const anonymous = await fetch(base + '/api/bootstrap');

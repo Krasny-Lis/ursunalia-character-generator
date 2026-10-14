@@ -12,7 +12,7 @@
       <a class="button outline" routerLink="/zgloszenie-postaci"
         ><u-icon name="edit" />Edytuj zgłoszenie</a
       >
-      @if (['draft', 'changes'].includes(app.status)) {
+      @if (['draft', 'changes', 'rejected'].includes(app.status) || (app.status === 'submitted' && store.dirty() && app.kind === 'character')) {
         <button
           class="button primary"
           [disabled]="!complete() || store.busy()"
@@ -241,6 +241,8 @@
     </div>
     <aside class="sidebar">
       <section class="paper completeness">
+        <p>{{ status(app.status) }}</p>
+        @if (app.feedback) { <p>Uwagi MG: {{ app.feedback }}</p> }
         <span class="eyebrow"><u-icon name="shield" /> STATUS KOMPLETNOŚCI</span>
         <div class="progress-row">
           <progress
@@ -266,6 +268,7 @@
           }}
         </p>
       </section>
+      <u-character-history [app]="app" />
       <section class="paper">
         <span class="eyebrow">PODSUMOWANIE</span>
         <div class="ornament">✧</div>
@@ -330,7 +333,7 @@
           {{
             store.mode() === 'demo'
               ? 'Wersja demonstracyjna sprawdzi kompletność odpowiedzi. Nie wyśle danych do organizatora.'
-              : 'Organizator otrzyma odpowiedzi i portret. Po wysłaniu edycja będzie dostępna, gdy organizator poprosi o poprawki.'
+              : 'MG otrzyma odpowiedzi i portret. Zapis zmienionych odpowiedzi postaci w czasie weryfikacji cofnie ją do szkicu.'
           }}
         </p>
         <div class="actions">

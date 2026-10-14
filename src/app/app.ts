@@ -26,7 +26,7 @@ export class App {
     });
   }
   @HostListener('window:beforeunload', ['$event']) protect(event: BeforeUnloadEvent) {
-    if (this.store.dirty()) {
+    if (this.store.dirty() || this.store.reviewDirty()) {
       event.preventDefault();
       event.returnValue = '';
     }

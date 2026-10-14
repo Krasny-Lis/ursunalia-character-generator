@@ -59,9 +59,9 @@ import { Icon } from './icon';
       <div class="survey-cards">
         @for (form of forms(); track form.id) {
           <article class="paper survey-card">
-            <span class="wax-icon"><u-icon [name]="$first ? 'feather' : 'calendar'" /></span
+            <span class="wax-icon"><u-icon [name]="store.isCharacter(form) ? 'feather' : 'calendar'" /></span
             ><span class="eyebrow">{{
-              $first ? 'POSTAĆ I FABUŁA' : 'ORGANIZACJA WYDARZENIA'
+              store.isCharacter(form) ? 'POSTAĆ I FABUŁA' : 'ANKIETA DODATKOWA'
             }}</span>
             <h3>{{ form.title }}</h3>
             <p>{{ form.description }}</p>
