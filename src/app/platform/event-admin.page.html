@@ -1,5 +1,5 @@
-<a class="back-link" routerLink="/organizator/ankiety"><u-icon name="back" />Panel organizatora</a>
-<section class="page-heading"><div><span class="eyebrow">ADMINISTRACJA WYDARZENIA</span><h1>Wydarzenia i uczestnicy</h1><p>Dane wydarzenia, zapisy i uprawnienia jego zespołu.</p></div></section>
+<a class="back-link" routerLink="/organizator"><u-icon name="back" />Panel organizatora</a>
+<section class="page-heading"><div><span class="eyebrow">ADMINISTRACJA WYDARZENIA</span><h1>Ustawienia Ursunaliów</h1><p>Dane wydarzenia, zapisy i uprawnienia jego zespołu.</p></div></section>
 @if (store.mode() !== 'server' || !store.canAdminEvents()) {
   <section class="paper empty-state"><h2>Dostęp dla organizatora wydarzenia</h2><p>Ta administracja wymaga konta i serwera.</p><a class="button primary" routerLink="/konto">Moje konto</a></section>
 } @else {
