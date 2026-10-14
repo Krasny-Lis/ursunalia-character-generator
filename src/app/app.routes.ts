@@ -3,7 +3,7 @@ import type { Routes } from '@angular/router';
 const planned = () => import('./platform/preview-public.page').then(m => m.PreviewPublicPage);
 
 export const routes: Routes = [
-  { path: '', loadComponent: () => import('./platform/event.page').then(m => m.EventPage) },
+  { path: '', loadComponent: () => import('./platform/home.page').then(m => m.HomePage) },
   { path: 'o-wydarzeniu', loadComponent: planned,
     data: { title: 'O wydarzeniu', description: 'Termin, program, dojazd, najważniejsze informacje i kontakt do organizatorów.' } },
   { path: 'swiat-gry', loadComponent: planned,

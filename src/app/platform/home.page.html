@@ -1,0 +1,142 @@
+<section class="home-hero" aria-labelledby="home-title">
+  <div class="home-hero__copy">
+    <span class="home-eyebrow">LARP FABULARNY · KISLEV · 2027</span>
+    <h1 id="home-title">Ursunalia <span>2027</span></h1>
+    <p class="home-hero__motto">Nowe początki, stare długi.</p>
+    <p class="home-hero__intro">
+      Na północnych rubieżach Kisleva budzi się wiosna. Do Krywulki przybywają
+      żołnierze, kupcy i pielgrzymi. Łączy ich święto. Dzielą stare długi.
+      Jaką historię napiszesz Ty?
+    </p>
+    <p class="home-hero__date"><u-icon name="calendar" /> {{ eventDate() }}</p>
+    <div class="home-hero__actions">
+      @if (store.mode() === 'server' && !store.user() && registrations() === 'Otwarte') {
+        <a routerLink="/konto" class="button primary">Utwórz konto <u-icon name="next" /></a>
+      } @else if (canStart()) {
+        <button type="button" class="button primary" [disabled]="store.busy()" (click)="startCharacter()">
+          {{ hasCharacter() ? 'Kontynuuj postać' : store.mode() === 'demo' ? 'Wypróbuj zgłoszenie' : 'Zgłoś postać' }}
+          <u-icon name="next" />
+        </button>
+      } @else {
+        <a routerLink="/dla-gracza" class="button primary">Jak wziąć udział? <u-icon name="next" /></a>
+      }
+      <a routerLink="/o-wydarzeniu" class="button outline">Poznaj wydarzenie</a>
+    </div>
+  </div>
+  <div class="home-hero__art" aria-hidden="true">
+    <img src="art/kislev-night.png" alt="" fetchpriority="high" />
+  </div>
+</section>
+
+<div class="home-announcement" role="note">
+  <u-icon name="info" />
+  <p><strong>Ursunalia 2027</strong> odbędą się {{ eventDate() }}.
+    Szczegóły dojazdu, miejsca wydarzenia i wysokości składki zostaną ogłoszone przez organizatorów.</p>
+  <a routerLink="/o-wydarzeniu">Informacje praktyczne <u-icon name="next" /></a>
+</div>
+
+<div class="home-top-grid">
+  <section class="home-updates" aria-labelledby="updates-title">
+    <div class="home-section-heading">
+      <div>
+        <span class="home-eyebrow">Z ŻYCIA URSUNALIÓW</span>
+        <h2 id="updates-title">Aktualności i ogłoszenia</h2>
+      </div>
+      <a routerLink="/aktualnosci" class="home-text-link">Wszystkie aktualności <u-icon name="next" /></a>
+    </div>
+    <div class="paper home-updates__empty">
+      <u-icon name="feather" />
+      <div>
+        <span class="home-eyebrow">TABLICA OGŁOSZEŃ</span>
+        <h3>Wkrótce pierwsze komunikaty</h3>
+        <p>Tu pojawią się ogłoszenia organizatorów, terminy i ważne informacje.
+          Nie przegap kolejnych aktualizacji przed wydarzeniem.</p>
+        <a routerLink="/aktualnosci" class="home-inline-link">Przejdź do aktualności <u-icon name="next" /></a>
+      </div>
+    </div>
+  </section>
+
+  <aside class="paper home-facts" aria-labelledby="facts-title">
+    <span class="eyebrow">NAJWAŻNIEJSZE INFORMACJE</span>
+    <h2 id="facts-title">Ursunalia w skrócie</h2>
+    <dl>
+      <div>
+        <dt><u-icon name="calendar" /> Termin</dt>
+        <dd>{{ eventDate() }}</dd>
+      </div>
+      <div>
+        <dt><u-icon name="pin" /> Lokalizacja wydarzenia</dt>
+        <dd>Adres terenu: do ogłoszenia</dd>
+      </div>
+      <div>
+        <dt><u-icon name="people" /> Zgłoszenia postaci</dt>
+        <dd>{{ registrations() }}</dd>
+      </div>
+      <div>
+        <dt><u-icon name="file" /> Składka</dt>
+        <dd>Kwota i termin: do ogłoszenia</dd>
+      </div>
+    </dl>
+    <a class="button light" routerLink="/o-wydarzeniu">Więcej o wydarzeniu <u-icon name="next" /></a>
+  </aside>
+</div>
+
+<section class="home-steps" aria-labelledby="steps-title">
+  <div class="home-section-heading">
+    <div>
+      <span class="home-eyebrow">DROGA NA URSUNALIA</span>
+      <h2 id="steps-title">Jak dołączyć do gry?</h2>
+    </div>
+    <a routerLink="/dla-gracza" class="home-text-link">Poradnik uczestnika <u-icon name="next" /></a>
+  </div>
+  <ol class="home-step-list">
+    <li class="paper">
+      <span class="home-step-number">01</span>
+      <h3>Utwórz konto</h3>
+      <p>Zarejestruj się, aby rozpocząć przygotowania do udziału.</p>
+    </li>
+    <li class="paper">
+      <span class="home-step-number">02</span>
+      <h3>Zgłoś postać</h3>
+      <p>Przygotuj historię bohatera i poczekaj na decyzję Mistrza Gry.</p>
+    </li>
+    <li class="paper">
+      <span class="home-step-number">03</span>
+      <h3>Opłać składkę</h3>
+      <p>Po akceptacji postaci otrzymasz informacje o przelewie.</p>
+    </li>
+    <li class="paper">
+      <span class="home-step-number">04</span>
+      <h3>Odbierz kartę</h3>
+      <p>Po potwierdzeniu wpłaty i przygotowaniu dokumentu otrzymasz do niego dostęp.</p>
+    </li>
+  </ol>
+  <p class="home-steps__note">Utworzenie konta i przesłanie postaci nie oznacza automatycznego przyjęcia na wydarzenie.</p>
+</section>
+
+<section class="home-explore" aria-labelledby="explore-title">
+  <div class="home-section-heading">
+    <div>
+      <span class="home-eyebrow">PRZYGOTUJ SIĘ DO OPOWIEŚCI</span>
+      <h2 id="explore-title">Poznaj Ursunalia</h2>
+    </div>
+  </div>
+  <div class="home-explore__grid">
+    <a routerLink="/swiat-gry" class="paper home-feature">
+      <u-icon name="book" />
+      <span class="home-feature__content">
+        <strong>Świat gry</strong>
+        <span>Odkryj Kislev, Ziemie Braci, wiarę, zwyczaje i siły kształtujące losy Krywulki.</span>
+        <span class="home-feature__link">Czytaj o świecie <u-icon name="next" /></span>
+      </span>
+    </a>
+    <a routerLink="/dla-gracza" class="paper home-feature">
+      <u-icon name="shield" />
+      <span class="home-feature__content">
+        <strong>Dla gracza</strong>
+        <span>Dowiedz się, jak stworzyć postać, przygotować strój i poznać zasady uczestnictwa.</span>
+        <span class="home-feature__link">Zobacz poradniki <u-icon name="next" /></span>
+      </span>
+    </a>
+  </div>
+</section>
