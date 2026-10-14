@@ -15,19 +15,11 @@ import { CharacterHistory } from './character-history';
     <a class="back-link" routerLink="/organizator"><u-icon name="back" />Panel organizatora</a>
     <section class="page-heading">
       <div>
-        <span class="eyebrow">PANEL ORGANIZATORA</span>
+        <span class="eyebrow">PANEL MG · URSUNALIA 2027</span>
         <h1>Panel Mistrza Gry</h1>
         <p>Weryfikuj wysłane postacie, przeglądaj odpowiedzi i podejmuj decyzje.</p>
       </div>
       @if (store.canAdminEvents() && store.mode() === 'server') { <a class="button outline" routerLink="/organizator">Panel organizatora</a> }
-      @if (isOrganizerView() && store.canManageForm(store.seed()!.event.id)) {
-        <a
-          class="button primary"
-          routerLink="/organizator/ankiety/edytor"
-          [queryParams]="{ id: 'new', eventId: store.seed()!.event.id }"
-          ><u-icon name="edit" />Formularz postaci</a
-        >
-      }
     </section>
     @if (!store.canOrganize()) {
       <section class="paper empty-state">
@@ -36,26 +28,6 @@ import { CharacterHistory } from './character-history';
         <a class="button primary" routerLink="/konto">Logowanie</a>
       </section>
     } @else {
-      @if (isOrganizerView()) { <div class="survey-cards">
-        @for (form of store.forms(); track form.id) {
-          <article class="paper survey-card">
-            <span class="eyebrow">OPUBLIKOWANA · WERSJA {{ form.revision }}</span>
-            <h2>{{ form.title }}</h2>
-            <p>{{ form.sections.length }} sekcji · {{ count(form) }} pytań</p>
-            @if (store.canManageForm(form.eventId) && store.isCharacter(form)) {
-            <div class="actions">
-              <a
-                class="button light"
-                routerLink="/organizator/ankiety/edytor"
-                [queryParams]="{ id: form.id }"
-                ><u-icon name="edit" />Edytuj formularz</a
-              >
-            </div>
-            }
-          </article>
-        }
-      </div>
-      }
       <section class="section-title">
         <div>
           <span class="eyebrow">ZGŁOSZENIA POSTACI</span>
@@ -65,14 +37,6 @@ import { CharacterHistory } from './character-history';
           <label class="filter-label">Szukaj
             <input type="search" [(ngModel)]="userQuery" placeholder="Gracz lub postać…" />
           </label>
-          @if (isOrganizerView()) { <label class="filter-label">Rodzaj ankiety
-            <select [(ngModel)]="formFilter">
-              <option value="all">Wszystkie ankiety</option>
-              @for (form of store.forms(); track form.id) {
-                <option [value]="form.id">{{ form.title }}</option>
-              }
-            </select>
-          </label> }
           <label class="filter-label">Status
             <select [(ngModel)]="filter">
               <option value="all">Wszystkie</option>
@@ -138,7 +102,7 @@ import { CharacterHistory } from './character-history';
                 <u-icon name="close" />
               </button>
             </div>
-            @if (store.canAdminEvents()) { <p>{{ app.userEmail }}</p> }
+            @if (isOrganizerView()) { <p>{{ app.userEmail }}</p> }
             @if (app.locked) { <p class="info-strip">Karta zablokowana dla gracza</p> }
             @for (section of app.form.sections; track section.id) {
               <h3>{{ section.title }}</h3>
@@ -216,7 +180,10 @@ export class OrganizerPage {
   constructor() {
     void this.refresh();
   }
-  isOrganizerView() { return this.store.canAdminEvents(); }
+  isOrganizerView() {
+    return this.store.user()?.role === 'organizer' || this.store.eventGrants().some(g =>
+      g.eventId === 'ursunalia-2027' && g.role === 'organizer');
+  }
   count(form: any) {
     return form.sections.reduce((n: number, s: any) => n + s.fields.length, 0);
   }
