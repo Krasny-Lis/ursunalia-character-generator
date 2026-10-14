@@ -63,7 +63,12 @@ export interface GameEvent {
   locationNote: string;
   description: string;
   status: string;
+  published?: boolean;
+  registrationsOpen?: boolean;
+  revision?: number;
 }
+export interface EventGrant { eventId: string; role: 'organizer' | 'gm'; }
+export interface EventMembership { eventId: string; status: 'joined'; joinedAt: string; }
 export interface Seed {
   event: GameEvent;
   forms: FormDefinition[];

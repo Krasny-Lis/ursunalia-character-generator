@@ -2,6 +2,8 @@
 
 Zakres R-02 / PR 1: wyłącznie fundament migracji obecnej bazy v27.2. Nie zmienia reguł, endpointów, formularzy ani danych zgłoszeń. Nie dodaje wydarzeń ani nowego modelu postaci. Podczas przygotowania tej zmiany operacje wykonano tylko na izolowanych bazach testowych, bez dostępu do bazy produkcyjnej.
 
+Kolejna migracja (R-02 / PR 2), `event_memberships_v1`, dodaje wydarzenia, uczestnictwo i granty, zachowując oryginalne tabele i rekordy. Jej mapowanie, uprawnienia oraz dodatkowe kontrole preflight opisano w [EVENTS-AND-PERMISSIONS.md](EVENTS-AND-PERMISSIONS.md). Migracja 1 pozostaje niezmienna. Przed wdrożeniem wersji 2 sprawdzić na kopii wnioskowane członkostwa i przyznanie istniejącym organizatorom praw wyłącznie do Ursunaliów 2027.
+
 ## Co robi serwer przy starcie
 
 `server/migrations.mjs` zawiera uporządkowane, niezmienne migracje. Pierwsza (`version=1`, `baseline_v27_2`) jest identycznym DDL czterech obecnych tabel: `users`, `sessions`, `forms`, `applications`.

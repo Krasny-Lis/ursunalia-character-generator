@@ -69,6 +69,8 @@ test('complete workflow: register, durable draft, submit, owner isolation, organ
   const state = await request('/api/bootstrap', { as: 'alena' });
   assert.equal(state.data.user.role, 'participant');
   assert.equal(state.data.applications.length, 0);
+  assert.equal(state.data.memberships.length, 0);
+  assert.equal((await request('/api/events/ursunalia-2027/join', { as: 'alena', method: 'POST', body: {} })).status, 200);
   assert.equal(
     (await request('/api/forms', { as: 'alena', method: 'POST', body: seed.forms[0] })).status,
     403,
@@ -185,6 +187,7 @@ test('server rejects cross-origin writes, forged schemas, unsafe images and unkn
     403,
   );
   assert.equal((await register('validation')).status, 201);
+  assert.equal((await request('/api/events/ursunalia-2027/join', { as: 'validation', method: 'POST', body: {} })).status, 200);
   const draft = {
     id: `application-${randomUUID()}`,
     form: structuredClone(seed.forms[0]),

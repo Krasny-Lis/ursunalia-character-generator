@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { definitionIssues } from '../shared/validation.mjs';
+import { validEventDefinition } from './events.mjs';
 
 // Immutable baseline: the four tables shipped in Royal Manuscript v27.2.
 const baseline = `
@@ -16,8 +18,11 @@ const registry = `CREATE TABLE schema_migrations(
   applied_at TEXT NOT NULL,
   operation TEXT NOT NULL CHECK(operation IN ('initialize','adopt','apply'))
 );`;
+const eventSql = readFileSync(new URL('./migrations/002-events.sql', import.meta.url), 'utf8');
+const eventSchema = eventSql.split('-- DATA BACKFILL')[0];
 export const MIGRATIONS = Object.freeze([
   Object.freeze({ version: 1, name: 'baseline_v27_2', sql: baseline, schemaSql: baseline }),
+  Object.freeze({ version: 2, name: 'event_memberships_v1', sql: eventSql, schemaSql: baseline + eventSchema }),
 ]);
 
 export function migrationChecksum(migration) {
@@ -126,14 +131,47 @@ function inspect(db, migrations) {
       for (const table of ['users', 'sessions', 'forms', 'applications'])
         report.counts[table] = db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
       let invalidForms = 0;
+      const formEvents = new Map();
       for (const row of db.prepare('SELECT id,revision,definition FROM forms').iterate()) {
         try {
           const form = JSON.parse(row.definition);
           if (definitionIssues(form).length || form.id !== row.id || form.revision !== row.revision)
             invalidForms++;
+          else {
+            if (formEvents.has(form.id) && formEvents.get(form.id) !== form.eventId)
+              issue('INCONSISTENT_FORM_EVENT');
+            formEvents.set(form.id, form.eventId);
+          }
         } catch { invalidForms++; }
       }
       if (invalidForms) issue('INVALID_FORM_DEFINITIONS', invalidForms);
+      const eventsPlanned = migrations.some(m => m.name === 'event_memberships_v1');
+      const eventsApplied = migrations.slice(0, report.currentVersion).some(m => m.name === 'event_memberships_v1');
+      if (eventsPlanned) {
+        const missingIdentities = db.prepare('SELECT COUNT(*) n FROM users WHERE id IS NULL').get().n;
+        if (missingIdentities) issue('INVALID_USER_IDENTIFIERS', missingIdentities);
+      }
+      if (eventsPlanned && !eventsApplied && [...formEvents.values()].some(id => id !== 'ursunalia-2027'))
+        issue('EVENT_MAPPING_REQUIRED');
+      if (eventsApplied) {
+        for (const table of ['events', 'event_memberships', 'event_grants'])
+          report.counts[table] = db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
+        const eventIds = new Set();
+        let invalidEvents = 0;
+        for (const row of db.prepare('SELECT id,definition FROM events').iterate()) {
+          eventIds.add(row.id);
+          try {
+            const event = JSON.parse(row.definition);
+            if (!validEventDefinition(event) || event.id !== row.id) invalidEvents++;
+          } catch { invalidEvents++; }
+        }
+        if (invalidEvents) issue('INVALID_EVENT_DEFINITIONS', invalidEvents);
+        if ([...formEvents.values()].some(id => !eventIds.has(id))) issue('UNKNOWN_FORM_EVENT');
+        const missingMemberships = db.prepare(`SELECT COUNT(*) n FROM applications a JOIN forms f
+          ON f.id=a.form_id AND f.revision=a.form_revision LEFT JOIN event_memberships m
+          ON m.event_id=json_extract(f.definition,'$.eventId') AND m.user_id=a.user_id WHERE m.user_id IS NULL`).get().n;
+        if (missingMemberships) issue('MISSING_EVENT_MEMBERSHIPS', missingMemberships);
+      }
       let invalidAnswers = 0;
       for (const row of db.prepare('SELECT answers FROM applications').iterate()) {
         try {

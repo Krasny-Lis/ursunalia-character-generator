@@ -16,7 +16,7 @@ import { Icon } from './icon';
         <h1>Ankiety organizatora</h1>
         <p>Twórz formularze i przeglądaj zgłoszenia uczestników.</p>
       </div>
-      @if (store.canOrganize()) {
+      @if (store.canManageForm(store.seed()!.event.id)) {
         <a
           class="button primary"
           routerLink="/organizator/ankiety/edytor"
@@ -38,6 +38,7 @@ import { Icon } from './icon';
             <span class="eyebrow">OPUBLIKOWANA · WERSJA {{ form.revision }}</span>
             <h2>{{ form.title }}</h2>
             <p>{{ form.sections.length }} sekcji · {{ count(form) }} pytań</p>
+            @if (store.canManageForm(form.eventId)) {
             <div class="actions">
               <a
                 class="button light"
@@ -46,6 +47,7 @@ import { Icon } from './icon';
                 ><u-icon name="edit" />Edytuj formularz</a
               >
             </div>
+            }
           </article>
         }
       </div>

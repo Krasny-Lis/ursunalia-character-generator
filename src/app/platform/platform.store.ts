@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Answers, Application, FormDefinition, Seed, User } from './models';
+import { Answers, Application, FormDefinition, Seed, User, GameEvent, EventGrant, EventMembership } from './models';
 import { answerIssues, definitionIssues } from '../../../shared/validation.mjs';
 const KEY = 'ursunalia:manuscript:v1';
 export const uid = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -19,6 +19,9 @@ export class PlatformStore {
   readonly forms = signal<FormDefinition[]>([]);
   readonly applications = signal<Application[]>([]);
   readonly user = signal<User | null>(null);
+  readonly events = signal<GameEvent[]>([]);
+  readonly eventGrants = signal<EventGrant[]>([]);
+  readonly memberships = signal<EventMembership[]>([]);
   readonly mode = signal<'loading' | 'demo' | 'server'>('loading');
   readonly ready = signal(false);
   readonly error = signal('');
@@ -31,9 +34,21 @@ export class PlatformStore {
     () => this.applications().find((a) => a.id === this.activeId()) ?? null,
   );
   readonly canOrganize = computed(
-    () => this.mode() === 'demo' || this.user()?.role === 'organizer',
+    () => this.mode() === 'demo' || this.eventGrants().length > 0,
   );
+  canManageForm(eventId: string) {
+    return this.mode() === 'demo' || this.eventGrants().some(g => g.eventId === eventId && g.role === 'organizer');
+  }
+  isMember(eventId: string) {
+    return this.mode() === 'demo' || this.memberships().some(m => m.eventId === eventId);
+  }
+  async joinEvent(eventId: string) {
+    if (this.mode() !== 'server' || this.isMember(eventId)) return;
+    const membership = await this.request<EventMembership>(`api/events/${eventId}/join`, 'POST', {});
+    this.memberships.update(all => [...all.filter(m => m.eventId !== eventId), membership]);
+  }
   private initialized = false;
+  private initialEvent: GameEvent | null = null;
   async initialize() {
     if (this.initialized) return;
     this.initialized = true;
@@ -43,6 +58,7 @@ export class PlatformStore {
         this.request<{ mode: 'demo' | 'server' }>('runtime-config.json'),
       ]);
       this.seed.set(seed);
+      this.initialEvent = structuredClone(seed.event);
       this.forms.set(seed.forms);
       this.mode.set(config.mode);
       if (config.mode === 'server') await this.refreshServer();
@@ -70,9 +86,17 @@ export class PlatformStore {
       forms: FormDefinition[];
       user: User | null;
       applications: Application[];
+      events: GameEvent[];
+      eventGrants: EventGrant[];
+      memberships: EventMembership[];
     }>('api/bootstrap');
     this.forms.set(data.forms);
     this.user.set(data.user);
+    this.events.set(data.events);
+    this.eventGrants.set(data.eventGrants);
+    this.memberships.set(data.memberships);
+    const event = data.events.find(e => e.id === this.seed()?.event.id);
+    if (event) this.seed.update(seed => seed ? { ...seed, event } : seed);
     this.applications.set(data.applications);
     this.activeId.set(data.applications[0]?.id ?? '');
     this.dirty.set(false);
@@ -288,9 +312,15 @@ export class PlatformStore {
   async logout() {
     await this.request('api/auth/logout', 'POST', {});
     this.user.set(null);
+    this.eventGrants.set([]);
+    this.memberships.set([]);
+    this.events.set([]);
+    this.forms.set([]);
+    if (this.initialEvent) this.seed.update(seed => seed ? { ...seed, event: this.initialEvent! } : seed);
     this.applications.set([]);
     this.activeId.set('');
     this.dirty.set(false);
+    await this.refreshServer();
   }
   async publish(form: FormDefinition) {
     const problems = definitionIssues(form);
