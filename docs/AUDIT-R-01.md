@@ -2,6 +2,8 @@
 
 Data: 14.10.2026. Baza: `feature/royal-manuscript-rebuild`, commit `95f8042b7500bcfb9e1ac12014d3a3abcb9e5a16`. Gałąź analizy: `docs/r-01-mvp-audit`.
 
+**Aktualizacja Etapu 4:** poniższa diagnoza v27.2 i plan 11 PR-ów są historyczne. Zatwierdzony Etap 4 zastępuje soft delete/przywracanie nieodwracalnym czyszczeniem treści, dodaje odrębne archiwum bez zdjęć/reuse, blokady, administrację i powiadomienia. Bieżący kontrakt: [MVP-STAGE-4.md](MVP-STAGE-4.md); stan realizacji etapów nie jest zgodą na kolejne zakresy. Zachowano kompletny pierwotny raport dla audytu.
+
 Podstawa wymagań: `docs/MCP-SPEC.md` z tej gałęzi. Przeczytano README, kod `src/app/platform`, `server`, `shared`, routing, testy i workflow. Dokument opisuje propozycję; żadnej migracji ani zmiany implementacji nie wykonano. Nie scalano starszych gałęzi. Nie otwierano rzeczywistej bazy i nie ustalano liczby istniejących kont lub zgłoszeń na wdrożeniu.
 
 ## Wniosek i zakres
@@ -91,7 +93,7 @@ Node.js 24.19.0, instalacja z lockfile przez npm 11.6.2:
 
 Próby nie ujawniają danych produkcyjnych i nie wprowadzają ich do plików. Nie wykonano wizualnego przeglądu, przeglądarkowego E2E ani zdalnego CI bieżącego commita. Zielony historyczny CI podany w specyfikacji nie zastępuje tych kontroli.
 
-## 5. Minimalny model docelowy — propozycja, nie implementacja
+## 5. Minimalny model docelowy — historyczna propozycja R-01, zastąpiona wdrożonymi etapami
 
 Pozostawić `users`, `sessions`, Node/SQLite, endpointy auth i `shared/validation.mjs`. Dodać:
 
@@ -113,7 +115,7 @@ API pozostaje na tej samej domenie. Dodać operacje wydarzeń, dołączenia i od
 
 Decyzja, historia, rewizja i później powiadomienie muszą być jedną transakcją. MG może zapisać zmienione odpowiedzi bez zmiany statusu. Przy zapisie gracza w `submitted` porównać znormalizowane odpowiedzi z zapisem bazowym: rzeczywista zmiana → `draft`, brak zmian → zachować status. Porównanie powinno uwzględniać kolejność nieistotną dla wielokrotnego wyboru, lecz nie ignorować faktycznych zmian tekstu. Gracz nie edytuje `accepted`; niekompletny szkic nadal jest dozwolony.
 
-## 6. Migracja bez utraty istniejących danych
+## 6. Historyczny plan migracji bez utraty istniejących danych
 
 1. **Kopia i inwentaryzacja.** Na wdrożeniu wykonać spójną kopię SQLite przez backup lub przy zatrzymanym serwerze, z ochroną jak dane uczestników. Nie kopiować samego pliku podczas aktywnego WAL. Przetestować odtworzenie i integralność na kopii. Raport zawiera liczby, zgodność FK, rozpoznane statusy, formularze/event ID, kolizje i mapowanie — bez haseł, tokenów i treści odpowiedzi w publicznych logach.
 2. **Adopcja schematu.** Migrator rozpoznaje obecne cztery tabele, ich constraints i FK; nie nadaje wersji nierozpoznanej bazie. Nowe migracje tylko raz, transakcyjnie, z checksum i bez DROP/resetu. Dodać nowe struktury bez zmiany starych zapisów. Seeding docelowych danych tylko przy inicjalizacji/migracji, nie odtwarzanie wycofanych formularzy przy każdym starcie.
@@ -127,7 +129,7 @@ Decyzja, historia, rewizja i później powiadomienie muszą być jedną transakc
 
 Późniejsze destrukcyjne zmiany schematu: serwer tworzy preview różnic i liczbę różnych aktywnych postaci rzeczywiście tracących odpowiedzi; oddzielnie wskazuje wpływ na usunięte. Opcjonalny pełny JSON można pobrać przed zapisem. Potwierdzenie wiązać z konkretną zmianą, rewizją i stanem danych; przy zmianie któregokolwiek z nich trzeba ponownie policzyć skutki i potwierdzić. Schemat, usunięcie odpowiednich odpowiedzi (w tym z soft-deleted), rewizje i zapis potwierdzenia są atomowe. Statusy pozostają bez zmian. Nie potrzeba symulacji każdej postaci ani interfejsu scalania konfliktów.
 
-## 7. Proponowane małe PR-y
+## 7. Historyczny podział na 11 PR-ów (później realizowany zatwierdzonymi etapami)
 
 Każdy wychodzi z `feature/royal-manuscript-rebuild` i wraca do tej gałęzi. Poniżej plan, nie zgoda na jego implementację. Nie uruchamiać kolejnego zadania bez zatwierdzenia zakresu.
 
@@ -141,7 +143,7 @@ Każdy wychodzi z `feature/royal-manuscript-rebuild` i wraca do tej gałęzi. Po
 | 6 — pełny eksport | P1, przed destrukcyjnym R-05: serwerowy JSON definicji, postaci i powiązań, historii; uwzględnienie deleted i notatek, gdy istnieją | Organizator z prawem formularza może eksportować; zwykły MG/gracz nie; brak hashes/sessions; spójny snapshot, bez historii eksportów i importu bazy |
 | 7 — żywy schemat API | P0; R-05: current form i migracja snapshotów po zatwierdzonym raporcie; expectedRevision, preview i potwierdzenie destrukcji | Existing/deleted widzą bieżący schemat; dodane pole bez odpowiedzi; usunięte pole/opcja i typ poprawnie czyszczone w transakcji; status nie zmienia się; stale preview → 409 |
 | 8 — ręczny edytor | P0; R-05: jeden przycisk zapisu, stan roboczy, ochrona przed opuszczeniem, obsługa 409 i preview/eksport z PR 6–7 | Niezapisane zmiany nie docierają do graczy; konflikt zachowuje lokalne dane; istniejące DnD/podgląd/kontrolki działają; style bez zmian |
-| 9 — usuwanie i przywracanie | P1; R-06: endpointy i istniejące widoki, potwierdzenie usunięcia, przywrócenie przez MG | Można usunąć accepted; aktywne listy nie pokazują deleted; udział/status bez zmiany; przywracanie z kolizją 409; próby obcego użytkownika odrzucone |
+| 9 — cykl wycofania (zakres zastąpiony w Etapie 4) | P1; R-06: nieodwracalne usunięcie treści i kopii wewnętrznych; oddzielne tekstowe archiwum bez zdjęć, reuse na inne wydarzenie i niezależne blokady | Usunięcie accepted potwierdzone; brak przywracania MG i treści w eksporcie; udział pozostaje; trwałe archiwum, zdjęcia usunięte, CAS/izolacja/operacje zbiorcze |
 | 10 — trwałe powiadomienia | P1; R-06: odczyt/lista dla właściciela, atomowe powiązanie z nową decyzją | Po ponownym logowaniu decyzja jest widoczna; brak duplikacji i cudzych powiadomień; awaria zapisu nie pozostawia częściowej decyzji |
 | 11 — przepływ i wdrożenie | P0 jako bramka wydania; R-07: istniejący UI z API, E2E, regresje migracji, mobile/klawiatura | Konto → join → szkic → submit → changes/rejected → ponowne submit → accepted; równoczesne zapisy; odmowy API; build/verify/katalogi i kontrola wyglądu |
 

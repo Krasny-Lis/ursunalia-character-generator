@@ -5,6 +5,7 @@ import { definitionIssues } from '../shared/validation.mjs';
 import { validEventDefinition } from './events.mjs';
 import { characterMappingReport } from './character-mapping.mjs';
 import { liveSchemaMappingReport } from './live-schema-mapping.mjs';
+import { withoutImages } from '../shared/archive-data.mjs';
 
 // Immutable baseline: the four tables shipped in Royal Manuscript v27.2.
 const baseline = `
@@ -25,6 +26,7 @@ const eventSchema = eventSql.split('-- DATA BACKFILL')[0];
 const characterSql = readFileSync(new URL('./migrations/003-characters.sql', import.meta.url), 'utf8');
 const editSql = readFileSync(new URL('./migrations/004-character-edits.sql', import.meta.url), 'utf8');
 const liveSql = readFileSync(new URL('./migrations/005-live-schema.sql', import.meta.url), 'utf8');
+const lifecycleSql = readFileSync(new URL('./migrations/006-mvp-lifecycle.sql', import.meta.url), 'utf8');
 export const MIGRATIONS = Object.freeze([
   Object.freeze({ version: 1, name: 'baseline_v27_2', sql: baseline, schemaSql: baseline }),
   Object.freeze({ version: 2, name: 'event_memberships_v1', sql: eventSql, schemaSql: baseline + eventSchema }),
@@ -34,6 +36,8 @@ export const MIGRATIONS = Object.freeze([
     schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] + editSql }),
   Object.freeze({ version: 5, name: 'live_character_schema_v1', sql: liveSql,
     schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] + editSql + liveSql.split('-- DATA BACKFILL')[0] }),
+  Object.freeze({ version: 6, name: 'mvp_character_lifecycle_v1', sql: lifecycleSql,
+    schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] + editSql + liveSql.split('-- DATA BACKFILL')[0] + lifecycleSql.split('-- DATA BACKFILL')[0] }),
 ]);
 
 export function migrationChecksum(migration) {
@@ -245,6 +249,35 @@ function inspect(db, migrations) {
         if (invalid) issue('INVALID_LIVE_SCHEMAS', invalid);
         if (db.prepare(`SELECT COUNT(*) n FROM characters c LEFT JOIN character_schemas s ON s.event_id=c.event_id WHERE s.event_id IS NULL`).get().n)
           issue('MISSING_LIVE_SCHEMAS');
+      }
+      const lifecycleApplied = migrations.slice(0, report.currentVersion).some(m => m.name === 'mvp_character_lifecycle_v1');
+      if (charactersApplied && !lifecycleApplied && migrations.some(m => m.name === 'mvp_character_lifecycle_v1')) {
+        const inactive = db.prepare('SELECT id FROM characters WHERE deleted_at IS NOT NULL ORDER BY id').all();
+        if (inactive.length) { report.inactiveCharacters = inactive.map(r => r.id); issue('LEGACY_INACTIVE_MAPPING_REQUIRED', inactive.length); }
+      }
+      if (lifecycleApplied) {
+        for (const name of ['character_controls','character_archives','notifications'])
+          report.counts[name] = db.prepare(`SELECT COUNT(*) count FROM ${name}`).get().count;
+        if (db.prepare(`SELECT COUNT(*) n FROM characters c LEFT JOIN character_controls k ON k.character_id=c.id
+          WHERE k.character_id IS NULL OR (k.disposition='active')!=(c.deleted_at IS NULL)
+          OR (k.disposition!='active' AND (c.answers!='{}' OR c.feedback!=''))`).get().n) issue('INVALID_CHARACTER_LIFECYCLE');
+        if (db.prepare(`SELECT COUNT(*) n FROM character_controls k LEFT JOIN character_archives a ON a.character_id=k.character_id
+          WHERE (k.disposition='archived')!=(a.character_id IS NOT NULL)`).get().n) issue('INVALID_CHARACTER_ARCHIVES');
+        if (db.prepare(`SELECT COUNT(*) n FROM notifications n JOIN characters c ON c.id=n.character_id
+          JOIN character_decisions d ON d.id=n.decision_id WHERE n.user_id!=c.user_id OR n.event_id!=c.event_id OR d.character_id!=c.id`).get().n)
+          issue('INVALID_NOTIFICATIONS');
+        let invalidArchives = 0;
+        for (const a of db.prepare(`SELECT a.*,c.user_id owner,c.event_id event,c.status character_status,c.revision FROM character_archives a JOIN characters c ON c.id=a.character_id`).all()) {
+          const answers = JSON.parse(a.answers), form = JSON.parse(a.schema_snapshot), event = JSON.parse(a.event_snapshot);
+          if (a.user_id !== a.owner || a.event_id !== a.event || a.status !== a.character_status || a.character_revision !== a.revision ||
+            form.eventId !== a.event_id || event.id !== a.event_id || JSON.stringify(withoutImages([answers,form,event])) !== JSON.stringify([answers,form,event]) ||
+            form.sections.some(s => s.fields.some(f => f.type === 'file' && answers[f.id]))) invalidArchives++;
+        }
+        if (invalidArchives) issue('INVALID_ARCHIVE_SNAPSHOTS', invalidArchives);
+        if (db.prepare(`SELECT COUNT(*) n FROM character_controls k JOIN characters c ON c.id=k.character_id
+          LEFT JOIN applications a ON a.id=c.legacy_application_id LEFT JOIN character_schema_origins o ON o.character_id=c.id
+          WHERE k.disposition='deleted' AND (a.answers!='{}' OR a.feedback!='' OR o.character_id IS NOT NULL
+          OR EXISTS(SELECT 1 FROM character_decisions d WHERE d.character_id=c.id AND d.comment!=''))`).get().n) issue('RETIRED_CHARACTER_CONTENT');
       }
     }
     report.pendingVersions = migrations.slice(report.currentVersion).map(m => m.version);

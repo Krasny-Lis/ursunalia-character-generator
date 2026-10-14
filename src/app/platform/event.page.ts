@@ -8,6 +8,9 @@ import { Icon } from './icon';
   standalone: true,
   imports: [RouterLink, Icon],
   template: `
+    @if (store.mode() === 'server' && store.events().length > 1) {
+      <section class="section-title"><h2>Wydarzenia</h2><div class="actions">@for (item of store.events(); track item.id) { <a class="button light" [routerLink]="['/wydarzenie', item.id]">{{ item.name }}</a> }</div></section>
+    }
     @if (event(); as currentEvent) {
     <div class="eyebrow page-eyebrow">LARP FANTASY · KISLEV · 2027</div>
     <section class="event-hero">
@@ -44,7 +47,7 @@ import { Icon } from './icon';
           Wersja demonstracyjna. Szkice zapisują się w tej przeglądarce. Wysyłanie do organizatora
           wymaga serwera.
         } @else {
-          Twoje zgłoszenia są widoczne tylko dla Ciebie i organizatorów wydarzenia.
+          Twoje zgłoszenia są chronione uprawnieniami wydarzenia. Szkic trafia do panelu MG dopiero po wysłaniu.
         }
       </span>
     </div>

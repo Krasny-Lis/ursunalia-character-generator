@@ -9,6 +9,8 @@ const record = value => !!value && typeof value === 'object' && !Array.isArray(v
 
 export function characterOperations(db, events) {
   function transaction(work) {
+    // Reuse calls save inside its own IMMEDIATE transaction, with the same authorization checks.
+    if (db.isTransaction) return work();
     db.exec('BEGIN IMMEDIATE');
     try { const result = work(); db.exec('COMMIT'); return result; }
     catch (error) { if (db.isTransaction) db.exec('ROLLBACK'); throw error; }
@@ -40,6 +42,7 @@ export function characterOperations(db, events) {
       updatedAt: value.updated_at, submittedAt: value.submitted_at ?? undefined, feedback: value.feedback,
       migrated: value.legacy_application_id !== null,
       deletedAt: value.deleted_at ?? undefined,
+      locked: !!db.prepare('SELECT locked FROM character_controls WHERE character_id=?').get(value.id)?.locked,
       history: db.prepare(`SELECT id,actor_id actorId,actor_name actorName,decided_at decidedAt,
         action,from_status fromStatus,status,comment,character_revision characterRevision
         FROM character_decisions WHERE character_id=? ORDER BY character_revision`).all(value.id),
@@ -128,11 +131,11 @@ export function characterOperations(db, events) {
       return user ? db.prepare('SELECT * FROM characters WHERE user_id=? AND deleted_at IS NULL ORDER BY updated_at DESC').all(user.id).map(r => dto(r)) : [];
     },
     forExport(eventId) {
-      return db.prepare('SELECT * FROM characters WHERE event_id=? ORDER BY id').all(eventId).map(r => dto(r, true));
+      return db.prepare('SELECT * FROM characters WHERE event_id=? AND deleted_at IS NULL ORDER BY id').all(eventId).map(r => dto(r, true));
     },
     get(user, id, reviewer = false) {
       const value = reviewer ? row(id) : owned(user, id);
-      if (reviewer) events.requireGrant(user, value.event_id);
+      if (reviewer) { events.requireGrant(user, value.event_id); if (value.status === 'draft') fail(404, 'Szkic nie został wysłany do MG.'); }
       return dto(value, reviewer);
     },
     save(user, body) {
@@ -144,13 +147,15 @@ export function characterOperations(db, events) {
         if (value) {
           value = owned(user, body.id);
           revision(value, body.expectedRevision);
+          if (db.prepare('SELECT locked FROM character_controls WHERE character_id=?').get(value.id)?.locked) fail(409, 'Karta zablokowana');
           if (value.status === 'accepted') fail(409, 'Zaakceptowaną postać może odblokować MG.');
           const form = definition(value);
           if (body.form.id !== form.id || body.form.revision !== form.revision) fail(409, 'Rewizja aktualnego formularza nie zgadza się z postacią.');
           return dto(edit(value, updatedAnswers(value, body.answers), true));
         }
+        const retired = db.prepare('SELECT user_id FROM characters WHERE id=?').get(body.id);
+        if (retired) fail(retired.user_id === user.id ? 409 : 404, 'Ta postać nie jest aktywna. Nie można jej przywrócić.');
         if (!/^application-[a-f0-9-]{36}$/.test(body.id) || body.expectedRevision !== 0) fail(400, 'Nieprawidłowa nowa postać lub rewizja.');
-        if (db.prepare('SELECT id FROM characters WHERE id=?').get(body.id)) fail(409, 'Identyfikator postaci jest już zajęty.');
         // Never shadow a historical survey/application with a forged matching ID.
         if (db.prepare('SELECT id FROM applications WHERE id=?').get(body.id)) fail(409, 'Identyfikator należy do historycznego zgłoszenia.');
         const found = db.prepare('SELECT definition FROM character_schemas WHERE form_id=?').get(body.form.id);
@@ -165,6 +170,7 @@ export function characterOperations(db, events) {
         validate(form, answers);
         db.prepare(`INSERT INTO characters(id,event_id,user_id,form_id,form_revision,answers,status,updated_at)
           VALUES(?,?,?,?,?,?,'draft',?)`).run(body.id, form.eventId, user.id, mapping.form_id, mapping.form_revision, JSON.stringify(answers), now());
+        db.prepare('INSERT INTO character_controls(character_id) VALUES(?)').run(body.id);
         return dto(row(body.id));
       });
     },
@@ -172,6 +178,7 @@ export function characterOperations(db, events) {
       return transaction(() => {
         const value = owned(user, id);
         revision(value, body.expectedRevision);
+        if (db.prepare('SELECT locked FROM character_controls WHERE character_id=?').get(value.id)?.locked) fail(409, 'Karta zablokowana');
         if (!['draft', 'changes', 'rejected'].includes(value.status)) fail(409, 'Postać nie jest gotowa do ponownej wysyłki.');
         validate(definition(value), JSON.parse(value.answers), true);
         const time = now();
@@ -198,6 +205,7 @@ export function characterOperations(db, events) {
       return transaction(() => {
         const value = row(id);
         events.requireGrant(user, value.event_id);
+        if (value.status === 'draft') fail(404, 'Szkic nie został wysłany do MG.');
         revision(value, body.expectedRevision);
         if (body.expectedSchemaRevision !== definition(value).revision) fail(409, 'Schemat zmienił się podczas edycji. Zachowaj lokalną pracę i odśwież postać.');
         const edited = edit(value, updatedAnswers(value, body.answers), false);
@@ -218,12 +226,30 @@ export function characterOperations(db, events) {
           fail(400, 'Nieprawidłowa decyzja lub komentarz (maks. 2000 znaków).');
         if (unlock ? value.status !== 'accepted' : value.status === 'draft') fail(409, unlock ? 'Tylko zaakceptowana postać wymaga odblokowania.' : 'Szkic musi zostać wysłany przed podjęciem decyzji.');
         if (status === 'accepted') validate(definition(value), JSON.parse(value.answers), true);
+        if (!unlock && status === value.status && feedback === value.feedback) return dto(value, true);
         const time = now();
         db.prepare('UPDATE characters SET status=?,feedback=?,updated_at=?,revision=revision+1 WHERE id=? AND revision=?')
           .run(status, feedback, time, id, value.revision);
+        const decisionId = randomUUID();
         db.prepare(`INSERT INTO character_decisions VALUES(?,?,?,?,?,?,?,?,?,?)`).run(
-          randomUUID(), id, user.id, user.name, time, unlock ? 'unlock' : 'decision', value.status, status, feedback, value.revision + 1);
+          decisionId, id, user.id, user.name, time, unlock ? 'unlock' : 'decision', value.status, status, feedback, value.revision + 1);
+        db.prepare('INSERT INTO notifications VALUES(?,?,?,?,?,?,?,NULL)').run(
+          randomUUID(), value.user_id, value.event_id, id, decisionId, unlock ? 'unlock' : status, time);
         return dto(row(id), true);
+      });
+    },
+    decideMany(user, body) {
+      return transaction(() => {
+        if (typeof body.eventId !== 'string' || !Array.isArray(body.characters) || !body.characters.length || body.characters.length > 500 ||
+          body.characters.some(c => !c || typeof c.id !== 'string') || new Set(body.characters.map(c => c.id)).size !== body.characters.length)
+          fail(400, 'Wybierz od 1 do 500 postaci jednego wydarzenia.');
+        events.requireGrant(user, body.eventId);
+        for (const c of body.characters) {
+          const value = row(c.id);
+          if (value.event_id !== body.eventId) fail(404, 'Postać należy do innego wydarzenia.');
+          revision(value, c.expectedRevision);
+        }
+        return body.characters.map(c => this.decide(user, c.id, { status: body.status, feedback: body.feedback, expectedRevision: c.expectedRevision }));
       });
     },
   };

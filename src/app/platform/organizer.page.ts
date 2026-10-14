@@ -10,6 +10,7 @@ import { CharacterHistory } from './character-history';
 @Component({
   standalone: true,
   imports: [RouterLink, FormsModule, Icon, DatePipe, FieldControl, CharacterHistory],
+  styles: [`.bulk-review .button { white-space: normal; max-width: 100%; }`],
   template: `
     <a class="back-link" routerLink="/"><u-icon name="back" />Wydarzenie</a>
     <section class="page-heading">
@@ -18,6 +19,7 @@ import { CharacterHistory } from './character-history';
         <h1>Ankiety organizatora</h1>
         <p>Twórz formularze i przeglądaj zgłoszenia uczestników.</p>
       </div>
+      @if (store.canAdminEvents() && store.mode() === 'server') { <a class="button outline" routerLink="/organizator/wydarzenia">Administracja wydarzeń</a> }
       @if (store.canManageForm(store.seed()!.event.id)) {
         <a
           class="button primary"
@@ -90,9 +92,17 @@ import { CharacterHistory } from './character-history';
       @if (error()) {
         <p class="error-banner" role="alert">{{ error() }}</p>
       }
+      <section class="paper survey-card bulk-review">
+        <h3>Decyzja zbiorcza · zaznaczone {{ checked().size }}</h3>
+        <p>Zaznacz wysłane postacie z jednego wydarzenia. Każda nowa akceptacja wymaga poprawnych odpowiedzi. Konflikt wycofa całą operację.</p>
+        <label>Wspólny komentarz MG (opcjonalny)<textarea [(ngModel)]="bulkFeedback" (ngModelChange)="store.reviewDirty.set(true)" maxlength="2000" [disabled]="busy()" rows="2"></textarea></label>
+        <div class="actions"><button class="button light" [disabled]="busy() || !checked().size || editing()" (click)="reviewMany('changes')">Odeślij zaznaczone do poprawy</button><button class="button primary" [disabled]="busy() || !checked().size || editing()" (click)="reviewMany('accepted')">Zaakceptuj zaznaczone</button><button class="button light" [disabled]="busy() || !checked().size || editing()" (click)="reviewMany('rejected')">Odrzuć zaznaczone</button></div>
+      </section>
       <div class="review-layout">
         <div class="application-list">
           @for (app of filtered(); track app.id) {
+            <div>
+            <label class="checkbox-label"><input type="checkbox" [checked]="checked().has(app.id)" [disabled]="busy()" (change)="toggleChecked(app.id, $any($event.target).checked)" />Zaznacz postać · {{ app.userName }}</label>
             <button
               class="paper review-item"
               [class.selected]="selected()?.id === app.id"
@@ -104,6 +114,7 @@ import { CharacterHistory } from './character-history';
               <span class="review-meta"><small>{{ app.submittedAt | date: 'dd.MM.yyyy, HH:mm' }}</small>
                 <strong class="review-status" [attr.data-status]="app.status">{{ status(app.status) }}</strong></span>
             </button>
+            </div>
           } @empty {
             <section class="paper empty-state">
               <u-icon name="file" />
@@ -126,6 +137,7 @@ import { CharacterHistory } from './character-history';
               </button>
             </div>
             <p>{{ app.userEmail }}</p>
+            @if (app.locked) { <p class="info-strip">Karta zablokowana dla gracza</p> }
             @for (section of app.form.sections; track section.id) {
               <h3>{{ section.title }}</h3>
               @if (editing()) {
@@ -192,6 +204,8 @@ export class OrganizerPage {
   readonly error = signal('');
   readonly editing = signal(false);
   readonly editAnswers = signal<Answers>({});
+  readonly checked = signal(new Set<string>());
+  bulkFeedback = '';
   filter = 'all';
   formFilter = 'all';
   userQuery = '';
@@ -212,7 +226,7 @@ export class OrganizerPage {
     );
   }
   readonly status = statusLabel;
-  canLeave() { return !this.store.reviewDirty() || window.confirm('Masz niezapisane zmiany MG. Opuścić widok?'); }
+  canLeave() { return !(this.store.reviewDirty() || this.bulkFeedback) || window.confirm('Masz niezapisane zmiany MG. Opuścić widok?'); }
   ngOnDestroy() { this.store.reviewDirty.set(false); }
   closeDetail() { if (this.canLeave()) { this.selected.set(null); this.cancelEdit(); } }
   select(app: Application) {
@@ -233,13 +247,13 @@ export class OrganizerPage {
     this.editAnswers.update(answers => ({ ...answers, [id]: value }));
     this.store.reviewDirty.set(true);
   }
-  cancelEdit() { this.editing.set(false); this.store.reviewDirty.set(false); this.feedback = this.selected()?.feedback ?? ''; }
+  cancelEdit() { this.editing.set(false); this.store.reviewDirty.set(!!this.bulkFeedback); this.feedback = this.selected()?.feedback ?? ''; }
   private updated(app: Application) {
     this.applications.update(all => all.map(a => a.id === app.id ? app : a));
     this.selected.set(app);
     this.feedback = app.feedback ?? '';
     this.error.set('');
-    this.store.reviewDirty.set(false);
+    this.store.reviewDirty.set(!!this.bulkFeedback);
   }
   async saveEdit() {
     const app = this.selected();
@@ -266,6 +280,8 @@ export class OrganizerPage {
       const all = await this.store.request<Application[]>('api/organizer/characters');
       const id = this.selected()?.id;
       this.applications.set(all);
+      this.checked.set(new Set());
+      this.bulkFeedback = '';
       this.selected.set(null);
       this.cancelEdit();
       if (id) { const current = all.find(a => a.id === id); if (current) { this.selected.set(current); this.feedback = current.feedback ?? ''; } }
@@ -296,5 +312,25 @@ export class OrganizerPage {
   }
   export(app: Application) {
     downloadJson('ursunalia-' + app.id + '.json', app);
+  }
+  toggleChecked(id: string, selected: boolean) {
+    this.checked.update(all => { const next = new Set(all); selected ? next.add(id) : next.delete(id); return next; });
+  }
+  async reviewMany(status: 'changes' | 'accepted' | 'rejected') {
+    if (this.busy() || this.editing()) return;
+    const values = this.applications().filter(a => this.checked().has(a.id));
+    if (!values.length) return;
+    if (new Set(values.map(a => a.eventId)).size !== 1) { this.error.set('Wybierz postacie jednego wydarzenia.'); return; }
+    if (!window.confirm(`Zapisać decyzję „${this.status(status)}” dla ${values.length} zaznaczonych postaci?`)) return;
+    this.busy.set(true); this.error.set('');
+    try {
+      const updated = await this.store.request<Application[]>('api/organizer/characters/decisions', 'POST',
+        { eventId: values[0].eventId, status, feedback: this.bulkFeedback, characters: values.map(a => ({ id: a.id, expectedRevision: a.revision })) });
+      this.applications.update(all => all.map(a => updated.find(c => c.id === a.id) ?? a));
+      const selected = this.selected(); if (selected) { const current = updated.find(a => a.id === selected.id); if (current) this.updated(current); }
+      this.checked.set(new Set()); this.bulkFeedback = ''; this.store.reviewDirty.set(false);
+      this.store.notice.set('Zapisano decyzje zbiorczo.');
+    } catch (e) { this.error.set(this.store.message(e)); }
+    finally { this.busy.set(false); }
   }
 }

@@ -62,6 +62,7 @@ export interface Application {
   editHistory?: CharacterEdit[];
   deletedAt?: string;
   migrated?: boolean;
+  locked?: boolean;
   updatedAt: string;
   submittedAt?: string;
   feedback?: string;
@@ -89,6 +90,21 @@ export interface GameEvent {
 }
 export interface EventGrant { eventId: string; role: 'organizer' | 'gm'; }
 export interface EventMembership { eventId: string; status: 'joined'; joinedAt: string; }
+export interface ArchivedCharacter {
+  id: string; eventId: string; event: GameEvent; form: FormDefinition; answers: Answers;
+  status: CharacterStatus; archivedAt: string; revision: number;
+}
+export interface AppNotification {
+  id: string; eventId: string; characterId: string; kind: 'accepted' | 'changes' | 'rejected' | 'unlock';
+  createdAt: string; readAt: string | null; comment: string;
+  characterAvailable: boolean; archiveAvailable: boolean;
+}
+export interface EventAccount { id: string; name: string; email: string; }
+export interface EventAdministration {
+  event: GameEvent; participants: (EventAccount & { joinedAt: string })[];
+  grants: (EventAccount & { role: 'organizer' | 'gm' })[];
+}
+export interface ManagedCharacter { id: string; revision: number; status: CharacterStatus; locked: boolean; userName: string; userEmail: string; }
 export interface Seed {
   event: GameEvent;
   forms: FormDefinition[];

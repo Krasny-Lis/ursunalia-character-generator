@@ -10,6 +10,7 @@ import { migrateDatabase } from './migrations.mjs';
 import { eventOperations } from './events.mjs';
 import { characterOperations } from './characters.mjs';
 import { liveSchemaOperations } from './live-schemas.mjs';
+import { lifecycleOperations, notificationOperations } from './character-lifecycle.mjs';
 const derive = promisify(scrypt);
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,6 +42,7 @@ export async function createAppServer({
   try {
     migrateDatabase(db);
     db.exec('PRAGMA journal_mode=WAL');
+    db.exec('PRAGMA secure_delete=ON');
   } catch (error) {
     db.close();
     throw error;
@@ -56,6 +58,8 @@ export async function createAppServer({
   characters.ensureSeedMapping();
   const schemas = liveSchemaOperations(db, events, characters);
   schemas.initialize();
+  const lifecycle = lifecycleOperations(db, events, characters);
+  const notifications = notificationOperations(db);
   if (adminEmail && adminPassword) {
     if (adminPassword.length < 12 || adminPassword.length > 128)
       throw new Error('ADMIN_PASSWORD musi mieć od 12 do 128 znaków.');
@@ -213,6 +217,8 @@ export async function createAppServer({
                 .map((r) => application(r))
             : [],
           characters: characters.ownList(user),
+          archives: lifecycle.ownArchives(user),
+          notifications: notifications.list(user),
         });
       }
       if (path === '/api/events' && req.method === 'GET') return json(events.list(session(req)));
@@ -225,6 +231,24 @@ export async function createAppServer({
       if (eventPath && req.method === 'PATCH') {
         const body = await readJson(req);
         return json(events.update(requireUser(req), eventPath[1], body));
+      }
+      const adminEvent = path.match(/^\/api\/events\/([^/]+)\/(administration|accounts|characters|character-locks|character-archives)$/);
+      if (adminEvent) {
+        const user = requireUser(req), id = adminEvent[1], action = adminEvent[2];
+        if (req.method === 'GET' && action === 'administration') return json(events.administration(user, id));
+        if (req.method === 'GET' && action === 'accounts') return json(events.searchAccounts(user, id, requestUrl.searchParams.get('q')));
+        if (req.method === 'GET' && action === 'characters') return json(lifecycle.adminList(user, id));
+        if (req.method === 'POST' && action === 'character-locks') return json(lifecycle.lock(user, id, await readJson(req)));
+        if (req.method === 'POST' && action === 'character-archives') return json(lifecycle.archiveMany(user, id, await readJson(req)));
+      }
+      if (path === '/api/archives' && req.method === 'GET') return json(lifecycle.ownArchives(requireUser(req)));
+      if (path === '/api/notifications' && req.method === 'GET') return json(notifications.list(requireUser(req)));
+      const readNotification = path.match(/^\/api\/notifications\/([^/]+)\/read$/);
+      if (readNotification && req.method === 'POST') { await readJson(req); return json(notifications.read(requireUser(req), readNotification[1])); }
+      const lifecycleCharacter = path.match(/^\/api\/characters\/([^/]+)\/(archive|reuse)$/);
+      if (lifecycleCharacter && req.method === 'POST') {
+        const user = requireUser(req), body = await readJson(req);
+        return json(lifecycle[lifecycleCharacter[2]](user, lifecycleCharacter[1], body));
       }
       const join = path.match(/^\/api\/events\/([^/]+)\/join$/);
       if (join && req.method === 'POST') {
@@ -245,11 +269,14 @@ export async function createAppServer({
         return json(characters.save(requireUser(req), await readJson(req)));
       const character = path.match(/^\/api\/characters\/([^/]+)$/);
       if (character && req.method === 'GET') return json(characters.get(requireUser(req), character[1]));
+      if (character && req.method === 'DELETE') return json(lifecycle.delete(requireUser(req), character[1], await readJson(req)));
       const sendCharacter = path.match(/^\/api\/characters\/([^/]+)\/submit$/);
       if (sendCharacter && req.method === 'POST')
         return json(characters.submit(requireUser(req), sendCharacter[1], await readJson(req)));
       if (path === '/api/organizer/characters' && req.method === 'GET')
         return json(characters.list(requireUser(req), requestUrl.searchParams));
+      if (path === '/api/organizer/characters/decisions' && req.method === 'POST')
+        return json(characters.decideMany(requireUser(req), await readJson(req)));
       const gmCharacter = path.match(/^\/api\/organizer\/characters\/([^/]+)$/);
       if (gmCharacter && req.method === 'GET') return json(characters.get(requireUser(req), gmCharacter[1], true));
       if (gmCharacter && req.method === 'PATCH')

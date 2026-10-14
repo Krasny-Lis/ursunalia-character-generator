@@ -9,6 +9,7 @@ export function validEventDefinition(value) {
     !!value.name.trim();
 }
 export function eventOperations(db) {
+  db.function('account_fold', { deterministic: true }, value => String(value).toLocaleLowerCase('pl'));
   const transaction = work => {
     db.exec('BEGIN IMMEDIATE');
     try { const result = work(); db.exec('COMMIT'); return result; }
@@ -107,10 +108,13 @@ export function eventOperations(db) {
     });
   }
   function changeGrant(user, id, target, body, remove = false) {
-    validateBody(body, remove ? [] : ['role']);
+    validateBody(body, remove ? ['expectedRevision'] : ['role','expectedRevision']);
+    if (!Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 1) throw fail(400, 'Podaj rewizję wydarzenia.');
     if (!remove && !['organizer', 'gm'].includes(body.role)) throw fail(400, 'Nieprawidłowe uprawnienie.');
     return transaction(() => {
       requireGrant(user, id, true);
+      const event = record(id);
+      if (body.expectedRevision !== event.revision) throw fail(409, 'Uprawnienia lub wydarzenie zmieniły się. Odśwież dane.');
       if (!db.prepare('SELECT id FROM users WHERE id=?').get(target)) throw fail(404, 'Nie znaleziono konta.');
       const old = db.prepare('SELECT role FROM event_grants WHERE event_id=? AND user_id=?').get(id, target);
       if (old?.role === 'organizer' && (remove || body.role !== 'organizer') &&
@@ -119,12 +123,25 @@ export function eventOperations(db) {
       if (remove) db.prepare('DELETE FROM event_grants WHERE event_id=? AND user_id=?').run(id, target);
       else db.prepare('INSERT INTO event_grants VALUES(?,?,?) ON CONFLICT(event_id,user_id) DO UPDATE SET role=excluded.role')
         .run(id, target, body.role);
-      return { eventId: id, userId: target, role: remove ? null : body.role };
+      if (remove ? !!old : old?.role !== body.role) db.prepare('UPDATE events SET revision=revision+1 WHERE id=?').run(id);
+      return { eventId: id, userId: target, role: remove ? null : body.role, revision: record(id).revision };
     });
   }
   const withGrant = (user, id, manage, work) => transaction(() => {
     requireGrant(user, id, manage);
     return work();
   });
-  return { role, membership, requireGrant, requireMembership, visible, list, get, grants, memberships, create, update, join, changeGrant, withGrant };
+  function administration(user, id) {
+    requireGrant(user, id, true);
+    return { event: dto(record(id)),
+      participants: db.prepare(`SELECT u.id,u.name,u.email,m.joined_at joinedAt FROM event_memberships m JOIN users u ON u.id=m.user_id WHERE m.event_id=? ORDER BY u.name,u.id`).all(id),
+      grants: db.prepare(`SELECT u.id,u.name,u.email,g.role FROM event_grants g JOIN users u ON u.id=g.user_id WHERE g.event_id=? ORDER BY u.name,u.id`).all(id) };
+  }
+  function searchAccounts(user, id, query) {
+    requireGrant(user, id, true);
+    const q = typeof query === 'string' ? query.trim().toLowerCase() : '';
+    if (q.length < 3 || q.length > 200) throw fail(400, 'Wpisz od 3 do 200 znaków nazwy lub adresu e-mail.');
+    return db.prepare(`SELECT id,name,email FROM users WHERE instr(account_fold(name),?)>0 OR instr(account_fold(email),?)>0 ORDER BY name,id LIMIT 20`).all(q,q);
+  }
+  return { role, membership, requireGrant, requireMembership, visible, list, get, grants, memberships, create, update, join, changeGrant, withGrant, administration, searchAccounts };
 }

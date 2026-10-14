@@ -195,7 +195,8 @@ it('invalid published definitions are rejected before updating the participant l
 it('server event permissions control the existing builder independently from the global account role', async () => {
   store.mode.set('server');
   store.user.set({ id: 'fixture', name: 'Fixture', email: 'fixture@example.test', role: 'organizer' });
-  expect(store.canOrganize()).toBe(false);
+  expect(store.canOrganize()).toBe(true); // Global organizer can open the event-creation screen.
+  expect(store.canManageForm(seed.event.id)).toBe(false); // Event management still requires its grant.
   store.eventGrants.set([{ eventId: seed.event.id, role: 'gm' }]);
   expect(store.canOrganize()).toBe(true);
   const fixture = TestBed.createComponent(BuilderPage);
@@ -540,4 +541,105 @@ it('restored demo refuses a destructive schema mapping and retains the full orig
   const restored=TestBed.runInInjectionContext(()=>new PlatformStore()); await restored.initialize();
   expect(restored.error()).toContain('ręcznego mapowania');
   expect(localStorage.getItem('ursunalia:manuscript:v1')).toBe(raw);
+});
+
+it('independent character lock disables player controls without changing status, including submission', async () => {
+  const active = { ...store.active()!, kind: 'character' as const, status: 'changes' as const, revision: 3, locked: true };
+  store.mode.set('server'); store.applications.set([active]); store.activeId.set(active.id);
+  const fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock);
+  expect(store.canEdit(active)).toBe(false);
+  store.update('name', 'Forbidden'); await store.save(); expect(await store.submit()).toBe(false);
+  expect(fetchMock).not.toHaveBeenCalled(); expect(store.active()?.answers['name']).toBe(active.answers['name']);
+  const fixture = TestBed.createComponent(FormPage); await fixture.whenStable();
+  expect(fixture.nativeElement.textContent).toContain('Karta zablokowana');
+  expect(fixture.nativeElement.querySelector('#input-name')?.disabled).toBe(true);
+  expect(store.active()?.status).toBe('changes');
+});
+
+it('irreversible character actions require explicit confirmation, use the expected revision and preserve local work on conflict', async () => {
+  const { CharacterActions } = await import('./character-actions');
+  const app = { ...store.active()!, kind: 'character' as const, revision: 7 };
+  store.mode.set('server'); store.applications.set([app]); store.activeId.set(app.id); store.dirty.set(true);
+  const request = vi.spyOn(store,'request').mockRejectedValue(new Error('Postać zmieniła się. Odśwież dane.'));
+  const fixture=TestBed.createComponent(CharacterActions); fixture.componentRef.setInput('app',app); await fixture.whenStable();
+  vi.spyOn(window,'confirm').mockReturnValue(false); await fixture.componentInstance.retire(false); expect(request).not.toHaveBeenCalled();
+  vi.spyOn(window,'confirm').mockReturnValue(true); await fixture.componentInstance.retire(false);
+  expect(request).toHaveBeenCalledWith('api/characters/'+app.id,'DELETE',{expectedRevision:7,confirmDelete:true});
+  expect(store.active()).toEqual(app); expect(store.dirty()).toBe(true); expect(fixture.componentInstance.error()).toContain('zmieniła');
+});
+
+it('successful retirement clears the targeted local character and loads the archive without resetting another unsaved draft', async () => {
+  const app = { ...store.active()!, kind: 'character' as const, revision: 4 };
+  const other = { ...app, id: 'another', answers: {name:'Unsaved other'} };
+  store.mode.set('server'); store.user.set({id:'owner',name:'Owner',email:'owner@example.test',role:'participant'});
+  store.applications.set([app,other]); store.activeId.set(other.id); store.dirty.set(true);
+  vi.spyOn(store,'request').mockImplementation(async url => url==='api/archives' ? [{id:app.id}] as any : url==='api/notifications' ? [] : {} as any);
+  await store.retireCharacter(app,true);
+  expect(store.applications()).toEqual([other]); expect(store.active()).toEqual(other); expect(store.dirty()).toBe(true);
+  expect(store.archives()[0].id).toBe(app.id);
+});
+
+it('archive reuse explicitly joins the new event and installs a new draft without changing the immutable archive', async () => {
+  const archived={id:'old',eventId:seed.event.id,event:structuredClone(seed.event),form:structuredClone(seed.forms[0]),answers:{name:'Old'},status:'accepted' as const,archivedAt:'2026-10-14',revision:3};
+  const target={...structuredClone(seed.forms[0]),id:'next-form',eventId:'next',revision:2};
+  const saved={id:'new',kind:'character' as const,eventId:'next',form:target,answers:{name:'Old'},status:'draft' as const,revision:1,updatedAt:'2026-10-14',history:[]};
+  store.mode.set('server'); store.forms.set([target]); store.characterForms.set([{eventId:'next',formId:target.id,formRevision:2}]);
+  store.archives.set([archived]); store.applications.set([]); store.activeId.set('');
+  const request=vi.spyOn(store,'request').mockImplementation(async url => url.endsWith('/join') ? {eventId:'next',status:'joined',joinedAt:'2026-10-14'} as any : saved);
+  await store.reuseArchive(archived,'next');
+  expect(request).toHaveBeenNthCalledWith(1,'api/events/next/join','POST',{});
+  expect(request).toHaveBeenNthCalledWith(2,'api/characters/old/reuse','POST',{eventId:'next',expectedSchemaRevision:2});
+  expect(store.active()).toEqual(saved); expect(store.archives()).toEqual([archived]); expect(store.active()?.status).toBe('draft');
+});
+
+it('notifications show unread and unavailable states; ownership-safe read updates the counter and logout clears private caches', async () => {
+  const { NotificationsPage } = await import('./notifications.page');
+  store.mode.set('server'); store.user.set({id:'owner',name:'Owner',email:'owner@example.test',role:'participant'});
+  const notification={id:'notice',eventId:seed.event.id,characterId:'deleted',kind:'accepted' as const,createdAt:'2026-10-14',readAt:null,comment:'',characterAvailable:false,archiveAvailable:false};
+  store.notifications.set([notification]); store.events.set([seed.event]);
+  vi.spyOn(store,'request').mockImplementation(async url=> url==='api/notifications' ? [notification] as any : {...notification,readAt:'2026-10-14T12:00:00Z'} as any);
+  const fixture=TestBed.createComponent(NotificationsPage); await fixture.whenStable();
+  expect(store.unreadCount()).toBe(1); expect(fixture.nativeElement.textContent).toContain('Postać została usunięta.');
+  await fixture.componentInstance.read(notification); await fixture.whenStable();
+  expect(store.unreadCount()).toBe(0); expect(fixture.nativeElement.textContent).toContain('PRZECZYTANE');
+  vi.spyOn(store,'refreshServer').mockRejectedValue(new Error('Offline'));
+  await expect(store.logout()).rejects.toThrow('Offline'); expect(store.notifications()).toEqual([]); expect(store.archives()).toEqual([]);
+});
+
+it('event administration preserves unsaved data on 409, requires event grants and sends revisions with role changes', async () => {
+  const { EventAdminPage } = await import('./event-admin.page');
+  store.mode.set('server'); store.user.set({id:'admin',name:'Admin',email:'admin@example.test',role:'organizer'});
+  store.events.set([{...seed.event,revision:2,published:true,registrationsOpen:false}]); store.eventGrants.set([{eventId:seed.event.id,role:'organizer'}]);
+  const data={event:store.events()[0],participants:[],grants:[]};
+  const request=vi.spyOn(store,'request').mockImplementation(async url=>url.endsWith('/administration') ? data as any : [] as any);
+  const fixture=TestBed.createComponent(EventAdminPage); await fixture.whenStable();
+  fixture.componentInstance.event.name='Local unsaved event'; fixture.componentInstance.changed();
+  request.mockRejectedValue(new Error('Wydarzenie zmieniło się. Odśwież dane.'));
+  await fixture.componentInstance.save();
+  expect(fixture.componentInstance.event.name).toBe('Local unsaved event'); expect(store.adminDirty()).toBe(true);
+  expect(fixture.componentInstance.error()).toContain('zmieniło');
+  store.adminDirty.set(false);
+  await fixture.componentInstance.grant({id:'team',name:'Team',email:'team@example.test'},'gm');
+  expect(request).toHaveBeenLastCalledWith(`api/events/${seed.event.id}/grants/team`,'PUT',{role:'gm',expectedRevision:2});
+});
+
+it('a pending authenticated bootstrap cannot rehydrate private data after logout', async () => {
+  store.mode.set('server'); store.user.set({id:'owner',name:'Owner',email:'owner@example.test',role:'participant'});
+  let finish!: (value: unknown) => void;
+  const oldResponse=new Promise(resolve=>{finish=resolve;});
+  const empty={forms:[],user:null,events:[],eventGrants:[],memberships:[],characterForms:[],characters:[],applications:[],archives:[],notifications:[]};
+  const request=vi.spyOn(store,'request').mockResolvedValue(empty as any);
+  request.mockImplementationOnce(()=>oldResponse as any);
+  const pending=store.refreshServer(); await store.logout();
+  finish({...empty,user:{id:'owner'},archives:[{id:'private-archive'}],notifications:[{id:'private-notice'}]});await pending;
+  expect(store.user()).toBeNull(); expect(store.archives()).toEqual([]); expect(store.notifications()).toEqual([]);
+});
+
+it('background refresh preserves an unsaved local character that was edited while the response was in flight', async () => {
+  store.mode.set('server');
+  const original={...store.active()!,kind:'character' as const,revision:1};store.applications.set([original]);store.activeId.set(original.id);
+  let finish!: (value: unknown) => void;const response=new Promise(resolve=>{finish=resolve;});vi.spyOn(store,'request').mockImplementation(()=>response as any);
+  const pending=store.refreshServer();store.update('name','Keep unsaved change');
+  finish({forms:store.forms(),user:null,events:[],eventGrants:[],memberships:[],characterForms:[],characters:[original],applications:[]});await pending;
+  expect(store.active()?.answers['name']).toBe('Keep unsaved change');expect(store.dirty()).toBe(true);
 });

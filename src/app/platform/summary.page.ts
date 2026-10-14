@@ -5,11 +5,12 @@ import { PlatformStore, downloadJson } from './platform.store';
 import { Field, Section } from './models';
 import { Icon } from './icon';
 import { CharacterHistory } from './character-history';
+import { CharacterActions } from './character-actions';
 import { statusLabel } from './models';
 import { answerIssues, isPortrait } from '../../../shared/validation.mjs';
 @Component({
   standalone: true,
-  imports: [RouterLink, Icon, A11yModule, CharacterHistory],
+  imports: [RouterLink, Icon, A11yModule, CharacterHistory, CharacterActions],
   templateUrl: './summary.page.html',
 })
 export class SummaryPage {

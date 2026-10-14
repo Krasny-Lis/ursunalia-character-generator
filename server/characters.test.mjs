@@ -91,7 +91,8 @@ test('GM edits preserve every status, including accepted; each new acceptance va
   await f.register('player'); await f.join('player');
   let c = (await f.save('player', newCharacter(undefined, seed.example))).data;
   const edit = answers => f.request('admin', `/api/organizer/characters/${c.id}`, 'PATCH', { expectedRevision: c.revision, expectedSchemaRevision: c.form.revision, answers });
-  for (const status of ['draft','submitted','changes','rejected','accepted']) {
+  assert.equal((await edit({ ...seed.example, name: 'Hidden draft' })).status, 404);
+  for (const status of ['submitted','changes','rejected','accepted']) {
     if (status === 'submitted') c = (await f.submit('player', c)).data;
     else if (status !== 'draft') c = (await f.decide('admin', c, status)).data;
     const saved = await edit({ ...seed.example, name: `GM ${status}` });
@@ -144,7 +145,7 @@ test('event-scoped GM authorization covers list, detail, editing, decisions, unl
   const gm = await f.register('gm'); await f.register('player'); await f.join('player');
   let a = (await f.save('player', newCharacter(undefined, seed.example))).data;
   a = (await f.submit('player', a)).data;
-  await f.request('admin', `/api/events/${seed.event.id}/grants/${gm.id}`, 'PUT', { role: 'gm' });
+  await f.grant('admin', seed.event.id, gm.id, 'gm');
   await f.request('admin', '/api/events', 'POST', { id: 'beta', name: 'Beta', published: true, registrationsOpen: true });
   const form = (await f.request('admin', '/api/forms', 'POST', { ...seed.forms[0], id: 'beta-form', eventId: 'beta' })).data;
   assert.equal((await f.request('admin', '/api/events/beta/character-form', 'PUT', { formId: form.id, formRevision: form.revision })).status, 200);
@@ -167,7 +168,7 @@ test('event-scoped GM authorization covers list, detail, editing, decisions, unl
     { expectedRevision: a.revision, status: 'accepted' }, 'https://attacker.test')).status, 403);
   assert.equal((await f.decide('gm', a, 'changes')).status, 200);
   assert.equal((await f.request('player', `/api/characters/${a.id}`)).data.history[0].actorId, gm.id);
-  await f.request('admin', `/api/events/${seed.event.id}/grants/${gm.id}`, 'DELETE', {});
+  await f.grant('admin', seed.event.id, gm.id);
   assert.equal((await f.request('gm', `/api/organizer/characters/${a.id}`)).status, 403);
   await f.restart();
   assert.equal((await f.request('gm', '/api/organizer/characters')).status, 403);
@@ -224,7 +225,7 @@ test('never-sent and retracted drafts stay out of every GM queue view, and reapp
 test('GM edits persist minimal actor/time/character/revision metadata, distinct from decisions and without snapshotting personal data', async t => {
   const f = await apiFixture(t);
   const gm = await f.register('gm'); await f.register('player'); await f.join('player');
-  await f.request('admin', `/api/events/${seed.event.id}/grants/${gm.id}`, 'PUT', { role: 'gm' });
+  await f.grant('admin', seed.event.id, gm.id, 'gm');
   let c = (await f.save('player', newCharacter(undefined, seed.example))).data;
   c = (await f.submit('player', c)).data;
   const before = c;

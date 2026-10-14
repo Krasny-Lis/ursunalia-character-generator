@@ -26,7 +26,7 @@ export class App {
     });
   }
   @HostListener('window:beforeunload', ['$event']) protect(event: BeforeUnloadEvent) {
-    if (this.store.dirty() || this.store.reviewDirty() || this.store.builderDirty()) {
+    if (this.store.dirty() || this.store.reviewDirty() || this.store.builderDirty() || this.store.adminDirty()) {
       event.preventDefault();
       event.returnValue = '';
     }

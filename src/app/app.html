@@ -17,6 +17,9 @@
       @if (store.canOrganize()) {
         <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
       }
+      @if (store.user()) {
+        <a routerLink="/powiadomienia" routerLinkActive="active" (click)="menu.set(false)">Powiadomienia@if (store.unreadCount()) { · {{ store.unreadCount() }} }</a>
+      }
     </nav>
     <div class="header-tools">
       <button

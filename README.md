@@ -19,7 +19,9 @@ Otwórz `http://localhost:4200`. Dane pozostają w tej przeglądarce; w tym tryb
 - `/#/moje-postacie` — lista szkiców i zgłoszeń.
 - `/#/organizator/ankiety` — ankiety i panel weryfikacji zgłoszeń.
 - `/#/organizator/ankiety/edytor` — edytor sekcji i pytań, podgląd, import/eksport i publikacja.
-- `/#/konto` — logowanie i rejestracja w trybie serwerowym.
+- `/#/konto` — konto, logowanie/rejestracja i własne archiwum tekstowe bez zdjęć.
+- `/#/organizator/wydarzenia` — administracja wydarzeń, uczestników, grantów, blokad i zbiorczej archiwizacji.
+- `/#/powiadomienia` — trwałe decyzje/komentarze MG i oznaczanie odczytu.
 
 ## Pełny system — zapis na serwerze
 
@@ -43,7 +45,9 @@ Wydarzenia, uczestnictwo i uprawnienia MG/organizatora są teraz trwałe i przyp
 
 Przepływ postaci: **W edycji → Do weryfikacji → Zaakceptowana / Do poprawy / Odrzucona**. Jeden uczestnik ma jedną aktywną postać na wydarzenie. Gracz poprawia także odrzuconą postać; faktycznie zmieniony zapis podczas weryfikacji cofa ją do szkicu, zapis bez zmian zachowuje status. Zaakceptowaną postać może odblokować MG. Panel MG umożliwia edycję bez zmiany statusu, opcjonalne komentarze i historię decyzji. Zapis chronią rewizje; konflikty nie nadpisują lokalnej pracy. Bezstratna migracja, API, granice przypiętych schematów oraz test przepływu: [docs/CHARACTERS-AND-REVIEW.md](docs/CHARACTERS-AND-REVIEW.md).
 
-Dodatkowe ankiety i oryginalne zgłoszenia pozostają zachowane. Formularz postaci jest teraz jednym żywym schematem na wydarzenie: ręczny zapis obejmuje wszystkie istniejące i nowe postacie, bez zmiany ich statusów. Destrukcja odpowiedzi wymaga aktualnej analizy i jawnego potwierdzenia; dostępny jest pełny eksport JSON. Kreator nie utrzymuje trwałego lokalnego szkicu i ostrzega przed opuszczeniem. Raport migracji, API i test przepływu: [docs/LIVE-CHARACTER-SCHEMA.md](docs/LIVE-CHARACTER-SCHEMA.md).
+Dodatkowe ankiety i oryginalne zgłoszenia pozostają zachowane przy migracji. Jawne późniejsze usunięcie postaci czyści także jej kopie wewnętrzne; archiwizacja usuwa zdjęcia, zachowując historyczny tekst. Formularz postaci jest teraz jednym żywym schematem na wydarzenie: ręczny zapis obejmuje wszystkie aktywne istniejące i nowe postacie, bez zmiany ich statusów. Destrukcja odpowiedzi wymaga aktualnej analizy i jawnego potwierdzenia; dostępny jest pełny eksport JSON. Kreator nie utrzymuje trwałego lokalnego szkicu i ostrzega przed opuszczeniem. Raport migracji, API i test przepływu: [docs/LIVE-CHARACTER-SCHEMA.md](docs/LIVE-CHARACTER-SCHEMA.md).
+
+Etap 4 dopełnia MVP: pełna administracja wydarzeń, niezależne blokady kart, decyzje zbiorcze MG, trwałe powiadomienia i odrębne nieodwracalne usuwanie/tekstowe archiwum. Właściciel może wykorzystać archiwum na inne wydarzenie jako nowy szkic bez zdjęcia/akceptacji/historii MG. Nie istnieje przywracanie usuniętej lub archiwalnej karty. Raport, migracja 6, ryzyka WAL/backupów i instrukcja odbioru: [docs/MVP-STAGE-4.md](docs/MVP-STAGE-4.md).
 
 Portret jest opcjonalny, JPG/PNG/WebP do 750 KB; całe żądanie ma limit 2 MB. Szkice postaci zapisuje przycisk „Zapisz szkic”. Przeglądarka ostrzega o niezapisanych zmianach; panel MG ostrzega również przy opuszczaniu widoku.
 
@@ -78,7 +82,7 @@ Etap postaci sprawdzono w Chromium z rzeczywistym API/SQLite oraz na szerokości
 
 ## Dane i migracja
 
-Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje migracje 1–5. Migracja 5 zachowuje oryginały postaci w osobnej tabeli źródeł oraz konta, sesje i dawne formularze/zgłoszenia; nie rozstrzyga utraty odpowiedzi lub konfliktów mapowania. Postacie otrzymują jeden aktualny schemat; edycje MG — odrębny rejestr metadanych. Kolejka MG pomija szkice, także cofnięte po zmianach gracza. Nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
+Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje v27.2 i stosuje migracje 1–6. Migracja 5 zachowuje oryginały postaci w osobnej tabeli źródeł oraz konta, sesje i dawne formularze/zgłoszenia; nie rozstrzyga utraty odpowiedzi lub konfliktów mapowania. Postacie otrzymują jeden aktualny schemat; edycje MG — odrębny rejestr metadanych. Kolejka i bezpośrednie odczyty/edycje MG pomijają szkice, także cofnięte po zmianach gracza. Migracja 6 nie zmienia istniejących danych; dodaje kontrolki, archiwum i powiadomienia. Dawne nieaktywne rekordy wymagają jawnej decyzji mapowania. Nierozpoznana baza lub nierozstrzygnięte mapowanie blokuje start. Nie uruchamiano migracji na rzeczywistym wdrożeniu.
 
 - `public/data/platform.json` — wydarzenie, startowe ankiety i fikcyjny przykład. Katalogi z poprzedniej wersji pozostają w `public/data/`.
 - `shared/validation.mjs` — wspólna walidacja przeglądarki i serwera.
@@ -94,22 +98,6 @@ Szczegóły projektu i zasobów: `docs/DESIGN-v27.md`. Stare ekrany i nakładaj�
 
 Po zestawieniu w Chrome/Playwright gotowego buildu z sześcioma makietami poprawiono nagłówek kreatora, numer sekcji, papier, kontrast tła oraz mobilną nawigację. Zestaw testów, ograniczenia środowiska i dokładny status GitHub opisuje `docs/QA-v27.1.md`. Oryginalna struktura siedmiu sekcji pozostała bez zmian.
 
-### Przeniesienie całej przebudowy do GitHub
+### Baza dalszych prac
 
-**Uwaga:** ta paczka ma być traktowana jako pełny snapshot, nie nakładka plików. Przykładowe polecenia w nowym, czystym katalogu (Node.js 24.15+):
-
-```bash
-git clone --branch feature/platform-foundation-v24 https://github.com/Krasny-Lis/ursunalia-character-generator.git
-cd ursunalia-character-generator
-git switch -c feature/royal-manuscript-rebuild
-node /SCIEZKA/DO/ROZPAKOWANEGO/ursunalia-v27/scripts/reconcile-rebuild.mjs .
-node /SCIEZKA/DO/ROZPAKOWANEGO/ursunalia-v27/scripts/reconcile-rebuild.mjs . --apply
-npm ci
-npm run verify
-node scripts/validate-catalog.mjs
-git add -A
-git commit -m "feat: rebuild Ursunalia application with Royal Manuscript UI"
-git push -u origin feature/royal-manuscript-rebuild
-```
-
-Pierwsze wywołanie skryptu jest bezpiecznym podglądem. Drugie kopiuje nowe pliki i usuwa **wyłącznie śledzone przez Git** starsze pliki, których brakuje w ZIP-ie. Skrypt wymaga czystego repozytorium oraz właściwej gałęzi, nie dotyka katalogu `.git`. Po wypchnięciu gałęzi utwórz PR do `feature/platform-foundation-v24` i pozostaw go bez mergowania. `dist/` jest ignorowane przez Git; paczka ZIP nadal je zawiera i można uruchomić z niej serwer przed przebudową.
+Royal Manuscript jest już bazą projektu: `feature/royal-manuscript-rebuild`. Kolejne zmiany wychodzą z niej i wracają do niej w PR, bez automatycznego merge. Historyczny skrypt `reconcile-rebuild.mjs` służył jednorazowemu przeniesieniu v27; nie jest procedurą aktualizacji istniejącej aplikacji lub SQLite.

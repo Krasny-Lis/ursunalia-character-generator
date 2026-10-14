@@ -24,7 +24,7 @@ test('safe adoption uses the one selected current schema, preserves exact origin
     const before = db.prepare('SELECT * FROM characters').get(), users=db.prepare('SELECT * FROM users').all(), sessions=db.prepare('SELECT * FROM sessions').all();
     const log = db.prepare('SELECT * FROM schema_migrations').all(), forms=db.prepare('SELECT * FROM forms').all();
     assert.equal(preflightDatabase(db).ok,true); assert.deepEqual(preflightDatabase(db).liveSchemaMapping.conflicts,[]);
-    assert.deepEqual(migrateDatabase(db).appliedVersions,[5]);
+    assert.deepEqual(migrateDatabase(db, { migrations: MIGRATIONS.slice(0,5) }).appliedVersions,[5]);
     const original = JSON.parse(db.prepare('SELECT original_record FROM character_schema_origins').get().original_record);
     assert.deepEqual(original,{ ...before });
     const after=db.prepare('SELECT * FROM characters').get();
@@ -32,7 +32,7 @@ test('safe adoption uses the one selected current schema, preserves exact origin
     assert.deepEqual(db.prepare('SELECT * FROM users').all(),users); assert.deepEqual(db.prepare('SELECT * FROM sessions').all(),sessions);
     assert.deepEqual(db.prepare('SELECT * FROM forms').all(),forms); assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<5').all(),log);
     assert.equal(JSON.parse(db.prepare('SELECT definition FROM character_schemas').get().definition).revision,2);
-    assert.deepEqual(migrateDatabase(db).appliedVersions,[]); assert.deepEqual(db.prepare('SELECT * FROM characters').get(),after);
+    assert.deepEqual(migrateDatabase(db, { migrations: MIGRATIONS.slice(0,5) }).appliedVersions,[]); assert.deepEqual(db.prepare('SELECT * FROM characters').get(),after);
   } finally { db.close(); }
 });
 test('removed answers, removed selected options, changed types and unknown-key collisions block adoption with a private metadata report', async t => {
@@ -55,7 +55,7 @@ test('removed answers, removed selected options, changed types and unknown-key c
       assert.ok(report.issues.some(i=>i.code==='LIVE_SCHEMA_MAPPING_REQUIRED'));
       assert.equal(report.liveSchemaMapping.conflicts[0].characterId,'historical');
       assert.equal(JSON.stringify(report).includes('owner@example.test'),false); assert.equal(JSON.stringify(report).includes('preserve-hash'),false);
-      assert.throws(()=>migrateDatabase(db),MigrationError); assert.deepEqual(db.prepare('SELECT * FROM characters').all(),before);
+      assert.throws(()=>migrateDatabase(db, { migrations: MIGRATIONS.slice(0,5) }),MigrationError); assert.deepEqual(db.prepare('SELECT * FROM characters').all(),before);
       assert.deepEqual(db.prepare('SELECT * FROM schema_migrations').all(),log);
       assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name='character_schemas'").get().n,0);
     } finally { db.close(); }
@@ -69,6 +69,6 @@ test('failed adoption rolls back origins, current schema and revision increments
     assert.throws(()=>migrateDatabase(db,{migrations:failing}),/no such table/);
     assert.deepEqual(db.prepare('SELECT * FROM characters').all(),before); assert.deepEqual(db.prepare('SELECT * FROM schema_migrations').all(),log);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name IN ('character_schemas','character_schema_origins')").get().n,0);
-    assert.deepEqual(migrateDatabase(db).appliedVersions,[5]);
+    assert.deepEqual(migrateDatabase(db, { migrations: MIGRATIONS.slice(0,5) }).appliedVersions,[5]);
   } finally { db.close(); }
 });

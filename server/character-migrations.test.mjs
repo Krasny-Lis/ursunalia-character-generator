@@ -100,7 +100,7 @@ test('fresh schema and legacy/version-2 backfill preserve exact original JSON, s
         assert.ok(report.characterMapping.preservedAnswerWarnings[0].invalidFieldIds.includes('traits'));
         assert.equal(JSON.stringify(report).includes('sensitive-preserved-answer'), false);
       }
-      assert.equal(migrateDatabase(db).currentVersion, 5);
+      assert.equal(migrateDatabase(db).currentVersion, 6);
       if (before) {
         assert.deepEqual(snapshot(db), before);
         const original = before.applications[0], migrated = db.prepare('SELECT * FROM characters').get();
@@ -159,7 +159,7 @@ test('failed version-3 data backfill rolls back all new tables and registry, ret
     assert.deepEqual(db.prepare('SELECT * FROM schema_migrations').all(), log);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_schema WHERE name IN ('characters','character_decisions','event_character_forms')").get().n, 0);
     assert.equal(db.isTransaction, false);
-    assert.equal(migrateDatabase(db).currentVersion, 5);
+    assert.equal(migrateDatabase(db).currentVersion, 6);
   } finally { db.close(); }
 });
 
