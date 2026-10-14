@@ -1,0 +1,101 @@
+<a class="account-back" routerLink="/"><u-icon name="back"/> Strona główna</a>
+<header class="account-heading">
+  <span class="account-eyebrow">URSUNALIA 2027 · STREFA UCZESTNIKA</span>
+  <h1>Moje konto</h1>
+  <p>Twoje dane i bezpieczeństwo konta, bez zdjęć profilowych i archiwum postaci.</p>
+</header>
+
+@if (store.mode() === 'demo') {
+  <div class="account-demo paper">
+    <u-icon name="info"/>
+    <div>
+      <h2>Wersja demonstracyjna</h2>
+      <p>Logowanie i rejestracja wymagają działającego serwera. Możesz przejść do podglądu panelu gracza.</p>
+      <a routerLink="/moj-panel" class="button light">Mój panel <u-icon name="next"/></a>
+    </div>
+  </div>
+} @else if (store.user(); as user) {
+  <div class="account-layout">
+    <section class="paper account-profile" aria-labelledby="account-profile-title">
+      <div class="account-card-heading">
+        <div><span class="eyebrow">DANE OSOBOWE I KONTAKTOWE</span>
+          <h2 id="account-profile-title">Dane konta</h2></div>
+        <button type="button" class="button light" (click)="editing.set(!editing())">
+          <u-icon [name]="editing() ? 'close' : 'edit'"/>
+          {{ editing() ? 'Zakończ podgląd edycji' : 'Edytuj dane' }}
+        </button>
+      </div>
+      @if (editing()) {
+        <div class="account-integrations-note" role="note">
+          <u-icon name="info"/>
+          <div><strong>Podgląd przyszłego formularza</strong>
+            <p>Serwer nie obsługuje jeszcze zapisu pełnego profilu (imię, nazwisko, pseudonim, telefon i Facebook). Aby nie utracić wprowadzonych danych, edycja i zapis są na tym etapie nieaktywne.</p></div>
+        </div>
+      }
+      <dl class="account-details">
+        <div><dt>Imię i nazwisko / nazwa konta</dt><dd>{{ user.name }}</dd></div>
+        <div><dt>Pseudonim</dt><dd class="account-unavailable">Do uzupełnienia po integracji</dd></div>
+        <div><dt>E-mail</dt><dd>{{ user.email }}</dd></div>
+        <div><dt>Telefon</dt><dd class="account-unavailable">Do uzupełnienia po integracji</dd></div>
+        <div><dt>Facebook (opcjonalnie)</dt><dd class="account-unavailable">Nie podano</dd></div>
+        <div><dt>Rola</dt><dd>{{ user.role === 'organizer' ? 'Organizator' : 'Uczestnik' }}</dd></div>
+      </dl>
+      <p class="account-note">Numer telefonu będzie wymagany w docelowej rejestracji. Obecne API obsługuje tylko nazwę konta, e-mail i hasło.</p>
+    </section>
+
+    <aside class="account-sidebar">
+      <section class="paper account-sidebar-card">
+        <span class="eyebrow">BEZPIECZEŃSTWO</span>
+        <h2>Bezpieczeństwo</h2>
+        <p>Zmiana hasła pojawi się po dodaniu bezpiecznej obsługi tej operacji przez serwer.</p>
+        <div class="account-disabled-action"><u-icon name="shield"/> Zmiana hasła — w przygotowaniu</div>
+        <button type="button" class="button light" [disabled]="busy()" (click)="logout()">Wyloguj się</button>
+      </section>
+      <section class="paper account-sidebar-card">
+        <span class="eyebrow">ZARZĄDZANIE KONTEM</span>
+        <h2>Prywatność</h2>
+        <p>Dane konta nie są publicznym profilem. Możliwość trwałego usunięcia konta wymaga osobnej, potwierdzonej operacji po stronie serwera.</p>
+        <div class="account-disabled-action"><u-icon name="info"/> Usunięcie konta — w przygotowaniu</div>
+        <a routerLink="/moj-panel" class="button primary">Mój panel <u-icon name="next"/></a>
+      </section>
+    </aside>
+  </div>
+} @else {
+  <div class="account-auth">
+    <section class="paper account-auth-card">
+      <div class="account-tabs" role="group" aria-label="Logowanie lub rejestracja">
+        <button type="button" [class.active]="mode() === 'login'" [attr.aria-pressed]="mode() === 'login'" (click)="mode.set('login')">Logowanie</button>
+        <button type="button" [class.active]="mode() === 'register'" [attr.aria-pressed]="mode() === 'register'" (click)="mode.set('register')">Nowe konto</button>
+      </div>
+      <span class="eyebrow">{{ mode() === 'login' ? 'WITAJ PONOWNIE' : 'DOŁĄCZ DO OPOWIEŚCI' }}</span>
+      <h2>{{ mode() === 'login' ? 'Zaloguj się' : 'Utwórz konto' }}</h2>
+      @if (mode() === 'register') {
+        <div class="account-integrations-note" role="note"><u-icon name="info"/>
+          <p>Obecny serwer obsługuje wstępną rejestrację z nazwą konta, e-mailem i hasłem. Docelowy formularz z wymaganym telefonem, imieniem, nazwiskiem i pseudonimem wymaga rozbudowy API.</p>
+        </div>
+      }
+      <form (ngSubmit)="submit()">
+        @if (mode() === 'register') {
+          <label>Nazwa konta (tymczasowo)<input name="name" [(ngModel)]="name" required maxlength="100" autocomplete="name"/></label>
+        }
+        <label>Adres e-mail<input name="email" [(ngModel)]="email" type="email" required autocomplete="email"/></label>
+        <label>Hasło<input name="password" [(ngModel)]="password" type="password" required
+          [minlength]="mode() === 'register' ? 12 : 1" maxlength="128"
+          [autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"/></label>
+        @if (mode() === 'register') { <small>Hasło musi zawierać co najmniej 12 znaków.</small> }
+        @if (error()) { <p class="field-error" role="alert">{{ error() }}</p> }
+        <button type="submit" class="button primary" [disabled]="busy()">
+          {{ busy() ? 'Proszę czekać…' : mode() === 'login' ? 'Zaloguj się' : 'Utwórz konto' }}
+          <u-icon name="next"/>
+        </button>
+      </form>
+    </section>
+    <aside class="account-auth-aside" aria-label="O wydarzeniu">
+      <span class="account-eyebrow">URSUNALIA 2027</span>
+      <h2>Nowe początki, stare długi</h2>
+      <p>Zarejestruj się, utwórz postać i zacznij swoją opowieść na północnych rubieżach Kisleva.</p>
+      <span>22–24 kwietnia 2027</span>
+      <a routerLink="/dla-gracza">Jak wziąć udział? <u-icon name="next"/></a>
+    </aside>
+  </div>
+}
