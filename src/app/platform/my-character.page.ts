@@ -25,6 +25,7 @@ export class MyCharacterPage {
     : {},
   );
   readonly canEdit = computed(() => this.state.canEditRecord(this.character()));
+  readonly hasIssues = computed(() => Object.keys(this.issues()).length > 0);
 
   readonly canSubmit = computed(() => {
     const app = this.character();
