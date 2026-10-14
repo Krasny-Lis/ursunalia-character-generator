@@ -1,0 +1,155 @@
+<header class="guide-heading">
+  <span class="guide-eyebrow">URSUNALIA 2027 · PORADNIK UCZESTNIKA</span>
+  <h1>Dla gracza</h1>
+  <p>Wszystko, co warto wiedzieć przed stworzeniem postaci i przyjazdem na Ursunalia. Wybierz interesujący Cię temat lub przejdź po kolei przez przygotowania.</p>
+  <div class="guide-heading__actions">
+    <a routerLink="/konto" class="button primary">Moje konto <u-icon name="next"/></a>
+    <a routerLink="/o-wydarzeniu" class="button outline">Informacje o wydarzeniu</a>
+  </div>
+</header>
+
+<section class="guide-topics" aria-labelledby="topics-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">PRZEWODNIK</span>
+    <h2 id="topics-heading">Od czego zacząć?</h2>
+  </div>
+  <nav class="guide-topic-grid" aria-label="Tematy poradnika">
+    @for (topic of topics; track topic.id) {
+      <a class="paper guide-topic" [routerLink]="['/dla-gracza']" [fragment]="topic.id">
+        <u-icon [name]="topic.icon" />
+        <span>
+          <strong>{{ topic.title }}</strong>
+          <small>{{ topic.description }}</small>
+        </span>
+        <u-icon name="next" />
+      </a>
+    }
+  </nav>
+</section>
+
+<section id="udzial" class="guide-content-section" aria-labelledby="udzial-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">PIERWSZE KROKI</span>
+    <h2 id="udzial-heading">Jak wziąć udział?</h2>
+  </div>
+  <div class="paper guide-content-paper">
+    <p>Droga na Ursunalia składa się z czterech etapów. Utworzenie konta i wysłanie postaci są zgłoszeniem chęci udziału, a nie gwarancją przyjęcia.</p>
+    <ol class="guide-steps">
+      @for (step of steps; track step.number) {
+        <li>
+          <span class="guide-step-number">{{ step.number }}</span>
+          <div>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
+          </div>
+        </li>
+      }
+    </ol>
+    <div class="guide-note"><u-icon name="info" />
+      <p>Kwota i termin składki, fizyczne miejsce wydarzenia oraz harmonogram zostaną ogłoszone przez organizatorów. Dla uczestnika nie ma osobnego formularza ubezpieczeniowego w serwisie.</p>
+    </div>
+    <a routerLink="/konto" class="button primary">Przejdź do konta <u-icon name="next" /></a>
+  </div>
+</section>
+
+<section id="postac" class="guide-content-section" aria-labelledby="postac-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">BOHATER TWOJEJ OPOWIEŚCI</span>
+    <h2 id="postac-heading">Tworzenie postaci</h2>
+  </div>
+  <div class="paper guide-content-paper guide-two-column">
+    <div>
+      <h3>Jedna aktywna postać na wydarzenie</h3>
+      <p>Możesz przygotować szkic, wrócić do niego później i przesłać go do weryfikacji MG. Po wysłaniu zobaczysz status oraz decyzje i ewentualne uwagi do poprawek.</p>
+      <p>Zastanów się nad pochodzeniem postaci, jej miejscem w społeczności, relacjami i powodami, dla których przybywa do Krywulki.</p>
+      <a routerLink="/swiat-gry" class="guide-inline-link">Poznaj realia Kisleva <u-icon name="next" /></a>
+    </div>
+    <aside class="guide-note guide-note--stacked">
+      <u-icon name="info" />
+      <div>
+        <strong>Pamiętaj</strong>
+        <p>Zatwierdzona postać nie oznacza jeszcze opłaconego udziału. Zdjęcie postaci jest opcjonalne. Nie wymagamy zdjęcia profilowego uczestnika.</p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section id="stroje" class="guide-content-section" aria-labelledby="stroje-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">PRZYGOTOWANIE DO GRY</span>
+    <h2 id="stroje-heading">Stroje i wyposażenie</h2>
+  </div>
+  <div class="paper guide-content-paper guide-two-column">
+    <div>
+      <h3>Strój opowiada o Twojej postaci</h3>
+      <p>Przygotowując ubiór, weź pod uwagę pochodzenie, zajęcie i status społeczny bohatera. Inaczej może wyglądać kupiec, żołnierz, kapłan czy Drużin.</p>
+      <p>W materiałach o świecie gry znajdziesz kontekst kultur i obyczajów. Szczegółowe wytyczne dotyczące wyposażenia będą dodane po ich zatwierdzeniu przez organizatorów.</p>
+      <a routerLink="/swiat-gry" class="guide-inline-link">Przeglądaj świat gry <u-icon name="next" /></a>
+    </div>
+    <aside class="guide-soft-note">
+      <u-icon name="shield" />
+      <strong>Bezpieczeństwo i wygoda</strong>
+      <p>Wybieraj wyposażenie odpowiednie do warunków terenowych i bezpieczne dla innych uczestników. Wiążące wymagania będą opisane w oficjalnych zasadach.</p>
+    </aside>
+  </div>
+</section>
+
+<section id="zasady" class="guide-content-section" aria-labelledby="zasady-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">ZASADY LARPA</span>
+    <h2 id="zasady-heading">Zasady i mechaniki</h2>
+  </div>
+  <div class="paper guide-content-paper">
+    <h3>Dokumenty w przygotowaniu</h3>
+    <p>Regulamin gry, mechaniki oraz szczegółowe zasady bezpieczeństwa zostaną opublikowane po zatwierdzeniu przez organizatorów. Nie prezentujemy roboczych pomysłów jako obowiązujących reguł.</p>
+    <a routerLink="/aktualnosci" class="guide-inline-link">Sprawdź nowe komunikaty <u-icon name="next" /></a>
+  </div>
+</section>
+
+<section id="materialy" class="guide-content-section" aria-labelledby="materialy-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">WAŻNE ODNOSNIKI</span>
+    <h2 id="materialy-heading">Materiały</h2>
+  </div>
+  <div class="guide-resource-grid">
+    <a class="paper guide-resource" routerLink="/swiat-gry"><u-icon name="book"/>
+      <span><strong>Biblioteka świata gry</strong><small>Kislev, Ziemie Braci, kultury i religia</small></span>
+      <u-icon name="next"/>
+    </a>
+    <a class="paper guide-resource" routerLink="/o-wydarzeniu"><u-icon name="calendar"/>
+      <span><strong>Informacje organizacyjne</strong><small>Termin, miejsce, dojazd i FAQ</small></span>
+      <u-icon name="next"/>
+    </a>
+    <a class="paper guide-resource" routerLink="/aktualnosci"><u-icon name="feather"/>
+      <span><strong>Aktualności</strong><small>Ogłoszenia i komunikaty organizatorów</small></span>
+      <u-icon name="next"/>
+    </a>
+  </div>
+  <p class="guide-external-note">Dodatkowe ankiety organizacyjne mogą w przyszłości pojawić się jako linki w aktualnościach. Nie są osobnym modułem w serwisie.</p>
+</section>
+
+<section id="faq" class="guide-content-section" aria-labelledby="guide-faq-heading">
+  <div class="guide-section-heading">
+    <span class="guide-eyebrow">PYTANIA UCZESTNIKÓW</span>
+    <h2 id="guide-faq-heading">Najczęstsze pytania</h2>
+  </div>
+  <div class="paper guide-faq">
+    <details>
+      <summary>Czy mogę zmienić postać po jej wysłaniu?</summary>
+      <p>Jeżeli MG skieruje ją do poprawek, będzie można uzupełnić zgłoszenie. Ograniczenia edycji zależą od aktualnego statusu i ewentualnej blokady ustawionej przez organizatora.</p>
+    </details>
+    <details>
+      <summary>Czy mogę zgłosić kilka postaci?</summary>
+      <p>Na Ursunalia 2027 jedno konto może mieć jedną aktywną postać. Na obecnym etapie nie planujemy dodatkowych ankiet dla graczy.</p>
+    </details>
+    <details>
+      <summary>Jak działa opłacenie udziału?</summary>
+      <p>Po akceptacji postaci przez MG otrzymasz dane do przelewu. Organizator ręcznie potwierdza zaksięgowanie składki. Serwis nie korzysta z bramki płatniczej.</p>
+    </details>
+    <details>
+      <summary>Gdzie zobaczę kartę postaci?</summary>
+      <p>W docelowym panelu uczestnika, kiedy składka zostanie potwierdzona, a organizator oznaczy dokument Google Docs jako „Do sprawdzenia” lub „Gotowa” i udostępni link.</p>
+    </details>
+  </div>
+  <p class="guide-external-note">Poszczególne narzędzia obsługujące te etapy są nadal wdrażane. Ten poradnik opisuje zaakceptowany proces docelowy.</p>
+</section>
