@@ -47,6 +47,7 @@ export class ParticipantViewStore {
       case 'changes': return 'MG poprosił o wprowadzenie poprawek.';
       case 'rejected': return 'Zgłoszenie zostało odrzucone.';
       case 'accepted': return 'Postać zaakceptowana przez MG.';
+      default: return 'Utwórz zgłoszenie swojej postaci.';
     }
   });
 
