@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { definitionIssues } from '../shared/validation.mjs';
 import { validEventDefinition } from './events.mjs';
 import { characterMappingReport } from './character-mapping.mjs';
+import { liveSchemaMappingReport } from './live-schema-mapping.mjs';
 
 // Immutable baseline: the four tables shipped in Royal Manuscript v27.2.
 const baseline = `
@@ -23,6 +24,7 @@ const eventSql = readFileSync(new URL('./migrations/002-events.sql', import.meta
 const eventSchema = eventSql.split('-- DATA BACKFILL')[0];
 const characterSql = readFileSync(new URL('./migrations/003-characters.sql', import.meta.url), 'utf8');
 const editSql = readFileSync(new URL('./migrations/004-character-edits.sql', import.meta.url), 'utf8');
+const liveSql = readFileSync(new URL('./migrations/005-live-schema.sql', import.meta.url), 'utf8');
 export const MIGRATIONS = Object.freeze([
   Object.freeze({ version: 1, name: 'baseline_v27_2', sql: baseline, schemaSql: baseline }),
   Object.freeze({ version: 2, name: 'event_memberships_v1', sql: eventSql, schemaSql: baseline + eventSchema }),
@@ -30,6 +32,8 @@ export const MIGRATIONS = Object.freeze([
     schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] }),
   Object.freeze({ version: 4, name: 'character_edits_v1', sql: editSql,
     schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] + editSql }),
+  Object.freeze({ version: 5, name: 'live_character_schema_v1', sql: liveSql,
+    schemaSql: baseline + eventSchema + characterSql.split('-- DATA BACKFILL')[0] + editSql + liveSql.split('-- DATA BACKFILL')[0] }),
 ]);
 
 export function migrationChecksum(migration) {
@@ -222,6 +226,25 @@ function inspect(db, migrations) {
         const invalidEdits = db.prepare(`SELECT COUNT(*) n FROM character_edits e JOIN characters c
           ON c.id=e.character_id WHERE e.character_revision>c.revision`).get().n;
         if (invalidEdits) issue('INVALID_CHARACTER_EDIT_REVISION', invalidEdits);
+      }
+      const livePlanned = migrations.some(m => m.name === 'live_character_schema_v1');
+      const liveApplied = migrations.slice(0, report.currentVersion).some(m => m.name === 'live_character_schema_v1');
+      if (livePlanned && !liveApplied && !invalidForms && !invalidAnswers && !report.issues.length) {
+        report.liveSchemaMapping = liveSchemaMappingReport(db, !charactersApplied);
+        if (report.liveSchemaMapping?.conflicts.length) issue('LIVE_SCHEMA_MAPPING_REQUIRED', report.liveSchemaMapping.conflicts.length);
+      }
+      if (liveApplied) {
+        for (const name of ['character_schemas','character_schema_origins'])
+          report.counts[name] = db.prepare(`SELECT COUNT(*) count FROM ${name}`).get().count;
+        let invalid = 0;
+        for (const row of db.prepare('SELECT * FROM character_schemas').all()) {
+          const definition = JSON.parse(row.definition);
+          const mapping = db.prepare('SELECT form_id FROM event_character_forms WHERE event_id=?').get(row.event_id);
+          if (definitionIssues(definition).length || definition.id !== row.form_id || definition.eventId !== row.event_id || definition.revision !== row.revision || mapping?.form_id !== row.form_id) invalid++;
+        }
+        if (invalid) issue('INVALID_LIVE_SCHEMAS', invalid);
+        if (db.prepare(`SELECT COUNT(*) n FROM characters c LEFT JOIN character_schemas s ON s.event_id=c.event_id WHERE s.event_id IS NULL`).get().n)
+          issue('MISSING_LIVE_SCHEMAS');
       }
     }
     report.pendingVersions = migrations.slice(report.currentVersion).map(m => m.version);

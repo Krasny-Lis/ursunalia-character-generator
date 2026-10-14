@@ -90,7 +90,7 @@ test('GM edits preserve every status, including accepted; each new acceptance va
   const f = await apiFixture(t);
   await f.register('player'); await f.join('player');
   let c = (await f.save('player', newCharacter(undefined, seed.example))).data;
-  const edit = answers => f.request('admin', `/api/organizer/characters/${c.id}`, 'PATCH', { expectedRevision: c.revision, answers });
+  const edit = answers => f.request('admin', `/api/organizer/characters/${c.id}`, 'PATCH', { expectedRevision: c.revision, expectedSchemaRevision: c.form.revision, answers });
   for (const status of ['draft','submitted','changes','rejected','accepted']) {
     if (status === 'submitted') c = (await f.submit('player', c)).data;
     else if (status !== 'draft') c = (await f.decide('admin', c, status)).data;
@@ -229,7 +229,7 @@ test('GM edits persist minimal actor/time/character/revision metadata, distinct 
   c = (await f.submit('player', c)).data;
   const before = c;
   const response = await f.request('gm', `/api/organizer/characters/${c.id}`, 'PATCH', {
-    expectedRevision: c.revision, answers: { ...c.answers, history: 'Private character biography '.repeat(5) },
+    expectedRevision: c.revision, expectedSchemaRevision: c.form.revision, answers: { ...c.answers, history: 'Private character biography '.repeat(5) },
   });
   assert.equal(response.status, 200); c = response.data;
   assert.equal(c.status, before.status);
@@ -244,10 +244,10 @@ test('GM edits persist minimal actor/time/character/revision metadata, distinct 
   assert.equal(JSON.stringify(stored).includes('Private character biography'), false);
   assert.equal(JSON.stringify(stored).includes('@example.test'), false);
   assert.equal((await f.request('gm', `/api/organizer/characters/${c.id}`, 'PATCH', {
-    expectedRevision: c.revision, answers: c.answers,
+    expectedRevision: c.revision, expectedSchemaRevision: c.form.revision, answers: c.answers,
   })).data.editHistory.length, 1); // A no-op is not a new edit.
   assert.equal((await f.request('gm', `/api/organizer/characters/${c.id}`, 'PATCH', {
-    expectedRevision: before.revision, answers: before.answers,
+    expectedRevision: before.revision, expectedSchemaRevision: before.form.revision, answers: before.answers,
   })).status, 409);
   assert.equal((await f.save('player', c, { ...c.answers, name: 'Player changed' })).status, 200);
   assert.deepEqual(f.db.prepare('SELECT * FROM character_edits').all(), stored); // Player edits are not attributed to MG.
@@ -262,7 +262,7 @@ test('GM edits persist minimal actor/time/character/revision metadata, distinct 
   assert.equal((await f.request('outsider', `/api/organizer/characters/${c.id}`)).status, 403);
   assert.deepEqual((await f.request('', '/api/bootstrap')).data.characters, []);
   assert.equal((await f.request('outsider', `/api/organizer/characters/${c.id}`, 'PATCH', {
-    expectedRevision: owned.revision, answers: owned.answers,
+    expectedRevision: owned.revision, expectedSchemaRevision: owned.form.revision, answers: owned.answers,
   })).status, 403);
   assert.deepEqual(f.db.prepare('SELECT * FROM character_edits').all(), stored);
 });
@@ -273,7 +273,7 @@ test('a failed GM edit audit rolls back answers and revision; invalid inputs and
   let c = (await f.save('player', newCharacter(undefined, seed.example))).data;
   c = (await f.submit('player', c)).data;
   const before = f.db.prepare('SELECT * FROM characters WHERE id=?').get(c.id);
-  const edit = (answers) => f.request('admin', `/api/organizer/characters/${c.id}`, 'PATCH', { expectedRevision: c.revision, answers });
+  const edit = (answers) => f.request('admin', `/api/organizer/characters/${c.id}`, 'PATCH', { expectedRevision: c.revision, expectedSchemaRevision: c.form.revision, answers });
   assert.equal((await edit({ ...c.answers, portrait: 'https://tracker.test/img.png' })).status, 400);
   assert.equal(f.db.prepare('SELECT COUNT(*) n FROM character_edits').get().n, 0);
   f.db.exec("CREATE TRIGGER fail_edit_audit BEFORE INSERT ON character_edits BEGIN SELECT RAISE(ABORT,'fixture failure'); END;");

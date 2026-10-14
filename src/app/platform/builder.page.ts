@@ -8,11 +8,11 @@ import {
   transferArrayItem,
 } from '@angular/cdk/drag-drop';
 import { A11yModule } from '@angular/cdk/a11y';
-import { PlatformStore, uid, downloadJson } from './platform.store';
+import { PlatformStore, uid, downloadJson, SchemaImpact } from './platform.store';
 import { Field, FieldType, FormDefinition, Section, Answers } from './models';
 import { FieldControl } from './field.control';
 import { Icon } from './icon';
-import { migrateSurvey, isEditorDraft } from './migration';
+import { migrateSurvey } from './migration';
 import { definitionIssues } from '../../../shared/validation.mjs';
 export const FIELD_TYPES: { type: FieldType; label: string; description: string; icon: string }[] =
   [
@@ -66,6 +66,11 @@ export class BuilderPage {
   readonly route = inject(ActivatedRoute);
   readonly types = FIELD_TYPES;
   readonly form = signal<FormDefinition>(this.restore());
+  readonly baseline = signal(structuredClone(this.form()));
+  readonly expectedRevision = signal(this.store.forms().some(f => f.id === this.form().id) ? this.form().revision : 0);
+  readonly dirty = computed(() => this.expectedRevision() === 0 || JSON.stringify(this.form()) !== JSON.stringify(this.baseline()));
+  readonly impact = signal<SchemaImpact | null>(null);
+  readonly confirmLoss = signal(false);
   readonly selected = signal('');
   readonly selectedSection = signal('');
   readonly mode = signal<'edit' | 'preview'>('edit');
@@ -74,32 +79,22 @@ export class BuilderPage {
   readonly importOpen = signal(false);
   readonly error = signal('');
   readonly publishing = signal(false);
+  readonly exporting = signal(false);
   readonly answers = signal<Answers>({});
   readonly collapsed = signal(new Set<string>());
   readonly count = computed(() => this.form().sections.reduce((a, s) => a + s.fields.length, 0));
   readonly problems = computed(() => definitionIssues(this.form()));
   readonly listIds = computed(() => this.form().sections.map((s) => 'fields-' + s.id));
-  private key() {
-    return (
-      'ursunalia:builder:v27:' +
-      (this.route.snapshot.queryParamMap.get('id') ?? this.store.forms()[0]?.id ?? 'new')
-    );
-  }
+  constructor() { this.store.builderDirty.set(this.dirty() && this.store.canManageForm(this.form().eventId)); }
   private restore(): FormDefinition {
     const id = this.route.snapshot.queryParamMap.get('id');
-    try {
-      const raw = localStorage.getItem(this.key());
-      if (raw) {
-        const value = JSON.parse(raw);
-        if (isEditorDraft(value)) return value;
-      }
-    } catch {
-      /* Keep inaccessible or damaged backup untouched. */
-    }
+    const eventId = this.route.snapshot.queryParamMap.get('eventId') ?? this.store.seed()!.event.id;
+    const current = this.store.forms().find(f => f.eventId === eventId && this.store.isCharacter(f));
+    if (id === 'new' && current) return structuredClone(current);
     if (id === 'new')
       return {
         id: uid('form'),
-        eventId: 'ursunalia-2027',
+        eventId,
         revision: 1,
         status: 'draft',
         title: 'Nowa ankieta',
@@ -113,22 +108,16 @@ export class BuilderPage {
           },
         ],
       };
-    try {
-      const old = localStorage.getItem('ursunalia:surveys:builder:v26');
-      if (old && !id) return migrateSurvey(JSON.parse(old));
-    } catch {
-      /* Original v26 draft is retained. */
-    }
-    return structuredClone(this.store.forms().find((f) => f.id === id) ?? this.store.forms()[0]);
+    return structuredClone(this.store.forms().find(f => f.id === id && this.store.isCharacter(f)) ?? current ?? this.store.forms()[0]);
   }
   private save(form: FormDefinition) {
-    this.form.set({ ...form, status: 'draft' });
-    try {
-      localStorage.setItem(this.key(), JSON.stringify(this.form()));
-    } catch {
-      this.error.set('Zapis lokalny niedostępny. Pobierz JSON, aby zachować pracę.');
-    }
+    if (this.publishing()) return;
+    this.form.set(form);
+    this.store.builderDirty.set(this.dirty());
+    this.impact.set(null); this.confirmLoss.set(false);
   }
+  canLeave() { return !this.dirty() || window.confirm('Masz niezapisane zmiany formularza. Opuścić kreator?'); }
+  ngOnDestroy() { this.store.builderDirty.set(false); }
   newField(type: FieldType): Field {
     const field: Field = {
       id: uid('field'),
@@ -315,8 +304,25 @@ export class BuilderPage {
   label(type: FieldType) {
     return this.types.find((t) => t.type === type)?.label;
   }
-  export() {
-    downloadJson('ursunalia-ankieta-' + this.form().id + '.json', this.form());
+  async export() {
+    if (this.exporting() || this.publishing()) return;
+    this.exporting.set(true);
+    try { downloadJson('ursunalia-pelna-kopia-' + this.form().eventId + '.json', await this.store.exportSchema(this.form().eventId)); }
+    catch (e) { this.error.set(this.store.message(e)); }
+    finally { this.exporting.set(false); }
+  }
+  exportDraft() { downloadJson('ursunalia-niezapisany-formularz.json', this.form()); }
+  async reloadSchema() {
+    if (this.publishing() || !this.canLeave()) return;
+    this.publishing.set(true);
+    try {
+      const fresh = this.store.mode() === 'server'
+        ? await this.store.request<FormDefinition>(`api/events/${this.form().eventId}/character-schema`)
+        : this.store.forms().find(f => f.id === this.form().id)!;
+      this.form.set(structuredClone(fresh)); this.baseline.set(structuredClone(fresh)); this.expectedRevision.set(fresh.revision);
+      this.store.builderDirty.set(false); this.impact.set(null); this.error.set('');
+    } catch (e) { this.error.set(this.store.message(e)); }
+    finally { this.publishing.set(false); }
   }
   async import(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -328,7 +334,7 @@ export class BuilderPage {
       const errors = definitionIssues(form);
       if (errors.length) throw new Error(errors[0]);
       if (!confirm('Zastąpić aktualny szkic importowaną ankietą?')) return;
-      this.save({ ...form, eventId: 'ursunalia-2027' });
+      this.save({ ...form, id: this.form().id, eventId: this.form().eventId, revision: this.form().revision });
       this.importOpen.set(false);
       this.error.set('');
     } catch (e) {
@@ -337,16 +343,31 @@ export class BuilderPage {
     input.value = '';
   }
   async publish() {
-    if (this.publishing()) return;
+    if (this.publishing() || this.exporting() || !this.dirty()) return;
     this.publishing.set(true);
     try {
-      await this.store.publish(this.form());
+      const impact = await this.store.previewSchema(this.form(), this.expectedRevision());
+      if (impact.destructive) { this.impact.set(impact); this.confirmLoss.set(false); }
+      else await this.commit();
       this.error.set('');
     } catch (e) {
       this.error.set(this.store.message(e));
     } finally {
       this.publishing.set(false);
     }
+  }
+  async confirmSave() {
+    if (!this.impact() || !this.confirmLoss() || this.publishing() || this.exporting()) return;
+    this.publishing.set(true);
+    try { await this.commit(this.impact()!); }
+    catch (e) { this.error.set(this.store.message(e)); this.impact.set(null); this.confirmLoss.set(false); }
+    finally { this.publishing.set(false); }
+  }
+  private async commit(confirmation?: SchemaImpact) {
+    const saved = await this.store.saveSchema(this.form(), this.expectedRevision(), confirmation);
+    this.form.set(structuredClone(saved)); this.baseline.set(structuredClone(saved)); this.expectedRevision.set(saved.revision);
+    this.store.builderDirty.set(false); this.impact.set(null); this.confirmLoss.set(false); this.error.set('');
+    if (this.store.mode() !== 'server') this.store.notice.set('Zapisano formularz w demonstracji. Zmiany obejmują postacie w tej przeglądarce.');
   }
   previewAnswer(id: string, value: Answers[string]) {
     this.answers.update((all) => ({ ...all, [id]: value }));

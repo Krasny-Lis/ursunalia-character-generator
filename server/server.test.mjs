@@ -58,7 +58,7 @@ test('reject malformed definitions, duplicate IDs, invalid dates, selections and
   assert.ok(answerIssues(seed.forms[0], { ...seed.example, traits: ['not-in-catalog'] }).traits);
   assert.ok(answerIssues(seed.forms[1], { arrival: '2027-02-31', transport: 'own' }).arrival);
 });
-test('complete workflow: durable drafts, owner isolation, review, corrections and pinned snapshots', async () => {
+test('complete workflow: durable drafts, owner isolation, review, corrections and live schema', async () => {
   assert.equal((await request('/api/organizer/characters')).status, 401);
   const registered = await register('alena');
   assert.equal(registered.status, 201);
@@ -102,12 +102,14 @@ test('complete workflow: durable drafts, owner isolation, review, corrections an
   assert.equal(inbox.data[0].userEmail, 'alena@example.test');
   const changedForm = structuredClone(seed.forms[0]);
   changedForm.sections[0].fields[0].label = 'New name label';
-  const published = await request('/api/forms', { as: 'admin', method: 'POST', body: changedForm });
-  assert.equal(published.status, 201);
+  const published = await request('/api/events/ursunalia-2027/character-schema', { as: 'admin', method: 'PUT', body: { definition: changedForm, expectedRevision: 1 } });
+  assert.equal(published.status, 200);
   assert.equal(published.data.revision, 2);
   const oldApp = (await request('/api/bootstrap', { as: 'alena' })).data.characters[0];
-  assert.equal(oldApp.form.revision, 1);
-  assert.equal(oldApp.form.sections[0].fields[0].label, 'Imię postaci');
+  assert.equal(oldApp.form.revision, 2);
+  assert.equal(oldApp.form.sections[0].fields[0].label, 'New name label');
+  assert.equal(oldApp.status, character.status);
+  character = oldApp;
   const decide = (status, feedback) => request(`/api/organizer/characters/${id}/decision`, { as: 'admin', method: 'POST',
     body: { status, feedback, expectedRevision: character.revision } });
   const reviewed = await decide('changes', 'Dopisz przydomek.');

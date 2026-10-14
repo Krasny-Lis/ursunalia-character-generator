@@ -1,6 +1,11 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Answers, Application, FormDefinition, Seed, User, GameEvent, EventGrant, EventMembership, CharacterForm } from './models';
 import { answerIssues, definitionIssues } from '../../../shared/validation.mjs';
+import { schemaChanges, transformAnswers, type SchemaChange } from '../../../shared/schema-impact.mjs';
+export interface SchemaImpact {
+  destructive: boolean; changes: SchemaChange[]; affectedCharacters: number;
+  affectedDeletedCharacters: number; affectedAnswers: number; confirmationToken: string;
+}
 const KEY = 'ursunalia:manuscript:v1';
 export const uid = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 export function downloadJson(name: string, value: unknown) {
@@ -24,6 +29,7 @@ export class PlatformStore {
   readonly memberships = signal<EventMembership[]>([]);
   readonly characterForms = signal<CharacterForm[]>([]);
   readonly reviewDirty = signal(false);
+  readonly builderDirty = signal(false);
   readonly mode = signal<'loading' | 'demo' | 'server'>('loading');
   readonly ready = signal(false);
   readonly error = signal('');
@@ -114,7 +120,7 @@ export class PlatformStore {
     if (event) this.seed.update(seed => seed ? { ...seed, event } : seed);
     const all = [...(data.characters ?? []), ...data.applications];
     this.applications.set(all);
-    this.activeId.set(all[0]?.id ?? '');
+    this.activeId.set(all.some(a => a.id === this.activeId()) ? this.activeId() : all[0]?.id ?? '');
     this.dirty.set(false);
   }
   private restoreDemo(seed: Seed) {
@@ -141,7 +147,16 @@ export class PlatformStore {
         )
           throw new Error('Invalid snapshot');
         this.forms.set(saved.forms);
-        this.applications.set(saved.applications);
+        this.applications.set(saved.applications.map((a: Application) => {
+          if (!this.isCharacter(a.form)) return a;
+          const current = saved.forms.find((f: FormDefinition) => f.id === a.form.id);
+          if (!current) return a;
+          if (transformAnswers(a.form, current, a.answers).lostFieldIds.length) {
+            this.error.set('Zapisana demonstracja wymaga ręcznego mapowania odpowiedzi do aktualnego formularza. Oryginalna kopia w przeglądarce pozostała nietknięta.');
+            return a;
+          }
+          return { ...a, form: structuredClone(current) };
+        }));
         this.activeId.set(saved.activeId);
         return;
       }
@@ -347,24 +362,47 @@ export class PlatformStore {
     this.dirty.set(false);
     await this.refreshServer();
   }
-  async publish(form: FormDefinition) {
-    const problems = definitionIssues(form);
-    if (problems.length) throw new Error(problems[0]);
-    let published: FormDefinition = {
-      ...structuredClone(form),
-      status: 'published',
-      revision: (this.forms().find((f) => f.id === form.id)?.revision ?? 0) + 1,
-    };
-    if (this.mode() === 'server')
-      published = await this.request<FormDefinition>('api/forms', 'POST', published);
-    this.forms.update((all) => [...all.filter((f) => f.id !== published.id), published]);
-    this.characterForms.update(all => all.map(m => m.formId === published.id ? { ...m, formRevision: published.revision } : m));
-    this.persistDemo();
-    this.notice.set(
-      this.mode() === 'demo'
-        ? 'Ankieta opublikowana w tej przeglądarce. Zobaczysz ją na stronie wydarzenia.'
-        : 'Ankieta opublikowana dla uczestników.',
-    );
+  async previewSchema(form: FormDefinition, expectedRevision: number): Promise<SchemaImpact> {
+    if (this.mode() === 'server') return this.request<SchemaImpact>(`api/events/${form.eventId}/character-schema/preview`, 'POST', { definition: form, expectedRevision });
+    const previous = this.forms().find(f => f.id === form.id) ?? form;
+    const changes = schemaChanges(previous, form);
+    const affected = this.applications().filter(a => a.form.id === form.id && transformAnswers(previous, form, a.answers).lostFieldIds.length);
+    return { changes, destructive: changes.length > 0 || affected.length > 0,
+      affectedCharacters: affected.length, affectedDeletedCharacters: 0,
+      affectedAnswers: affected.reduce((n,a) => n + transformAnswers(previous, form, a.answers).lostFieldIds.length, 0), confirmationToken: 'demo' };
+  }
+  async saveSchema(form: FormDefinition, expectedRevision: number, confirmation?: SchemaImpact) {
+    const errors = definitionIssues(form); if (errors.length) throw new Error(errors[0]);
+    const previous = this.forms().find(f => f.id === form.id);
+    let saved: FormDefinition;
+    if (this.mode() === 'server') {
+      saved = await this.request<FormDefinition>(`api/events/${form.eventId}/character-schema`, 'PUT',
+        { definition: form, expectedRevision, confirmLoss: !!confirmation, confirmationToken: confirmation?.confirmationToken });
+      this.notice.set('Zapisano formularz. Zmiany obowiązują wszystkie postacie wydarzenia.');
+      // Refresh current schemas/characters only after successful commit. Preserve local work if the subsequent refresh fails.
+      this.forms.update(all => [...all.filter(f => f.id !== saved.id), saved]);
+      this.characterForms.update(all => [...all.filter(m => m.eventId !== saved.eventId), { eventId: saved.eventId, formId: saved.id, formRevision: saved.revision }]);
+      if (!this.dirty()) {
+        try { await this.refreshServer(); }
+        catch { this.notice.set('Formularz zapisany. Odśwież postacie po odzyskaniu połączenia.'); }
+      }
+    } else {
+      if ((previous?.revision ?? 0) !== expectedRevision) throw new Error('Konflikt rewizji formularza. Zachowaj swoją pracę.');
+      const impact = await this.previewSchema(form, expectedRevision);
+      if (impact.destructive && !confirmation) throw new Error('Potwierdź utratę odpowiedzi.');
+      saved = { ...structuredClone(form), status: 'published', revision: expectedRevision + 1 };
+      this.applications.update(all => all.map(a => a.form.id === saved.id ? { ...a, form: structuredClone(saved),
+        answers: transformAnswers(a.form, saved, a.answers).answers, revision: (a.revision ?? 0) + 1 } : a));
+      this.forms.update(all => [...all.filter(f => f.id !== saved.id), saved]);
+      this.persistDemo();
+    }
+    return saved;
+  }
+  async exportSchema(eventId: string) {
+    if (this.mode() === 'server') return this.request<unknown>(`api/events/${eventId}/character-schema/export`);
+    const form = this.forms().find(f => f.eventId === eventId && this.isCharacter(f));
+    return { format: 'ursunalia-character-schema-backup', formatVersion: 1, definition: form,
+      characters: this.applications().filter(a => a.form.id === form?.id), gmNotes: [], gmNotesAvailable: false };
   }
   message(e: unknown) {
     return e instanceof Error ? e.message : 'Operacja nie powiodła się. Spróbuj ponownie.';

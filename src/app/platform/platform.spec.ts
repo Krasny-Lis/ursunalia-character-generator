@@ -64,12 +64,13 @@ it('demo submission never claims to send to an organizer', async () => {
   expect(store.active()!.status).toBe('draft');
   expect(store.notice()).toContain('nie zostało wysłane');
 });
-it('publishing creates a new survey revision while a participant snapshot stays fixed', async () => {
+it('manual schema save updates existing demo characters without changing status', async () => {
   const first = structuredClone(store.forms()[0]);
   first.sections[0].title = 'Zmieniona tożsamość';
-  await store.publish(first);
+  await store.saveSchema(first, first.revision);
   expect(store.forms().find((f) => f.id === first.id)?.revision).toBe(2);
-  expect(store.active()?.form.sections[0].title).toBe('Tożsamość postaci');
+  expect(store.active()?.form.sections[0].title).toBe('Zmieniona tożsamość');
+  expect(store.active()?.status).toBe('draft');
 });
 it('storage quota failure stays visible and leaves the current answers in memory', () => {
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -187,7 +188,7 @@ it('builder supports creation, edits, duplicate, drag order and an interactive p
 it('invalid published definitions are rejected before updating the participant list', async () => {
   const form = structuredClone(store.forms()[0]);
   form.sections[0].fields[0].label = '';
-  await expect(store.publish(form)).rejects.toThrow();
+  await expect(store.saveSchema(form, form.revision)).rejects.toThrow();
   expect(store.forms()[0].revision).toBe(1);
 });
 
@@ -461,4 +462,82 @@ it('MG answer edit audit renders separately from decision history in the panel a
   store.applications.set([edited]);
   const summary = TestBed.createComponent(SummaryPage); await summary.whenStable();
   expect(summary.nativeElement.querySelector('u-character-history').textContent).toContain('Editing GM');
+});
+
+it('builder ignores old persistent drafts and never writes working changes into storage', async () => {
+  const oldKey = 'ursunalia:builder:v27:' + seed.forms[0].id;
+  localStorage.setItem(oldKey, JSON.stringify({ ...seed.forms[0], title: 'Old local draft' }));
+  const write = vi.spyOn(Storage.prototype, 'setItem');
+  const fixture = TestBed.createComponent(BuilderPage); await fixture.whenStable();
+  const page = fixture.componentInstance;
+  expect(page.form().title).toBe(seed.forms[0].title);
+  page.meta('title', 'Unsaved new title');
+  expect(page.dirty()).toBe(true); expect(store.builderDirty()).toBe(true);
+  expect(store.forms()[0].title).toBe(seed.forms[0].title);
+  expect(write).not.toHaveBeenCalled(); expect(localStorage.getItem(oldKey)).toContain('Old local draft');
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  expect(page.canLeave()).toBe(false); expect(confirm).toHaveBeenCalled();
+  page.meta('title', seed.forms[0].title); expect(page.dirty()).toBe(false);
+  expect(page.canLeave()).toBe(true);
+});
+
+it('builder retains local fields on 409 and commits the complete form only on explicit manual save', async () => {
+  serverCharacter('draft'); store.eventGrants.set([{ eventId: seed.event.id, role: 'organizer' }]);
+  const fixture = TestBed.createComponent(BuilderPage); await fixture.whenStable();
+  const page = fixture.componentInstance;
+  page.meta('title', 'Local work');
+  const request = vi.spyOn(store, 'previewSchema').mockRejectedValueOnce(new Error('Konflikt rewizji'));
+  await page.publish();
+  expect(page.form().title).toBe('Local work'); expect(page.expectedRevision()).toBe(1);
+  expect(page.dirty()).toBe(true); expect(page.error()).toContain('Konflikt');
+  request.mockResolvedValueOnce({ destructive:false, changes:[], affectedCharacters:0, affectedDeletedCharacters:0, affectedAnswers:0, confirmationToken:'token' });
+  const saved = { ...page.form(), revision:2 };
+  const commit = vi.spyOn(store, 'saveSchema').mockResolvedValue(saved);
+  await page.publish();
+  expect(commit).toHaveBeenCalledWith(expect.objectContaining({title:'Local work'}),1,undefined);
+  expect(page.dirty()).toBe(false); expect(store.builderDirty()).toBe(false);
+  expect(page.expectedRevision()).toBe(2);
+});
+
+it('destructive builder save requires explicit checkbox confirmation, offers full backup, and preserves work when confirmation becomes stale', async () => {
+  serverCharacter('draft'); store.eventGrants.set([{ eventId: seed.event.id, role:'organizer' }]);
+  const fixture = TestBed.createComponent(BuilderPage); await fixture.whenStable();
+  const page=fixture.componentInstance;
+  page.meta('title','Draft with deletion');
+  const impact={destructive:true,changes:[{kind:'field_removed',fieldId:'name'}],affectedCharacters:2,affectedDeletedCharacters:1,affectedAnswers:3,confirmationToken:'preview-token'};
+  vi.spyOn(store,'previewSchema').mockResolvedValue(impact);
+  const commit=vi.spyOn(store,'saveSchema').mockRejectedValueOnce(new Error('Potwierdź aktualną analizę'));
+  await page.publish(); await fixture.whenStable();
+  expect(commit).not.toHaveBeenCalled();
+  const dialog=fixture.nativeElement.querySelector('[role=dialog]');
+  expect(dialog.textContent).toContain('2 aktywnych oraz 1 usuniętych');
+  expect(dialog.textContent).toContain('Pobierz pełną kopię JSON');
+  await page.confirmSave(); expect(commit).not.toHaveBeenCalled();
+  page.confirmLoss.set(true); page.exporting.set(true); await page.confirmSave();
+  expect(commit).not.toHaveBeenCalled();
+  page.exporting.set(false); await page.confirmSave();
+  expect(commit).toHaveBeenCalledWith(expect.objectContaining({title:'Draft with deletion'}),1,impact);
+  expect(page.dirty()).toBe(true); expect(page.impact()).toBeNull(); expect(page.form().title).toBe('Draft with deletion');
+});
+
+it('restored demo characters use the current committed schema without rewriting their original stored snapshot', async () => {
+  const original = structuredClone(store.active()!);
+  const current = { ...structuredClone(original.form), revision: 2, title: 'Current demo schema' };
+  const raw = JSON.stringify({ version:1, forms:[current,seed.forms[1]], applications:[original], activeId:original.id });
+  localStorage.setItem('ursunalia:manuscript:v1',raw);
+  const restored=TestBed.runInInjectionContext(()=>new PlatformStore()); await restored.initialize();
+  expect(restored.active()!.form.title).toBe('Current demo schema');
+  expect(restored.active()!.answers).toEqual(original.answers);
+  expect(localStorage.getItem('ursunalia:manuscript:v1')).toBe(raw);
+});
+
+it('restored demo refuses a destructive schema mapping and retains the full original copy', async () => {
+  const original=structuredClone(store.active()!);
+  const current=structuredClone(original.form); current.revision=2;
+  current.sections[0].fields=current.sections[0].fields.filter(f=>f.id!=='name');
+  const raw=JSON.stringify({version:1,forms:[current],applications:[original],activeId:original.id});
+  localStorage.setItem('ursunalia:manuscript:v1',raw);
+  const restored=TestBed.runInInjectionContext(()=>new PlatformStore()); await restored.initialize();
+  expect(restored.error()).toContain('ręcznego mapowania');
+  expect(localStorage.getItem('ursunalia:manuscript:v1')).toBe(raw);
 });

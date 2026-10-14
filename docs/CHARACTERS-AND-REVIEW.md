@@ -2,6 +2,8 @@
 
 Baza: `feature/royal-manuscript-rebuild`. Istniejący Angular 22, Node.js 24, SQLite, renderer, walidacja, sesje i granty wydarzeń. Jeden PR obejmuje migrację, API, istniejące ekrany i testy. Nie wdraża żywego schematu, eksportu zbiorczego, powiadomień, usuwania/przywracania ani archiwum. Nie uruchamia migracji na produkcji.
 
+Ten dokument zachowuje kontrakt Etapu 2. Aktualny Etap 3 zastępuje przypięte schematy jednym bieżącym formularzem i dodaje ręczny kreator oraz pełny eksport; zasady migracji i aktualne API: [LIVE-CHARACTER-SCHEMA.md](LIVE-CHARACTER-SCHEMA.md). Model statusów, historia decyzji i odrębny rejestr edycji pozostają.
+
 ## Model i zapis
 
 Migracja **3 — `characters_review_v1`** dodaje:

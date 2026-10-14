@@ -60,6 +60,7 @@ export interface Application {
   revision?: number;
   history?: CharacterDecision[];
   editHistory?: CharacterEdit[];
+  deletedAt?: string;
   migrated?: boolean;
   updatedAt: string;
   submittedAt?: string;

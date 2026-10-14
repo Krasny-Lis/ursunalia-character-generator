@@ -9,6 +9,7 @@ import { definitionIssues, answerIssues, cleanAnswers } from '../shared/validati
 import { migrateDatabase } from './migrations.mjs';
 import { eventOperations } from './events.mjs';
 import { characterOperations } from './characters.mjs';
+import { liveSchemaOperations } from './live-schemas.mjs';
 const derive = promisify(scrypt);
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -53,6 +54,8 @@ export async function createAppServer({
     );
   const characters = characterOperations(db, events);
   characters.ensureSeedMapping();
+  const schemas = liveSchemaOperations(db, events, characters);
+  schemas.initialize();
   if (adminEmail && adminPassword) {
     if (adminPassword.length < 12 || adminPassword.length > 128)
       throw new Error('ADMIN_PASSWORD musi mieć od 12 do 128 znaków.');
@@ -116,12 +119,14 @@ export async function createAppServer({
     cookie(res, token);
   }
   function forms() {
-    return db
+    const legacy = db
       .prepare(
         'SELECT f.definition FROM forms f WHERE f.revision=(SELECT MAX(g.revision) FROM forms g WHERE g.id=f.id) ORDER BY f.rowid',
       )
       .all()
       .map((r) => JSON.parse(r.definition));
+    const current = db.prepare('SELECT definition FROM character_schemas ORDER BY event_id').all().map(r => JSON.parse(r.definition));
+    return [...current, ...legacy.filter(f => !current.some(s => s.id === f.id))];
   }
   function application(row, organizer = false) {
     if (!row) return null;
@@ -229,6 +234,13 @@ export async function createAppServer({
       const characterForm = path.match(/^\/api\/events\/([^/]+)\/character-form$/);
       if (characterForm && req.method === 'PUT')
         return json(characters.configure(requireUser(req), characterForm[1], await readJson(req)));
+      const schemaPath = path.match(/^\/api\/events\/([^/]+)\/character-schema(?:\/(preview|export))?$/);
+      if (schemaPath) {
+        if (req.method === 'GET' && !schemaPath[2]) return json(schemas.get(session(req), schemaPath[1]));
+        if (req.method === 'GET' && schemaPath[2] === 'export') return json(schemas.export(requireUser(req), schemaPath[1]));
+        if (req.method === 'POST' && schemaPath[2] === 'preview') return json(schemas.preview(requireUser(req), schemaPath[1], await readJson(req)));
+        if (req.method === 'PUT' && !schemaPath[2]) return json(schemas.save(requireUser(req), schemaPath[1], await readJson(req)));
+      }
       if (path === '/api/characters' && req.method === 'POST')
         return json(characters.save(requireUser(req), await readJson(req)));
       const character = path.match(/^\/api\/characters\/([^/]+)$/);
@@ -326,15 +338,14 @@ export async function createAppServer({
         const errors = definitionIssues(body);
         if (errors.length) throw httpError(400, errors[0]);
         const published = events.withGrant(user, body.eventId, true, () => {
+          if (db.prepare('SELECT event_id FROM character_schemas WHERE form_id=?').get(body.id))
+            throw httpError(409, 'Formularz postaci korzysta z API żywego schematu i analizy skutków.');
           const previousForms = db.prepare('SELECT definition FROM forms WHERE id=?').all(body.id);
           if (previousForms.some(row => JSON.parse(row.definition).eventId !== body.eventId))
             throw httpError(409, 'Nie można przenieść ankiety do innego wydarzenia.');
           const last = db.prepare('SELECT MAX(revision) AS revision FROM forms WHERE id=?').get(body.id);
           const form = { ...body, status: 'published', revision: (last.revision ?? 0) + 1 };
           db.prepare('INSERT INTO forms VALUES(?,?,?)').run(form.id, form.revision, JSON.stringify(form));
-          // New characters use the new snapshot; existing characters retain their pinned schema in this stage.
-          db.prepare('UPDATE event_character_forms SET form_revision=? WHERE event_id=? AND form_id=?')
-            .run(form.revision, form.eventId, form.id);
           return form;
         });
         return json(published, 201);
