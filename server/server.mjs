@@ -6,6 +6,7 @@ import { readFileSync, statSync, createReadStream, mkdirSync } from 'node:fs';
 import { dirname, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { definitionIssues, answerIssues, cleanAnswers } from '../shared/validation.mjs';
+import { migrateDatabase } from './migrations.mjs';
 const derive = promisify(scrypt);
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -34,11 +35,13 @@ export async function createAppServer({
 } = {}) {
   if (dbPath !== ':memory:') mkdirSync(dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
- CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,name TEXT NOT NULL,email TEXT NOT NULL UNIQUE,password TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('participant','organizer')));
- CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS forms(id TEXT NOT NULL,revision INTEGER NOT NULL,definition TEXT NOT NULL,PRIMARY KEY(id,revision));
- CREATE TABLE IF NOT EXISTS applications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),form_id TEXT NOT NULL,form_revision INTEGER NOT NULL,answers TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN ('draft','submitted','accepted','changes')),updated_at TEXT NOT NULL,submitted_at TEXT,feedback TEXT NOT NULL DEFAULT '',UNIQUE(user_id,form_id),FOREIGN KEY(form_id,form_revision) REFERENCES forms(id,revision));`);
+  try {
+    migrateDatabase(db);
+    db.exec('PRAGMA journal_mode=WAL');
+  } catch (error) {
+    db.close();
+    throw error;
+  }
   for (const form of seed.forms)
     db.prepare('INSERT OR IGNORE INTO forms VALUES(?,?,?)').run(
       form.id,

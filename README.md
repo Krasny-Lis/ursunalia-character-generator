@@ -72,6 +72,8 @@ Nie wykonano wizualnej kontroli w przeglądarce. Responsywne układy przygotowan
 
 ## Dane i migracja
 
+Mechanizm migracji SQLite, preflight tylko do odczytu oraz procedura bezpiecznego backupu i odtwarzania: [docs/SQLITE-MIGRATIONS.md](docs/SQLITE-MIGRATIONS.md). Przed startem nowej wersji na istniejącej bazie wykonaj zweryfikowaną kopię i próbę odtworzenia. Serwer rozpoznaje schemat v27.2 i dodaje rejestr migracji bez przepisywania kont, sesji ani zgłoszeń; nieznana lub niespójna baza blokuje start.
+
 - `public/data/platform.json` — wydarzenie, startowe ankiety i fikcyjny przykład. Katalogi z poprzedniej wersji pozostają w `public/data/`.
 - `shared/validation.mjs` — wspólna walidacja przeglądarki i serwera.
 - `src/app/platform/` — nowy interfejs i logika stanu.
