@@ -7,6 +7,7 @@ import { dirname, resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { definitionIssues, answerIssues, cleanAnswers } from '../shared/validation.mjs';
 import { migrateDatabase } from './migrations.mjs';
+import { eventOperations } from './events.mjs';
 const derive = promisify(scrypt);
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,6 +43,7 @@ export async function createAppServer({
     db.close();
     throw error;
   }
+  const events = eventOperations(db);
   for (const form of seed.forms)
     db.prepare('INSERT OR IGNORE INTO forms VALUES(?,?,?)').run(
       form.id,
@@ -53,14 +55,15 @@ export async function createAppServer({
       throw new Error('ADMIN_PASSWORD musi mieć od 12 do 128 znaków.');
     const email = adminEmail.trim().toLowerCase();
     const existing = db.prepare('SELECT id FROM users WHERE email=?').get(email);
-    if (!existing)
-      db.prepare('INSERT INTO users VALUES(?,?,?,?,?)').run(
-        randomUUID(),
-        'Organizator',
-        email,
-        await passwordHash(adminPassword),
-        'organizer',
-      );
+    if (!existing) {
+      const id = randomUUID(), encoded = await passwordHash(adminPassword);
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        db.prepare('INSERT INTO users VALUES(?,?,?,?,?)').run(id, 'Organizator', email, encoded, 'organizer');
+        db.prepare('INSERT INTO event_grants VALUES(?,?,?)').run(seed.event.id, id, 'organizer');
+        db.exec('COMMIT');
+      } catch (error) { if (db.isTransaction) db.exec('ROLLBACK'); db.close(); throw error; }
+    }
   }
   const attempts = new Map();
   function limit(req) {
@@ -88,11 +91,9 @@ export async function createAppServer({
       )
       .get(hash(token), Date.now());
   }
-  function requireUser(req, organizer = false) {
+  function requireUser(req) {
     const user = session(req);
     if (!user) throw httpError(401, 'Zaloguj się, aby kontynuować.');
-    if (organizer && user.role !== 'organizer')
-      throw httpError(403, 'Dostęp tylko dla organizatorów.');
     return user;
   }
   function cookie(res, token, expire = false) {
@@ -137,6 +138,7 @@ export async function createAppServer({
       const user = db.prepare('SELECT name,email FROM users WHERE id=?').get(row.user_id);
       app.userName = user.name;
       app.userEmail = user.email;
+      app.userId = row.user_id;
     }
     return app;
   }
@@ -180,14 +182,18 @@ export async function createAppServer({
       res.end(JSON.stringify(value));
     };
     try {
-      const path = new URL(req.url, 'http://localhost').pathname;
+      const requestUrl = new URL(req.url, 'http://localhost');
+      const path = requestUrl.pathname;
       if (['POST', 'PATCH', 'DELETE', 'PUT'].includes(req.method) && req.headers.origin !== origin)
         throw httpError(403, 'Nieprawidłowe źródło żądania.');
       if (path === '/runtime-config.json' && req.method === 'GET') return json({ mode: 'server' });
       if (path === '/api/bootstrap' && req.method === 'GET') {
         const user = session(req);
         return json({
-          forms: forms(),
+          forms: forms().filter(form => events.visible(user, form.eventId)),
+          events: events.list(user),
+          memberships: events.memberships(user),
+          eventGrants: events.grants(user),
           user: publicUser(user),
           applications: user
             ? db
@@ -196,6 +202,27 @@ export async function createAppServer({
                 .map((r) => application(r))
             : [],
         });
+      }
+      if (path === '/api/events' && req.method === 'GET') return json(events.list(session(req)));
+      if (path === '/api/events' && req.method === 'POST') {
+        const body = await readJson(req);
+        return json(events.create(requireUser(req), body), 201);
+      }
+      const eventPath = path.match(/^\/api\/events\/([^/]+)$/);
+      if (eventPath && req.method === 'GET') return json(events.get(session(req), eventPath[1]));
+      if (eventPath && req.method === 'PATCH') {
+        const body = await readJson(req);
+        return json(events.update(requireUser(req), eventPath[1], body));
+      }
+      const join = path.match(/^\/api\/events\/([^/]+)\/join$/);
+      if (join && req.method === 'POST') {
+        const body = await readJson(req);
+        return json(events.join(requireUser(req), join[1], body));
+      }
+      const grant = path.match(/^\/api\/events\/([^/]+)\/grants\/([^/]+)$/);
+      if (grant && ['PUT', 'DELETE'].includes(req.method)) {
+        const body = await readJson(req);
+        return json(events.changeGrant(requireUser(req), grant[1], grant[2], body, req.method === 'DELETE'));
       }
       if (path === '/api/auth/register' && req.method === 'POST') {
         limit(req);
@@ -266,23 +293,22 @@ export async function createAppServer({
         return json({ ok: true });
       }
       if (path === '/api/forms' && req.method === 'POST') {
-        requireUser(req, true);
         const body = await readJson(req);
+        const user = requireUser(req);
         if (JSON.stringify(body).length > 400000)
           throw httpError(413, 'Definicja ankiety jest zbyt duża.');
         const errors = definitionIssues(body);
         if (errors.length) throw httpError(400, errors[0]);
-        if (body.eventId !== seed.event.id) throw httpError(400, 'Nieznane wydarzenie.');
-        const last = db
-          .prepare('SELECT MAX(revision) AS revision FROM forms WHERE id=?')
-          .get(body.id);
-        const form = { ...body, status: 'published', revision: (last.revision ?? 0) + 1 };
-        db.prepare('INSERT INTO forms VALUES(?,?,?)').run(
-          form.id,
-          form.revision,
-          JSON.stringify(form),
-        );
-        return json(form, 201);
+        const published = events.withGrant(user, body.eventId, true, () => {
+          const previousForms = db.prepare('SELECT definition FROM forms WHERE id=?').all(body.id);
+          if (previousForms.some(row => JSON.parse(row.definition).eventId !== body.eventId))
+            throw httpError(409, 'Nie można przenieść ankiety do innego wydarzenia.');
+          const last = db.prepare('SELECT MAX(revision) AS revision FROM forms WHERE id=?').get(body.id);
+          const form = { ...body, status: 'published', revision: (last.revision ?? 0) + 1 };
+          db.prepare('INSERT INTO forms VALUES(?,?,?)').run(form.id, form.revision, JSON.stringify(form));
+          return form;
+        });
+        return json(published, 201);
       }
       if (path === '/api/applications' && req.method === 'POST') {
         const user = requireUser(req);
@@ -313,6 +339,7 @@ export async function createAppServer({
           .get(body.form.id, body.form.revision);
         if (!definition) throw httpError(400, 'Nieznana wersja ankiety.');
         const form = JSON.parse(definition.definition);
+        events.requireMembership(user, form.eventId);
         const answers = cleanAnswers(form, body.answers);
         // Drafts may be incomplete; supplied values must still satisfy type/length/option limits.
         const draftForm = {
@@ -358,6 +385,7 @@ export async function createAppServer({
         if (!['draft', 'changes'].includes(row.status))
           throw httpError(409, 'Zgłoszenie zostało już wysłane.');
         const app = application(row);
+        events.requireMembership(requireUser(req), app.form.eventId);
         const issues = answerIssues(app.form, app.answers);
         if (Object.keys(issues).length)
           return json({ error: 'Uzupełnij wymagane pola.', issues }, 422);
@@ -367,18 +395,23 @@ export async function createAppServer({
         return json(application(db.prepare('SELECT * FROM applications WHERE id=?').get(row.id)));
       }
       if (path === '/api/organizer/applications' && req.method === 'GET') {
-        requireUser(req, true);
+        const user = requireUser(req);
+        const eventId = requestUrl.searchParams.get('eventId');
+        if (eventId !== null) events.requireGrant(user, eventId);
+        else if (!events.grants(user).length) throw httpError(403, 'Brak uprawnień do wydarzeń.');
         return json(
           db
-            .prepare("SELECT * FROM applications WHERE status!='draft' ORDER BY submitted_at DESC")
-            .all()
+            .prepare(`SELECT a.* FROM applications a JOIN forms f ON f.id=a.form_id AND f.revision=a.form_revision
+              JOIN event_grants g ON g.event_id=json_extract(f.definition,'$.eventId') AND g.user_id=?
+              WHERE g.role IN ('organizer','gm') AND a.status!='draft' AND (? IS NULL OR g.event_id=?) ORDER BY a.submitted_at DESC`)
+            .all(user.id, eventId, eventId)
             .map((r) => application(r, true)),
         );
       }
       const review = path.match(/^\/api\/organizer\/applications\/([^/]+)$/);
       if (review && req.method === 'PATCH') {
-        requireUser(req, true);
         const body = await readJson(req);
+        const user = requireUser(req);
         if (
           !['accepted', 'changes'].includes(body.status) ||
           typeof body.feedback !== 'string' ||
@@ -390,15 +423,12 @@ export async function createAppServer({
           .prepare("SELECT * FROM applications WHERE id=? AND status!='draft'")
           .get(review[1]);
         if (!row) throw httpError(404, 'Nie znaleziono wysłanego zgłoszenia.');
-        db.prepare('UPDATE applications SET status=?,feedback=?,updated_at=? WHERE id=?').run(
-          body.status,
-          body.feedback,
-          now(),
-          row.id,
-        );
-        return json(
-          application(db.prepare('SELECT * FROM applications WHERE id=?').get(row.id), true),
-        );
+        const updated = events.withGrant(user, application(row).form.eventId, false, () => {
+          db.prepare('UPDATE applications SET status=?,feedback=?,updated_at=? WHERE id=?')
+            .run(body.status, body.feedback, now(), row.id);
+          return application(db.prepare('SELECT * FROM applications WHERE id=?').get(row.id), true);
+        });
+        return json(updated);
       }
       if (path.startsWith('/api/')) throw httpError(404, 'Nie znaleziono zasobu.');
       if (req.method !== 'GET' && req.method !== 'HEAD')

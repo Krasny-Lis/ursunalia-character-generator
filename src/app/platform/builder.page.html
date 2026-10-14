@@ -1,7 +1,7 @@
 <a class="back-link" routerLink="/organizator/ankiety"
   ><u-icon name="back" />Ankiety organizatora</a
 >
-@if (!store.canOrganize()) {
+@if (!store.canManageForm(form().eventId)) {
   <section class="paper empty-state">
     <h1>Panel organizatora</h1>
     <p>Zaloguj się na konto organizatora, aby tworzyć ankiety.</p>

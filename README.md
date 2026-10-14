@@ -39,6 +39,8 @@ Otwórz **http://localhost:3000**. Serwer podaje aplikację Angular oraz API na 
 
 SQLite przechowuje użytkowników, sesje, wersje ankiet, szkice, zgłoszenia i decyzje organizatora. Domyślna baza: `var/ursunalia.sqlite`. Hasła są haszowane przez scrypt. Sesje używają ciasteczek HttpOnly / SameSite=Strict; w produkcji również Secure. Serwer weryfikuje właściciela zgłoszenia, rolę organizatora, źródło żądań i kompletność odpowiedzi.
 
+Wydarzenia, uczestnictwo i uprawnienia MG/organizatora są teraz trwałe i przypisane do konkretnego wydarzenia. Założenie konta nie zapisuje na wydarzenie; istniejąca akcja „Dołącz i wypełnij” wykonuje osobne dołączenie przed rozpoczęciem szkicu. Zamknięcie zapisów blokuje nowych uczestników, zachowując możliwość tworzenia i poprawiania zgłoszeń przez już zapisanych. API zarządzania wydarzeniami i grantami oraz zasady bezpiecznej migracji: [docs/EVENTS-AND-PERMISSIONS.md](docs/EVENTS-AND-PERMISSIONS.md).
+
 Przepływ: **szkic → wysłane → zaakceptowane / do poprawy → ponownie wysłane**. Jeden uczestnik może mieć jedno zgłoszenie na ankietę. Nowe wersje formularza nie zmieniają ankiet już rozpoczętych. Portret jest opcjonalny, JPG/PNG/WebP do 750 KB; całe żądanie może mieć maksymalnie 2 MB. Szkice na serwerze zapisuje przycisk „Zapisz szkic”. Przed opuszczeniem strony przeglądarka ostrzega o niezapisanych zmianach.
 
 ### Produkcja

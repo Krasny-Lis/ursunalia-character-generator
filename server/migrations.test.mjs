@@ -6,9 +6,14 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, copyFileS
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { MIGRATIONS, migrateDatabase, migrationChecksum, preflightDatabase, MigrationError } from './migrations.mjs';
+import { MIGRATIONS as ALL_MIGRATIONS, migrateDatabase as runMigrations, migrationChecksum, preflightDatabase as runPreflight, MigrationError } from './migrations.mjs';
 import { preflightFile } from './preflight.mjs';
 import { createAppServer } from './server.mjs';
+
+// Keep the version-1 contract tests independent from later data migrations.
+const MIGRATIONS = [ALL_MIGRATIONS[0]];
+const migrateDatabase = (db, options = {}) => runMigrations(db, { migrations: MIGRATIONS, ...options });
+const preflightDatabase = (db, options = {}) => runPreflight(db, { migrations: MIGRATIONS, ...options });
 
 const legacySql = readFileSync(new URL('./test-fixtures/v27.2-schema.sql', import.meta.url), 'utf8');
 const seed = JSON.parse(readFileSync(new URL('../public/data/platform.json', import.meta.url), 'utf8'));
@@ -353,7 +358,7 @@ test('SQLite backup includes committed WAL data and restores intact rows and ses
   const app = await createAppServer({ dbPath: restored });
   try {
     assert.deepEqual(snapshot(app.db), expected);
-    assert.deepEqual(migrateDatabase(app.db).appliedVersions, []);
+    assert.deepEqual(runMigrations(app.db).appliedVersions, []);
     await new Promise(r => app.server.listen(0, '127.0.0.1', r));
     const result = await fetch(`http://127.0.0.1:${app.server.address().port}/api/bootstrap`, {
       headers: { Cookie: `ursunalia_session=${fixtureToken}` },

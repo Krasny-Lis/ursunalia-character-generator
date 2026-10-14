@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import seedData from '../../../public/data/platform.json';
 import { PlatformStore } from './platform.store';
@@ -8,6 +9,7 @@ import { FormPage } from './form.page';
 import { SummaryPage } from './summary.page';
 import { BuilderPage } from './builder.page';
 import { FieldControl } from './field.control';
+import { EventPage } from './event.page';
 import { answerIssues } from '../../../shared/validation.mjs';
 const seed = seedData as Seed;
 let store: PlatformStore;
@@ -179,4 +181,95 @@ it('invalid published definitions are rejected before updating the participant l
   form.sections[0].fields[0].label = '';
   await expect(store.publish(form)).rejects.toThrow();
   expect(store.forms()[0].revision).toBe(1);
+});
+
+it('server event permissions control the existing builder independently from the global account role', async () => {
+  store.mode.set('server');
+  store.user.set({ id: 'fixture', name: 'Fixture', email: 'fixture@example.test', role: 'organizer' });
+  expect(store.canOrganize()).toBe(false);
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'gm' }]);
+  expect(store.canOrganize()).toBe(true);
+  const fixture = TestBed.createComponent(BuilderPage);
+  await fixture.whenStable();
+  expect(fixture.nativeElement.querySelector('.builder-heading')).toBeNull();
+  store.eventGrants.set([{ eventId: 'other-event', role: 'organizer' }]);
+  await fixture.whenStable();
+  expect(fixture.nativeElement.querySelector('.builder-heading')).toBeNull();
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'organizer' }]);
+  await fixture.whenStable();
+  expect(fixture.nativeElement.querySelector('.builder-heading')).not.toBeNull();
+});
+
+it('the existing start action explicitly joins before creating an unsaved draft', async () => {
+  store.mode.set('server');
+  store.user.set({ id: 'fixture', name: 'Fixture', email: 'fixture@example.test', role: 'participant' });
+  store.applications.set([]);
+  store.events.set([{ ...seed.event, published: true, registrationsOpen: true }]);
+  const membership = { eventId: seed.event.id, status: 'joined', joinedAt: '2026-10-14T00:00:00.000Z', source: 'explicit' };
+  const fetchMock = vi.fn().mockImplementation(async () => {
+    expect(store.applications()).toHaveLength(0);
+    return { ok: true, json: async () => membership };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+  const fixture = TestBed.createComponent(EventPage);
+  await fixture.whenStable();
+  expect(fixture.nativeElement.querySelector('.survey-card button').textContent).toContain('Dołącz i wypełnij');
+  await fixture.componentInstance.start(seed.forms[0]);
+  expect(fetchMock.mock.calls[0][0].pathname).toBe(`/api/events/${seed.event.id}/join`);
+  expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+  expect(store.memberships()).toEqual([membership]);
+  expect(store.active()?.answers).toEqual({});
+  expect(navigate).toHaveBeenCalledWith(['/zgloszenie-postaci'], { queryParams: { id: store.activeId() } });
+});
+
+it('closed registrations leave no new draft and preserve a useful error on the current event page', async () => {
+  store.mode.set('server');
+  store.user.set({ id: 'fixture', name: 'Fixture', email: 'fixture@example.test', role: 'participant' });
+  store.applications.set([]);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ error: 'Zapisy na wydarzenie są zamknięte.' }) }));
+  const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+  const fixture = TestBed.createComponent(EventPage);
+  await fixture.componentInstance.start(seed.forms[0]);
+  expect(store.applications()).toHaveLength(0);
+  expect(store.memberships()).toHaveLength(0);
+  expect(store.notice()).toContain('zamknięte');
+  expect(store.busy()).toBe(false);
+  expect(navigate).not.toHaveBeenCalled();
+});
+
+it('logout clears private event data and permissions even when the anonymous refresh fails', async () => {
+  store.mode.set('server');
+  store.eventGrants.set([{ eventId: seed.event.id, role: 'organizer' }]);
+  store.events.set([{ ...seed.event, name: 'Private event data' }]);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) }).mockRejectedValueOnce(new Error('Offline')));
+  await expect(store.logout()).rejects.toThrow('Offline');
+  expect(store.user()).toBeNull();
+  expect(store.eventGrants()).toHaveLength(0);
+  expect(store.events()).toHaveLength(0);
+  expect(store.forms()).toHaveLength(0);
+});
+
+it('event routes show only the chosen persistent event and join it through the existing action', async () => {
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({ providers: [provideRouter([{ path: 'wydarzenie/:id', component: EventPage }])] });
+  store = TestBed.inject(PlatformStore);
+  await store.initialize();
+  store.mode.set('server');
+  store.user.set({ id: 'fixture', name: 'Fixture', email: 'fixture@example.test', role: 'participant' });
+  store.events.set([seed.event, { ...seed.event, id: 'beta', name: 'Beta event', subtitle: 'Beta subtitle' }]);
+  store.forms.set([...seed.forms, { ...seed.forms[0], id: 'beta-form', eventId: 'beta', title: 'Beta form' }]);
+  store.applications.set([]);
+  const harness = await RouterTestingHarness.create('/wydarzenie/beta');
+  harness.detectChanges();
+  expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Beta event');
+  expect(harness.routeNativeElement?.querySelectorAll('.survey-card')).toHaveLength(1);
+  expect(harness.routeNativeElement?.querySelector('.survey-card h3')?.textContent).toContain('Beta form');
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ eventId: 'beta', status: 'joined', joinedAt: '2026-10-14T00:00:00.000Z' }) });
+  vi.stubGlobal('fetch', fetchMock);
+  vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+  const page = harness.routeDebugElement!.componentInstance as EventPage;
+  await page.start(page.forms()[0]);
+  expect(fetchMock.mock.calls[0][0].pathname).toBe('/api/events/beta/join');
+  expect(store.active()?.form.eventId).toBe('beta');
 });
