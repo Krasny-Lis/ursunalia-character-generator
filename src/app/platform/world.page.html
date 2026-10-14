@@ -1,0 +1,87 @@
+<header class="world-intro">
+  <span class="world-eyebrow">KRONIKI KISLEVA · URSUNALIA 2027</span>
+  <h1>Świat gry</h1>
+  <p>Zajrzyj do kronik północnego Kisleva, poznaj zwyczaje jego mieszkańców i dowiedz się, czego możesz spodziewać się na Ziemiach Braci.</p>
+</header>
+
+<section class="paper world-library" aria-labelledby="library-title">
+  <div class="world-library__top">
+    <div>
+      <span class="eyebrow">BIBLIOTEKA MATERIAŁÓW</span>
+      <h2 id="library-title">Artykuły i przewodniki</h2>
+      <p>Wybierz dziedzinę albo wyszukaj konkretny temat.</p>
+    </div>
+    <div class="world-search">
+      <label for="world-search">Szukaj materiałów</label>
+      <div>
+        <u-icon name="search" />
+        <input id="world-search" type="search" [value]="query()" autocomplete="off"
+          placeholder="Wpisz tytuł lub słowo…" (input)="query.set($any($event.target).value)" />
+      </div>
+    </div>
+  </div>
+
+  @if (preview.enabled) {
+    <div class="world-demo-info" role="note">
+      <u-icon name="info" />
+      <span>Podgląd deweloperski: poniższe materiały są przykładami układu strony,
+        <strong>nie są opublikowanymi artykułami Ursunaliów</strong>.
+        Przełącz rolę na Organizatora, aby zobaczyć demonstrację materiału redakcyjnego.</span>
+    </div>
+  }
+
+  <div class="world-categories" role="group" aria-label="Filtr kategorii materiałów">
+    <button type="button" [attr.aria-pressed]="selectedCategory() === 'all'"
+      [class.active]="selectedCategory() === 'all'"
+      (click)="selectCategory('all')">Wszystkie</button>
+    @for (category of categories; track category.id) {
+      <button type="button" [class.active]="selectedCategory() === category.id"
+        [attr.aria-pressed]="selectedCategory() === category.id"
+        (click)="selectCategory(category.id)">{{ category.title }}</button>
+    }
+  </div>
+
+  @if (availableArticles().length) {
+    <p class="world-count">Znaleziono materiałów: {{ filteredArticles().length }}</p>
+    <div class="world-articles">
+      @for (article of filteredArticles(); track article.slug) {
+        <article class="world-article">
+          <div class="world-article__body">
+            <span class="world-article__category">{{ categoryName(article.category) }}</span>
+            @if (article.visibility === 'organizer') {
+              <span class="world-article__internal"><u-icon name="shield" /> Organizator · próbka</span>
+            }
+            <h3><a [routerLink]="['/swiat-gry', article.slug]">{{ article.title }}</a></h3>
+            <p>{{ article.summary }}</p>
+          </div>
+          <a [routerLink]="['/swiat-gry', article.slug]"
+            class="world-article__read" [attr.aria-label]="'Czytaj: ' + article.title">
+            Czytaj artykuł <u-icon name="next" />
+          </a>
+        </article>
+      } @empty {
+        <div class="world-empty" role="status">
+          <u-icon name="search" />
+          <h3>Nie znaleziono materiałów</h3>
+          <p>Zmień wpisaną frazę lub kategorię.</p>
+          <button class="button light" type="button" (click)="clearFilters()">Wyczyść filtry</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="world-empty" role="status">
+      <u-icon name="book" />
+      <h3>Biblioteka jest w przygotowaniu</h3>
+      <p>Artykuły pojawią się po ich opracowaniu i opublikowaniu przez organizatorów.</p>
+      <a class="button light" routerLink="/aktualnosci">Zobacz aktualności</a>
+    </div>
+  }
+</section>
+
+<section class="world-more" aria-label="Inne materiały">
+  <div>
+    <h2>Potrzebujesz informacji o udziale?</h2>
+    <p>Zasady gry, wskazówki dotyczące stroju i przygotowania postaci znajdziesz w poradniku dla uczestników.</p>
+  </div>
+  <a routerLink="/dla-gracza" class="button outline">Przejdź do „Dla gracza” <u-icon name="next" /></a>
+</section>

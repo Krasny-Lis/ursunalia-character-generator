@@ -1,0 +1,55 @@
+<a class="world-reader-back" routerLink="/swiat-gry"><u-icon name="back" /> Wróć do biblioteki świata</a>
+
+@if (article(); as item) {
+  <div class="world-reader-header">
+    <span class="world-reader-eyebrow">{{ category() }} · Materiał demonstracyjny</span>
+    <h1>{{ item.title }}</h1>
+    <p>{{ item.summary }}</p>
+  </div>
+
+  <div class="world-reader-layout">
+    <article class="paper world-reader-article">
+      <div class="world-reader-banner" role="note">
+        <u-icon name="info" />
+        <span>Przykładowy tekst do przeglądu projektu czytnika. Nie jest oficjalnie opublikowanym artykułem.</span>
+      </div>
+      @if (item.visibility === 'organizer') {
+        <p class="world-reader-visibility"><u-icon name="shield" /> Widoczność demonstracyjna: Organizator</p>
+      }
+      @for (section of item.sections; track section.id) {
+        <section [id]="section.id" class="world-reader-section" [attr.aria-labelledby]="section.id + '-heading'">
+          <h2 [id]="section.id + '-heading'">{{ section.title }}</h2>
+          @for (paragraph of section.paragraphs; track $index) {
+            <p>{{ paragraph }}</p>
+          }
+        </section>
+      }
+      <div class="world-reader-end">
+        <a routerLink="/swiat-gry" class="button light"><u-icon name="back" /> Wróć do wszystkich artykułów</a>
+      </div>
+    </article>
+    <aside class="world-reader-sidebar">
+      <nav class="paper world-reader-toc" aria-label="Spis treści artykułu">
+        <span class="eyebrow">NA TEJ STRONIE</span>
+        <h2>Spis treści</h2>
+        <ol>
+          @for (section of item.sections; track section.id) {
+            <li><a [routerLink]="['/swiat-gry', item.slug]" [fragment]="section.id">{{ section.title }}</a></li>
+          }
+        </ol>
+      </nav>
+      <div class="world-reader-related">
+        <span>Więcej o świecie</span>
+        <a routerLink="/swiat-gry">Przeglądaj bibliotekę <u-icon name="next" /></a>
+      </div>
+    </aside>
+  </div>
+} @else {
+  <section class="paper world-reader-unavailable" role="status">
+    <u-icon name="book" />
+    <h1>Materiał niedostępny</h1>
+    <p>Artykuł może nie istnieć, nie być opublikowany lub wymagać uprawnień.
+      Publikowanie treści i zabezpieczenie dostępu zostaną wdrożone razem z CMS.</p>
+    <a class="button light" routerLink="/swiat-gry">Wróć do biblioteki</a>
+  </section>
+}

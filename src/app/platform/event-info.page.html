@@ -1,0 +1,114 @@
+<div class="event-info-heading">
+  <a routerLink="/" class="event-info-back"><u-icon name="back" /> Strona główna</a>
+  <span class="event-info-eyebrow">URSUNALIA 2027 · INFORMACJE ORGANIZACYJNE</span>
+  <h1>O wydarzeniu</h1>
+  <p>Północny Kislev budzi się z zimowego snu. Poznaj święto, sprawdź najważniejsze informacje i przygotuj się do udziału w opowieści.</p>
+</div>
+
+<section class="paper event-info-intro" aria-labelledby="intro-title">
+  <div>
+    <span class="eyebrow">NOWE POCZĄTKI, STARE DŁUGI</span>
+    <h2 id="intro-title">Budzenie Niedźwiedzi na Ziemiach Braci</h2>
+    <p>Do stanicy Krywulka przybywają żołnierze, kupcy, pielgrzymi i mieszkańcy okolicznych osad. Święto Budzenia Niedźwiedzi łączy ludzi o różnych obyczajach, interesach i zobowiązaniach.</p>
+    <p>Na północy pamięć dawnych konfliktów jest wciąż żywa. Ursunalia to fabularna opowieść osadzona w Kislevie ze świata Warhammer Fantasy. Jej dalszy przebieg współtworzą uczestnicy.</p>
+    <a routerLink="/swiat-gry" class="event-info-link">Poznaj świat gry <u-icon name="next" /></a>
+  </div>
+  <div class="event-info-seal" aria-hidden="true">
+    <span>✦</span>
+    <small>URSUNALIA · 2027</small>
+  </div>
+</section>
+
+<section aria-labelledby="event-info-essential">
+  <div class="event-info-section-heading">
+    <span class="event-info-eyebrow">W JEDNYM MIEJSCU</span>
+    <h2 id="event-info-essential">Najważniejsze informacje</h2>
+  </div>
+  <div class="event-info-facts">
+    <div class="paper">
+      <u-icon name="calendar" />
+      <span>Termin wydarzenia</span>
+      <strong>{{ date() }}</strong>
+    </div>
+    <div class="paper">
+      <u-icon name="pin" />
+      <span>Miejsce wydarzenia</span>
+      <strong>Do ogłoszenia</strong>
+      <small>Krywulka to lokalizacja fabularna, nie adres terenu gry</small>
+    </div>
+    <div class="paper">
+      <u-icon name="people" />
+      <span>Zgłoszenia postaci</span>
+      <strong>{{ registrationStatus() }}</strong>
+    </div>
+    <div class="paper">
+      <u-icon name="file" />
+      <span>Składka uczestnika</span>
+      <strong>Do ogłoszenia</strong>
+      <small>Kwota, termin i dane do przelewu</small>
+    </div>
+  </div>
+</section>
+
+<section class="event-info-two-col" aria-label="Dojazd i przebieg wydarzenia">
+  <div>
+    <div class="event-info-section-heading">
+      <span class="event-info-eyebrow">INFORMACJE PRAKTYCZNE</span>
+      <h2>Gdzie i jak dojechać?</h2>
+    </div>
+    <div class="paper event-info-panel">
+      <p>Dokładny adres miejsca wydarzenia nie został jeszcze ogłoszony. Gdy tylko będzie dostępny, umieścimy tutaj informacje o dojeździe oraz mapę Google.</p>
+      <div class="event-info-map-placeholder" role="note">
+        <u-icon name="pin" />
+        <strong>Mapa dojazdu</strong>
+        <span>Oczekujemy na potwierdzenie lokalizacji terenu.</span>
+      </div>
+      <a routerLink="/aktualnosci" class="event-info-link">Sprawdzaj ogłoszenia <u-icon name="next" /></a>
+    </div>
+  </div>
+  <div>
+    <div class="event-info-section-heading">
+      <span class="event-info-eyebrow">22–24 KWIETNIA 2027</span>
+      <h2>Program ramowy</h2>
+    </div>
+    <div class="paper event-info-panel">
+      <p>Godziny przyjazdu, rozpoczęcia gry i jej zakończenia oraz pozostałe punkty programu zostaną podane po ich zatwierdzeniu przez organizatorów.</p>
+      <div class="event-info-program-note">
+        <u-icon name="calendar" />
+        <div>
+          <strong>Harmonogram w przygotowaniu</strong>
+          <span>Nie podajemy orientacyjnych godzin, które mogłyby wprowadzać w błąd.</span>
+        </div>
+      </div>
+      <a routerLink="/aktualnosci" class="event-info-link">Zobacz aktualności <u-icon name="next" /></a>
+    </div>
+  </div>
+</section>
+
+<section class="event-info-faq" aria-labelledby="faq-heading">
+  <div class="event-info-section-heading">
+    <span class="event-info-eyebrow">POMOC DLA UCZESTNIKÓW</span>
+    <h2 id="faq-heading">Najczęstsze pytania</h2>
+  </div>
+  <div class="paper event-info-faq-list">
+    @for (item of faq; track item.question) {
+      <details>
+        <summary>{{ item.question }} <u-icon name="chevron" /></summary>
+        <p>{{ item.answer }}</p>
+      </details>
+    }
+  </div>
+  <p class="event-info-muted">Opis zgłoszenia, składki i karty przedstawia docelowy proces Ursunaliów. Jego kolejne części są jeszcze wdrażane w serwisie.</p>
+</section>
+
+<section class="paper event-info-contact" aria-labelledby="contact-heading">
+  <div>
+    <span class="eyebrow">ORGANIZATORZY I KONTAKT</span>
+    <h2 id="contact-heading">Masz pytania dotyczące wydarzenia?</h2>
+    <p>Dane kontaktowe organizatorów zostaną uzupełnione w tym miejscu. Do czasu ich ogłoszenia możesz śledzić bieżące komunikaty w aktualnościach.</p>
+  </div>
+  <div class="event-info-contact-actions">
+    <a routerLink="/aktualnosci" class="button primary">Aktualności <u-icon name="next" /></a>
+    <a routerLink="/dla-gracza" class="button light">Poradnik uczestnika</a>
+  </div>
+</section>
