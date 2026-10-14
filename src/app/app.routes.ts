@@ -4,10 +4,12 @@ const planned = () => import('./platform/preview-public.page').then(m => m.Previ
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./platform/home.page').then(m => m.HomePage) },
-  { path: 'o-wydarzeniu', loadComponent: planned,
-    data: { title: 'O wydarzeniu', description: 'Termin, program, dojazd, najważniejsze informacje i kontakt do organizatorów.' } },
-  { path: 'swiat-gry', loadComponent: planned,
-    data: { title: 'Świat gry', description: 'Kompendium Kisleva, Ziem Braci i materiałów fabularnych.' } },
+  { path: 'o-wydarzeniu',
+    loadComponent: () => import('./platform/event-info.page').then(m => m.EventInfoPage) },
+  { path: 'swiat-gry',
+    loadComponent: () => import('./platform/world.page').then(m => m.WorldPage) },
+  { path: 'swiat-gry/:slug',
+    loadComponent: () => import('./platform/world-article.page').then(m => m.WorldArticlePage) },
   { path: 'dla-gracza', loadComponent: planned,
     data: { title: 'Dla gracza', description: 'Poradniki, zasady i informacje potrzebne do przygotowania się do LARPa.' } },
   { path: 'aktualnosci', loadComponent: planned,
