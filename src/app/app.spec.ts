@@ -3,9 +3,11 @@ import { provideRouter } from '@angular/router';
 import { describe, it, expect, vi } from 'vitest';
 import { App } from './app';
 import { PlatformStore } from './platform/platform.store';
+import { UiPreviewStore } from './platform/ui-preview.store';
 import { routes } from './app.routes';
-describe('Royal Manuscript application shell', () => {
-  it('keeps the brand, mobile navigation and loading state accessible before bootstrap', async () => {
+
+describe('Ursunalia UI shell', () => {
+  it('shows the approved public navigation, without survey search, bell and archives', async () => {
     TestBed.configureTestingModule({ imports: [App], providers: [provideRouter(routes)] });
     const store = TestBed.inject(PlatformStore);
     vi.spyOn(store, 'initialize').mockResolvedValue();
@@ -13,6 +15,11 @@ describe('Royal Manuscript application shell', () => {
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.platform-brand')?.textContent).toContain('URSUNALIA');
+    const links = Array.from(root.querySelectorAll('nav[aria-label="Menu główne"] a'))
+      .map(link => link.textContent?.trim());
+    expect(links).toEqual(['Start', 'O wydarzeniu', 'Świat gry', 'Dla gracza', 'Aktualności']);
+    expect(root.querySelector('[aria-label="Szukaj ankiet"]')).toBeNull();
+    expect(root.querySelector('a[href="/powiadomienia"]')).toBeNull();
     const toggle = root.querySelector('.menu-toggle') as HTMLButtonElement;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     toggle.click();
@@ -23,18 +30,43 @@ describe('Royal Manuscript application shell', () => {
     await fixture.whenStable();
     expect(root.querySelector('router-outlet')).not.toBeNull();
   });
+
+  it('switches only UI role while leaving actual permissions unchanged', async () => {
+    TestBed.configureTestingModule({ imports: [App], providers: [provideRouter(routes)] });
+    const store = TestBed.inject(PlatformStore);
+    const preview = TestBed.inject(UiPreviewStore);
+    vi.spyOn(store, 'initialize').mockResolvedValue();
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(store.canAdminEvents()).toBe(false);
+    preview.setRole('gm');
+    await fixture.whenStable();
+    expect(root.querySelector('nav')?.textContent).toContain('Panel MG');
+    expect(store.canAdminEvents()).toBe(false);
+    preview.setRole('organizer');
+    await fixture.whenStable();
+    expect(root.querySelector('nav')?.textContent).toContain('Panel organizatora');
+    expect(store.canAdminEvents()).toBe(false);
+  });
 });
 
-it('the surveys link follows the selected visible event and opens its form section, without a hard-coded Ursunalia target', async () => {
-  TestBed.configureTestingModule({ imports:[App],providers:[provideRouter(routes)] });
-  const store=TestBed.inject(PlatformStore);vi.spyOn(store,'initialize').mockResolvedValue();
-  const event={id:'beta',name:'Noc latarni',subtitle:'',date:'17.05.2028',location:'Gdańsk',locationNote:'',description:'Własny opis',status:'Zapisy otwarte'};
-  store.mode.set('server');store.events.set([event]);
-  const fixture=TestBed.createComponent(App);await fixture.whenStable();
-  const surveys=()=>Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a')).find(a=>a.textContent?.trim()==='Ankiety')!;
-  expect(surveys().getAttribute('href')).toBe('/wydarzenie/beta#ankiety');
-  store.events.set([event,{...event,id:'gamma',name:'Drugi świat'}]);store.selectEvent('gamma');await fixture.whenStable();
-  expect(surveys().getAttribute('href')).toBe('/wydarzenie/gamma#ankiety');
-  store.events.set([event]);await fixture.whenStable();expect(surveys().getAttribute('href')).toBe('/wydarzenie/beta#ankiety');
-  store.events.set([]);await fixture.whenStable();expect(surveys().getAttribute('href')).toBe('/#ankiety');
+describe('UI preview gate', () => {
+  it('requires approval, payment and a ready/review document with a link', () => {
+    const preview = TestBed.inject(UiPreviewStore);
+    preview.setRole('player');
+    preview.setCharacter('accepted');
+    preview.setPayment('paid');
+    preview.setCard('ready');
+    expect(preview.canViewCard()).toBe(false);
+    preview.hasCardLink.set(true);
+    expect(preview.canViewCard()).toBe(true);
+    preview.setPayment('unpaid');
+    expect(preview.canViewCard()).toBe(false);
+    preview.setPayment('paid');
+    preview.setCard('preparing');
+    expect(preview.canViewCard()).toBe(false);
+    preview.setCard('review');
+    expect(preview.canViewCard()).toBe(true);
+  });
 });
