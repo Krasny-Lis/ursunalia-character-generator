@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Unit tests
+        run: npm test -- --watch=false
+
       - name: Build Angular application
         run: npm run build -- --configuration production --base-href /ursunalia-character-generator/
 
