@@ -45,7 +45,10 @@ export class OrganizerHubPage {
   readonly cmsSummary = signal('');
   readonly cmsBody = signal('');
 
-  readonly canAccess = computed(() => this.store.canAdminEvents() ||
+  readonly isUrsunaliaOrganizer = computed(() =>
+    this.store.user()?.role === 'organizer' ||
+    this.store.eventGrants().some(g => g.eventId === 'ursunalia-2027' && g.role === 'organizer'));
+  readonly canAccess = computed(() => this.isUrsunaliaOrganizer() ||
     (this.store.mode() === 'demo' && this.preview.enabled && this.preview.role() === 'organizer'));
   readonly demo = computed(() => this.store.mode() === 'demo' && this.preview.enabled);
   readonly listed = computed(() => {
@@ -62,7 +65,7 @@ export class OrganizerHubPage {
   constructor() {
     effect(() => {
       if (this.store.ready() && this.store.mode() === 'server' &&
-          this.store.canAdminEvents() && !this.loaded()) void this.refresh();
+          this.isUrsunaliaOrganizer() && !this.loaded()) void this.refresh();
     });
   }
 
@@ -74,13 +77,13 @@ export class OrganizerHubPage {
   select(tab: AdminTab) { this.tab.set(tab); }
 
   async refresh() {
-    if (!this.store.canAdminEvents() || this.store.mode() !== 'server' || this.loading()) return;
+    if (!this.isUrsunaliaOrganizer() || this.store.mode() !== 'server' || this.loading()) return;
     this.loading.set(true);
     this.loaded.set(true);
     this.error.set('');
     try {
       const data = await this.store.request<EventAdministration>('api/events/ursunalia-2027/administration');
-      if (!this.store.canAdminEvents()) return;
+      if (!this.isUrsunaliaOrganizer()) return;
       this.participants.set(data);
     } catch (e) {
       this.error.set(this.store.message(e));
