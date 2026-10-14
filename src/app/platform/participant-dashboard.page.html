@@ -53,12 +53,14 @@
         <span class="participant-step__label">Składka</span>
         <strong>{{ state.payment().title }}</strong>
         <p>{{ state.payment().detail }}</p>
+        <a routerLink="/skladka">Zobacz składkę <u-icon name="next"/></a>
       </li>
       <li class="paper participant-step" [class.participant-step--complete]="state.simulated() && state.preview.canViewCard()">
         <span class="participant-step__number">04</span>
         <span class="participant-step__label">Karta</span>
         <strong>{{ state.card().title }}</strong>
         <p>{{ state.card().detail }}</p>
+        <a routerLink="/dokument-postaci">Karta postaci <u-icon name="next"/></a>
       </li>
     </ol>
   </section>

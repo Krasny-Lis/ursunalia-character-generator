@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { PlatformStore, downloadJson } from './platform.store';
 import { Application, Answers, Field, statusLabel } from './models';
@@ -12,22 +12,14 @@ import { CharacterHistory } from './character-history';
   imports: [RouterLink, FormsModule, Icon, DatePipe, FieldControl, CharacterHistory],
   styles: [`.bulk-review .button { white-space: normal; max-width: 100%; }`],
   template: `
-    <a class="back-link" routerLink="/"><u-icon name="back" />Wydarzenie</a>
+    <a class="back-link" routerLink="/organizator"><u-icon name="back" />Panel organizatora</a>
     <section class="page-heading">
       <div>
-        <span class="eyebrow">PANEL ORGANIZATORA</span>
-        <h1>Ankiety organizatora</h1>
-        <p>Twórz formularze i przeglądaj zgłoszenia uczestników.</p>
+        <span class="eyebrow">PANEL MG · URSUNALIA 2027</span>
+        <h1>Panel Mistrza Gry</h1>
+        <p>Weryfikuj wysłane postacie, przeglądaj odpowiedzi i podejmuj decyzje.</p>
       </div>
-      @if (store.canAdminEvents() && store.mode() === 'server') { <a class="button outline" routerLink="/organizator/wydarzenia">Administracja wydarzeń</a> }
-      @if (store.canManageForm(store.seed()!.event.id)) {
-        <a
-          class="button primary"
-          routerLink="/organizator/ankiety/edytor"
-          [queryParams]="{ id: 'new', eventId: store.seed()!.event.id }"
-          ><u-icon name="edit" />Formularz postaci</a
-        >
-      }
+      @if (store.canAdminEvents() && store.mode() === 'server') { <a class="button outline" routerLink="/organizator">Panel organizatora</a> }
     </section>
     @if (!store.canOrganize()) {
       <section class="paper empty-state">
@@ -36,41 +28,14 @@ import { CharacterHistory } from './character-history';
         <a class="button primary" routerLink="/konto">Logowanie</a>
       </section>
     } @else {
-      <div class="survey-cards">
-        @for (form of store.forms(); track form.id) {
-          <article class="paper survey-card">
-            <span class="eyebrow">OPUBLIKOWANA · WERSJA {{ form.revision }}</span>
-            <h2>{{ form.title }}</h2>
-            <p>{{ form.sections.length }} sekcji · {{ count(form) }} pytań</p>
-            @if (store.canManageForm(form.eventId) && store.isCharacter(form)) {
-            <div class="actions">
-              <a
-                class="button light"
-                routerLink="/organizator/ankiety/edytor"
-                [queryParams]="{ id: form.id }"
-                ><u-icon name="edit" />Edytuj formularz</a
-              >
-            </div>
-            }
-          </article>
-        }
-      </div>
       <section class="section-title">
         <div>
-          <span class="eyebrow">ODPOWIEDZI UCZESTNIKÓW</span>
+          <span class="eyebrow">ZGŁOSZENIA POSTACI</span>
           <h2>Postacie</h2>
         </div>
         <div class="actions review-filters">
           <label class="filter-label">Szukaj
             <input type="search" [(ngModel)]="userQuery" placeholder="Gracz lub postać…" />
-          </label>
-          <label class="filter-label">Rodzaj ankiety
-            <select [(ngModel)]="formFilter">
-              <option value="all">Wszystkie ankiety</option>
-              @for (form of store.forms(); track form.id) {
-                <option [value]="form.id">{{ form.title }}</option>
-              }
-            </select>
           </label>
           <label class="filter-label">Status
             <select [(ngModel)]="filter">
@@ -108,12 +73,13 @@ import { CharacterHistory } from './character-history';
               [class.selected]="selected()?.id === app.id"
               (click)="select(app)"
             >
-              <span class="review-user">Użytkownik: <strong>{{ app.userName || app.userEmail }}</strong></span>
-              <span class="review-form">Ankieta: <strong>{{ app.form.title }}</strong></span>
+              <span class="review-user">Gracz: <strong>{{ app.userName || 'Uczestnik' }}</strong></span>
+              <span class="review-form">Zgłoszenie: <strong>{{ app.form.title }}</strong></span>
               <h3>{{ app.answers['name'] || 'Zgłoszenie' }} {{ app.answers['surname'] }}</h3>
               <span class="review-meta"><small>{{ app.submittedAt | date: 'dd.MM.yyyy, HH:mm' }}</small>
                 <strong class="review-status" [attr.data-status]="app.status">{{ status(app.status) }}</strong></span>
             </button>
+            <a class="review-open-separate" [routerLink]="['/mg']" [queryParams]="{postac: app.id}" target="_blank" rel="noopener noreferrer">Otwórz szczegóły w nowej karcie</a>
             </div>
           } @empty {
             <section class="paper empty-state">
@@ -136,7 +102,7 @@ import { CharacterHistory } from './character-history';
                 <u-icon name="close" />
               </button>
             </div>
-            <p>{{ app.userEmail }}</p>
+            @if (isOrganizerView()) { <p>{{ app.userEmail }}</p> }
             @if (app.locked) { <p class="info-strip">Karta zablokowana dla gracza</p> }
             @for (section of app.form.sections; track section.id) {
               <h3>{{ section.title }}</h3>
@@ -198,6 +164,7 @@ import { CharacterHistory } from './character-history';
 })
 export class OrganizerPage {
   readonly store = inject(PlatformStore);
+  private readonly route = inject(ActivatedRoute);
   readonly applications = signal<Application[]>([]);
   readonly selected = signal<Application | null>(null);
   readonly busy = signal(false);
@@ -213,15 +180,20 @@ export class OrganizerPage {
   constructor() {
     void this.refresh();
   }
+  isOrganizerView() {
+    return this.store.user()?.role === 'organizer' || this.store.eventGrants().some(g =>
+      g.eventId === 'ursunalia-2027' && g.role === 'organizer');
+  }
   count(form: any) {
     return form.sections.reduce((n: number, s: any) => n + s.fields.length, 0);
   }
   filtered() {
     const query = this.userQuery.trim().toLocaleLowerCase('pl');
     return this.applications().filter((a) =>
+      a.kind !== 'survey' && a.status !== 'draft' &&
       (this.filter === 'all' || a.status === this.filter) &&
       (this.formFilter === 'all' || a.form.id === this.formFilter) &&
-      (!query || [a.userName, a.userEmail, a.answers['name'], a.answers['surname'], a.form.title]
+      (!query || [a.userName, ...(this.store.canAdminEvents() ? [a.userEmail] : []), a.answers['name'], a.answers['surname'], a.form.title]
         .some(v => String(v ?? '').toLocaleLowerCase('pl').includes(query)))
     );
   }
@@ -284,7 +256,9 @@ export class OrganizerPage {
       this.bulkFeedback = '';
       this.selected.set(null);
       this.cancelEdit();
-      if (id) { const current = all.find(a => a.id === id); if (current) { this.selected.set(current); this.feedback = current.feedback ?? ''; } }
+      const targetId = this.route.snapshot.queryParamMap.get('postac') ?? id;
+      if (targetId) { const current = all.find(a => a.id === targetId && a.status !== 'draft' && a.kind !== 'survey');
+        if (current) { this.selected.set(current); this.feedback = current.feedback ?? ''; } }
       this.error.set('');
     } catch (e) {
       this.error.set(this.store.message(e));

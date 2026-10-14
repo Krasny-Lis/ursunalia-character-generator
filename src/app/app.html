@@ -15,9 +15,9 @@
         <a routerLink="/moj-panel" routerLinkActive="active" (click)="menu.set(false)">Mój panel</a>
         <a routerLink="/moja-postac" routerLinkActive="active" (click)="menu.set(false)">Moja postać</a>
       } @else if (shellRole() === 'gm') {
-        <a routerLink="/organizator/ankiety" routerLinkActive="active" (click)="menu.set(false)">Panel MG</a>
+        <a routerLink="/mg" routerLinkActive="active" (click)="menu.set(false)">Panel MG</a>
       } @else if (shellRole() === 'organizer') {
-        <a routerLink="/organizator/wydarzenia" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
+        <a routerLink="/organizator" routerLinkActive="active" (click)="menu.set(false)">Panel organizatora</a>
       }
     </nav>
     <div class="header-tools">
