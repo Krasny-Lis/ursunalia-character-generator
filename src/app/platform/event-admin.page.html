@@ -37,8 +37,7 @@
     <section class="paper survey-card"><p>Blokada jest niezależna od statusu. Niewysłane szkice mają tutaj wyłącznie metadane, bez odpowiedzi gracza.</p>
       <label class="checkbox-label"><input type="checkbox" [checked]="characters().length > 0 && selected().size === characters().length" [disabled]="busy()" (change)="selectAll($any($event.target).checked)" />Zaznacz wszystkie istniejące karty</label>
       <div class="actions"><button class="button outline" [disabled]="busy() || store.adminDirty() || !selected().size" (click)="operate(false)">Zablokuj zaznaczone · {{ selected().size }}</button><button class="button light" [disabled]="busy() || store.adminDirty() || !selected().size" (click)="operate(false, false)">Odblokuj zaznaczone</button></div>
-      <label class="checkbox-label"><input type="checkbox" [(ngModel)]="completed" [disabled]="busy()" />Potwierdzam, że wydarzenie zostało zakończone</label>
-      <button class="button light" [disabled]="busy() || store.adminDirty() || !selected().size || !completed || event.registrationsOpen" (click)="operate(true)">Archiwizuj zaznaczone po wydarzeniu</button><p>Najpierw zamknij zapisy. Archiwizacja jest nieodwracalna i usuwa zdjęcia.</p>
+
     </section>
     <div class="application-list">@for (card of characters(); track card.id) { <article class="paper survey-card"><label class="checkbox-label"><input type="checkbox" [checked]="selected().has(card.id)" [disabled]="busy()" (change)="toggle(card.id, $any($event.target).checked)" />{{ card.userName }} · {{ status(card.status) }}</label><p>{{ card.locked ? 'Karta zablokowana' : 'Bez dodatkowej blokady karty' }}</p><button class="button light" [disabled]="busy() || store.adminDirty()" (click)="operate(false, !card.locked, card)">{{ card.locked ? 'Odblokuj kartę' : 'Zablokuj kartę' }}</button></article> } @empty { <section class="paper empty-state"><h3>Brak aktywnych postaci</h3></section> }</div>
   }
