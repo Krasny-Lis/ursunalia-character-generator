@@ -3103,3 +3103,127 @@ body {
 .toast { cursor:pointer; }
 .toast:hover { border-color:#ffe0a2; }
 @media(max-width:700px) { .field .choices:has(.show-description) { grid-template-columns:1fr; } .review-filters,.review-filters .filter-label,.review-filters .filter-label input,.review-filters .filter-label select { width:100%; } }
+
+
+/* UI-first redesign: navigation and strictly local design-review toolbar. */
+.header-inner { gap: clamp(12px, 2vw, 28px); }
+.site-header nav { gap: clamp(12px, 1.4vw, 23px); margin-left: 0; }
+.site-header nav a { font-size: clamp(13px, .96vw, 16px); }
+.header-tools { gap: 8px; }
+.header-account-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 12px;
+  min-height: 44px;
+  color: var(--gold-light);
+  border: 1px solid #9c7a476b;
+  border-radius: 7px;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.header-account-link:hover { background: #b58c4022; }
+.header-account-link u-icon { font-size: 18px; }
+
+.dev-role-bar {
+  background: #102331;
+  color: #f3e4cb;
+  border-bottom: 1px solid #94703a;
+  padding: 10px max(4.5%, calc((100% - 1480px) / 2));
+  font: 13px/1.4 var(--sans);
+}
+.dev-role-bar__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+.dev-role-bar__heading { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+.dev-role-bar__heading strong { color: #f0cf94; font-size: 14px; }
+.dev-role-bar__heading span { color: #bacbd4; }
+.dev-role-bar__toggle {
+  background: transparent;
+  color: #f0cf94;
+  border: 1px solid #8f7956;
+  border-radius: 5px;
+  min-height: 36px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+.dev-role-bar__controls {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: end;
+}
+.dev-role-bar__controls label { display: grid; gap: 5px; color: #e9decd; font: inherit; }
+.dev-role-bar__controls select {
+  min-height: 40px;
+  min-width: 135px;
+  font-size: 13px;
+  background: #fff8eb;
+}
+.dev-role-bar__controls .dev-role-bar__check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+}
+.dev-role-bar__check input { accent-color: #b48348; }
+.dev-role-bar__result { color: #dfc28f; padding-bottom: 11px; }
+.ux-placeholder {
+  max-width: 950px;
+  margin: 40px auto;
+  padding: clamp(24px, 4vw, 48px);
+}
+.ux-placeholder h1 { color: var(--ink); font-size: clamp(32px, 4vw, 48px); margin: 12px 0; }
+.ux-placeholder p { max-width: 67ch; }
+.ux-placeholder__notice {
+  border: 1px solid #cfb58f;
+  border-radius: 7px;
+  background: #f0e3ce;
+  padding: 18px 20px;
+  margin: 25px 0;
+}
+.ux-placeholder__notice p { margin: 7px 0 0; }
+
+@media (max-width: 1180px) {
+  .site-header nav {
+    display: none;
+    position: absolute;
+    left: 4.5%;
+    right: 4.5%;
+    top: 81px;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 14px;
+    background: #0b1d2b;
+    border: 1px solid #9c7a47;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px #0005;
+  }
+  .site-header nav.open { display: flex; }
+  .site-header nav a { min-height: 48px; height: auto; padding: 10px; font-size: 15px; }
+  .site-header nav a.active::after { display: none; }
+  .menu-toggle { display: inline-grid; }
+  .header-tools { margin-left: auto; }
+}
+@media (max-width: 700px) {
+  .header-account-link { padding: 8px; font-size: 0; gap: 0; min-width: 44px; }
+  .header-account-link u-icon { font-size: 21px; }
+  .dev-role-bar { padding: 10px 4%; }
+  .dev-role-bar__heading span { font-size: 11px; }
+  .dev-role-bar__controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dev-role-bar__controls select { min-width: 0; width: 100%; }
+  .dev-role-bar__result { padding: 8px 0; }
+  .ux-placeholder { margin: 16px auto; }
+}
+@media print {
+  .dev-role-bar { display: none !important; }
+}
