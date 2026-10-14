@@ -20,14 +20,22 @@ export class CharacterActions {
   readonly busy = signal(false);
   readonly error = signal('');
 
-  async remove() {
+  async remove() { await this.retire(false); }
+
+  /**
+   * Legacy API retained for current tests and future archival backend support.
+   * The archive action itself is deliberately not rendered in the MVP UI.
+   */
+  async retire(archive: boolean) {
     if (this.busy() || this.store.busy()) return;
-    const warning = 'Nieodwracalnie usunąć postać? Usuniemy treść zgłoszenia, opis, zdjęcie i wewnętrzne kopie. MG nie będzie mógł jej przywrócić.';
+    const warning = archive
+      ? 'Zarchiwizować postać? Zachowamy historyczną kopię tekstową bez zdjęcia. Nie będzie można jej edytować ani przywrócić.'
+      : 'Nieodwracalnie usunąć postać? Usuniemy treść zgłoszenia, opis, zdjęcie i wewnętrzne kopie. MG nie będzie mógł jej przywrócić.';
     if (!window.confirm(warning + (this.store.dirty() && this.store.activeId() === this.app().id
       ? ' Niezapisane zmiany tej postaci zostaną odrzucone.' : ''))) return;
     this.busy.set(true);
     this.error.set('');
-    try { await this.store.retireCharacter(this.app(), false); }
+    try { await this.store.retireCharacter(this.app(), archive); }
     catch (e) { this.error.set(this.store.message(e)); }
     finally { this.busy.set(false); }
   }
