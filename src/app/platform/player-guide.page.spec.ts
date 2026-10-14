@@ -21,7 +21,7 @@ describe('Dla gracza – poradnik uczestnika', () => {
     expect(text).toContain('jedną aktywną postać');
     expect(text).toContain('przez MG');
     expect(text).toContain('Google Docs');
-    expect(text).toContain('Składka');
+    expect(text).toContain('Opłać składkę');
     expect(text).toContain('nie oznacza');
     expect(root.querySelector('[id="materialy"]')).not.toBeNull();
     expect(root.querySelectorAll('.guide-faq details').length).toBe(4);
